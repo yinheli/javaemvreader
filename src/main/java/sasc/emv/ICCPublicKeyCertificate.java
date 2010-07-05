@@ -1,0 +1,204 @@
+/*
+ * Copyright 2010 sasc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package sasc.emv;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import sasc.util.Util;
+
+/**
+ *
+ * @author sasc
+ */
+public class ICCPublicKeyCertificate {
+
+    private Application application;
+    private IssuerPublicKeyCertificate issuerPublicKeyCert;
+    private ICCPublicKey iccPublicKey;
+    private boolean isValid = false;
+    private byte[] signedBytes;
+    private byte[] pan = new byte[10];
+    private byte certFormat;
+    private byte[] certExpirationDate = new byte[2];
+    private byte[] certSerialNumber = new byte[3];
+    private int hashAlgorithmIndicator;
+    private int iccPublicKeyAlgorithmIndicator;
+    private byte[] hash = new byte[20];
+    private boolean validationPerformed = false;
+
+    public ICCPublicKeyCertificate(Application application, IssuerPublicKeyCertificate issuerPublicKeyCert) {
+        this.application = application;
+        this.issuerPublicKeyCert = issuerPublicKeyCert;
+        this.iccPublicKey = new ICCPublicKey();
+    }
+
+    public void setSignedBytes(byte[] signedBytes) {
+        this.signedBytes = signedBytes;
+    }
+
+    public IssuerPublicKeyCertificate getIssuerPublicKeyCertificate() {
+        return issuerPublicKeyCert;
+    }
+
+    public ICCPublicKey getICCPublicKey() {
+        if(!validationPerformed){
+            validate();
+        }
+        return iccPublicKey;
+    }
+
+    public boolean validate() {
+        if (validationPerformed) { //Validation already run
+            return isValid();
+        }
+        validationPerformed = true;
+
+        issuerPublicKeyCert.validate(); //Init the cert
+
+        IssuerPublicKey issuerPublicKey = issuerPublicKeyCert.getIssuerPublicKey();
+
+        byte[] recoveredBytes = Util.performRSA(signedBytes, issuerPublicKey.getExponent(), issuerPublicKey.getModulus());
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(recoveredBytes);
+
+        if (bis.read() != 0x6a) { //Header
+            throw new EMVException("Header != 0x6a");
+        }
+
+        certFormat = (byte) bis.read();
+
+        if (certFormat != 0x04) { //Always 0x04
+            throw new EMVException("Invalid certificate format");
+        }
+
+        bis.read(pan, 0, pan.length);
+
+        bis.read(certExpirationDate, 0, certExpirationDate.length);
+
+        bis.read(certSerialNumber, 0, certSerialNumber.length);
+
+        hashAlgorithmIndicator = bis.read() & 0xFF;
+
+        iccPublicKeyAlgorithmIndicator = bis.read() & 0xFF;
+
+        int iccPublicKeyModLengthTotal = bis.read() & 0xFF;
+
+        int iccPublicKeyExpLengthTotal = bis.read() & 0xFF;
+
+        int modBytesLength = bis.available() - 21;
+
+        if(iccPublicKeyModLengthTotal < modBytesLength){
+            //The mod bytes block in the cert contains padding
+            //we don't want padding in our key
+            modBytesLength = iccPublicKeyModLengthTotal;
+        }
+
+        byte[] modtmp = new byte[modBytesLength];
+
+        bis.read(modtmp, 0, modtmp.length);
+
+        iccPublicKey.setModulus(modtmp);
+
+        //Now read padding bytes (0xbb), if available
+        //The padding bytes are not used
+        byte[] padding = new byte[bis.available()-21];
+        bis.read(padding, 0, padding.length);
+
+        bis.read(hash, 0, hash.length);
+
+        //TODO check hash validation
+        ByteArrayOutputStream hashStream = new ByteArrayOutputStream();
+
+        hashStream.write(certFormat);
+        hashStream.write(pan, 0, pan.length);
+        hashStream.write(certExpirationDate, 0, certExpirationDate.length);
+        hashStream.write(certSerialNumber, 0, certSerialNumber.length);
+        hashStream.write((byte)hashAlgorithmIndicator);
+        hashStream.write((byte)iccPublicKeyAlgorithmIndicator);
+        hashStream.write((byte)iccPublicKeyModLengthTotal);
+        hashStream.write((byte)iccPublicKeyExpLengthTotal);
+        byte[] ipkModulus = iccPublicKey.getModulus();
+        hashStream.write(ipkModulus, 0, ipkModulus.length);
+        byte[] ipkExponent = iccPublicKey.getExponent();
+        hashStream.write(ipkExponent, 0, ipkExponent.length);
+
+        byte[] offlineAuthenticationRecords = application.getOfflineDataAuthenticationRecords();
+        hashStream.write(offlineAuthenticationRecords, 0, offlineAuthenticationRecords.length);
+
+        byte[] sha1Result = null;
+        try {
+            sha1Result = Util.calculateSHA1(hashStream.toByteArray());
+        } catch (NoSuchAlgorithmException ex) {
+            throw new SignedDataException("SHA-1 hash algorithm not available", ex);
+        }
+
+        if (!Arrays.equals(sha1Result, hash)) {
+            throw new SignedDataException("Hash is not valid");
+        }
+
+
+        int trailer = bis.read();
+
+        if (trailer != 0xbc) {//Trailer
+            throw new EMVException("Trailer != 0xbc");
+        }
+
+        if (bis.available() > 0) {
+            throw new EMVException("Error parsing certificate. Bytes left=" + bis.available());
+        }
+        isValid = true;
+        return true;
+    }
+
+    public boolean isValid() {
+        return isValid;
+    }
+
+    @Override
+    public String toString() {
+        StringWriter sw = new StringWriter();
+        dump(new PrintWriter(sw), 0);
+        return sw.toString();
+    }
+
+    public void dump(PrintWriter pw, int indent) {
+        pw.println(Util.getEmptyString(indent) + "ICC Public Key Certificate");
+        String indentStr = Util.getEmptyString(indent + 3);
+
+        if(!validationPerformed){
+            validate();
+        }
+
+        if (isValid()) {
+            pw.println(indentStr + "Primary Account Number (PAN): " + Util.byteArrayToHexString(pan));
+
+            pw.println(indentStr + "Certificate Format: " + certFormat);
+            pw.println(indentStr + "Certificate Expiration Date (MMYY): " + Util.byteArrayToHexString(certExpirationDate));
+            pw.println(indentStr + "Certificate Serial Number: " + Util.byteArrayToHexString(certSerialNumber));
+            pw.println(indentStr + "Hash Algorithm Indicator: " + hashAlgorithmIndicator +" (=SHA-1)");
+            pw.println(indentStr + "ICC Public Key Algorithm Indicator: " + iccPublicKeyAlgorithmIndicator +" (=RSA)");
+            pw.println(indentStr + "Hash: " + Util.byteArrayToHexString(hash));
+
+            iccPublicKey.dump(pw, indent + 3);
+        } else {
+            pw.println(indentStr + "CERTIFICATE NOT VALID");
+        }
+    }
+}

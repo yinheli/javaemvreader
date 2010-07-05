@@ -1,0 +1,87 @@
+<CertificationAuthorities>
+    <CA RID="A1 23 45 67 89">
+        <Name>TEST</Name>
+        <Description>Test CA used for ICC emulation</Description>
+        <PublicKeys>
+            <PublicKey index="7">
+                <Description>1152-Bit TEST CA Public Key</Description>
+                <ExpirationDate>31 December 2999</ExpirationDate>
+                <Exponent>03</Exponent>
+                <Modulus>
+                    a7 aa 21 90 d8 fd 7c 23 f8 9c 76 d1 35 38 ed a4
+                    f5 08 ed 4a c5 1a 23 46 22 44 42 5d 08 de 5d 2e
+                    3c e4 9f 5f 45 36 79 6b 19 66 7e 00 80 a6 ae e6
+                    72 1f 6f 38 fb a9 a5 38 84 c4 86 74 cb 11 c0 c9
+                    3e 3a 88 11 38 22 72 a4 4a 09 b8 86 7b 9d ad 4c
+                    f5 cc 7e 39 d5 d8 cf 51 85 58 2d 65 be bc c3 e5
+                    54 fc de bb d5 51 05 b1 ba ff 05 fd 5a 9a 88 3a
+                    0e 67 d8 ee 15 cc 92 2a 8d e0 b6 13 e2 44 56 8a
+                    fe 1f 4f fd 31 15 16 dd 87 e3 4e b5 53 4d 7c 3d
+                </Modulus>
+                <HashAlgorithmIndicator>01</HashAlgorithmIndicator>
+                <Hash>
+                    ba f8 97 44 9a 1d dd 46 eb ce ca 82 95 ee 9a 12 
+                    f6 1c fd 70
+                </Hash>
+                <PublicKeyAlgorithmIndicator>01</PublicKeyAlgorithmIndicator>
+            </PublicKey>
+        </PublicKeys>
+    </CA>
+    <CA RID="b0 12 34 56 78">
+        <Name>M/Chip_TEST</Name>
+        <Description>Test CA from EXTERNALPayPassMChip-CardVendorTestingv1.0-FINALallannexes.pdf</Description>
+        <PublicKeys>
+            <PublicKey index="243"> <!-- index 0xF3 -->
+                <Description>1152-Bit M/Chip TEST CA Public Key</Description>
+                <ExpirationDate>31 December 2999</ExpirationDate>
+                <Exponent>03</Exponent>
+                <Modulus>
+                    98 F0 C7 70 F2 38 64 C2 E7 66 DF 02 D1 E8 33 DF
+                    F4 FF E9 2D 69 6E 16 42 F0 A8 8C 56 94 C6 47 9D
+                    16 DB 15 37 BF E2 9E 4F DC 6E 6E 8A FD 1B 0E B7
+                    EA 01 24 72 3C 33 31 79 BF 19 E9 3F 10 65 8B 2F
+                    77 6E 82 9E 87 DA ED A9 C9 4A 8B 33 82 19 9A 35
+                    0C 07 79 77 C9 7A FF 08 FD 11 31 0A C9 50 A7 2C
+                    3C A5 00 2E F5 13 FC CC 28 6E 64 6E 3C 53 87 53
+                    5D 50 95 14 B3 B3 26 E1 23 4F 9C B4 8C 36 DD D4
+                    4B 41 6D 23 65 40 34 A6 6F 40 3B A5 11 C5 EF A3
+                </Modulus>
+                <HashAlgorithmIndicator>01</HashAlgorithmIndicator>
+                <Hash>
+                    13 aa e8 50 31 78 05 d1 ea 97 45 3f e3 60 57 c5
+                    7d d6 52 8b
+                </Hash>
+                <PublicKeyAlgorithmIndicator>01</PublicKeyAlgorithmIndicator>
+            </PublicKey>
+            <PublicKey index="245"> <!-- index 0xF5 -->
+                <Description>1984-Bit TEST CA Public Key</Description>
+                <ExpirationDate>31 December 2999</ExpirationDate>
+                <Exponent>010001</Exponent>
+                <Modulus>
+                    A6 E6 FB 72 17 95 06 F8 60 CC CA 8C 27 F9 9C EC
+                    D9 4C 7D 4F 31 91 D3 03 BB EE 37 48 1C 7A A1 5F
+                    23 3B A7 55 E9 E4 37 63 45 A9 A6 7E 79 94 BD C1
+                    C6 80 BB 35 22 D8 C9 3E B0 CC C9 1A D3 1A D4 50
+                    DA 30 D3 37 66 2D 19 AC 03 E2 B4 EF 5F 6E C1 82
+                    82 D4 91 E1 97 67 D7 B2 45 42 DF DE FF 6F 62 18
+                    55 03 53 20 69 BB B3 69 E3 BB 9F B1 9A C6 F1 C3
+                    0B 97 D2 49 EE E7 64 E0 BA C9 7F 25 C8 73 D9 73
+                    95 3E 51 53 A4 20 64 BB FA BF D0 6A 4B B4 86 86
+                    0B F6 63 74 06 C9 FC 36 81 3A 4A 75 F7 5C 31 CC
+                    A9 F6 9F 8D E5 9A DE CE F6 BD E7 E0 78 00 FC BE
+                    03 5D 31 76 AF 84 73 E2 3E 9A A3 DF EE 22 11 96
+                    D1 14 83 02 67 7C 72 0C FE 25 44 A0 3D B5 53 E7
+                    F1 B8 42 7B A1 CC 72 B0 F2 9B 12 DF EF 4C 08 1D
+                    07 6D 35 3E 71 88 0A AD FF 38 63 52 AF 0A B7 B2
+                    8E D4 9E 1E 67 2D 11 F9
+                </Modulus>
+                <HashAlgorithmIndicator>01</HashAlgorithmIndicator>
+                <Hash>
+                    b6 e5 63 2c 03 3b 9a be b9 a8 86 c9 da 0b a9 40
+                    30 43 2f 2f
+                </Hash>
+                <PublicKeyAlgorithmIndicator>01</PublicKeyAlgorithmIndicator>
+            </PublicKey>
+        </PublicKeys>
+    </CA>
+</CertificationAuthorities>

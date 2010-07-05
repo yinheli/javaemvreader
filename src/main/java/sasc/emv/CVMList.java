@@ -1,0 +1,68 @@
+/*
+ * Copyright 2010 sasc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package sasc.emv;
+
+import java.io.ByteArrayInputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.LinkedList;
+import sasc.util.Util;
+
+/**
+ * Cardholder Verification Method (CVM) List
+ * The CVM list specifies acceptable types of cardholder verification
+ * EMV book 3 section 10.5 (page 119)
+ *
+ * @author sasc
+ */
+public class CVMList {
+    private LinkedList<CVRule> cvRules = new LinkedList<CVRule>();
+
+    public CVMList(byte[] data){
+
+        if(data.length < 8 ) throw new IllegalArgumentException("Length is less than 8. Length="+data.length);
+        ByteArrayInputStream bis = new ByteArrayInputStream(data);
+        byte[] amountField = new byte[4];
+        byte[] secondAmountField = new byte[4];
+        bis.read(amountField, 0, amountField.length);
+        bis.read(secondAmountField, 0, secondAmountField.length);
+        if(bis.available() % 2 != 0 ) throw new EMVException("CMVRules data is not a multiple of 2. Length="+data.length);
+        while(bis.available() > 0){
+            byte[] tmp = new byte[2];
+            bis.read(tmp, 0, tmp.length);
+            cvRules.add(new CVRule(tmp[0], tmp[1], amountField, secondAmountField));
+        }
+    }
+
+    @Override
+    public String toString() {
+        StringWriter sw = new StringWriter();
+        dump(new PrintWriter(sw), 0);
+        return sw.toString();
+    }
+
+    public void dump(PrintWriter pw, int indent) {
+        pw.println(Util.getEmptyString(indent) + "Cardholder Verification Method (CVM) List:");
+
+        for(CVRule cvRule : cvRules){
+            cvRule.dump(pw, indent+3);
+        }
+    }
+
+    public static void main(String[] args){
+        System.out.println(new CVMList(Util.fromHexString("00 00 00 00 00 00 00 00 44 03 41 03 42 03 5e 03 1f 00")).toString());
+    }
+}

@@ -1,0 +1,45 @@
+/*
+ * Copyright 2010 sasc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package sasc.emv;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import sasc.util.Util;
+
+/**
+ *
+ * @author sasc
+ */
+public class MasterFile implements File {
+    private byte[] data;
+
+    public MasterFile(byte[] data){
+        this.data = data;
+    }
+
+    @Override
+    public String toString() {
+        StringWriter sw = new StringWriter();
+        dump(new PrintWriter(sw), 0);
+        return sw.toString();
+    }
+
+    public void dump(PrintWriter pw, int indent) {
+        pw.println(Util.getEmptyString(indent) + "Master File");
+
+        pw.println(Util.getEmptyString(indent+3) + Util.prettyPrintHex(Util.byteArrayToHexString(data), indent+3));
+    }
+}

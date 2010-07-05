@@ -1,0 +1,6 @@
+3B 67 00 00 A6 40 40 00 09 90 00
+	VISA Classic - Landkreditt Bank (Norway)
+	VISA Classic - Nordea Bank (Norway)
+
+3B 66 00 00 31 4B 01 01 00 80 
+	VISA Classic - Skandiabanken (Norway)

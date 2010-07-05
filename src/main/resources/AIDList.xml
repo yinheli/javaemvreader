@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Simple Example of how a list of supported/known AIDs could be constructed -->
+<AIDList>
+	<Application AID="A0000000031010" Supported="yes">
+              <Name>VISA</Name>
+              <ApplicationSelectionIndicator>EXACT_MATCH</ApplicationSelectionIndicator>
+              <Description></Description>
+        </Application>
+
+	<Application AID="A0000000032010"/>
+	<Application AID="A0000000033010"/>
+	<Application AID="A0000000034010"/>
+	<Application AID="A0000000035010"/>
+	<Application AID="A0000000041010"/>
+	<Application AID="A0000000042010"/>
+	<Application AID="A0000000043010"/>
+	<Application AID="A0000000043060"/>
+	<Application AID="A0000000044010"/>
+	<Application AID="A0000000045010"/>
+	<Application AID="A0000000421010"/>
+	<Application AID="A0000000422010"/>
+	<Application AID="A0000000423010"/>
+	<Application AID="A0000000424010"/>
+	<Application AID="A0000000425010"/>
+</AIDList>

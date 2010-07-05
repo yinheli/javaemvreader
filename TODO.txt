@@ -1,0 +1,86 @@
+TODO:
+
+
+ROOT(MF)
+-ADF
+--AEF
+--AEF
+-DDF
+--ADF
+---AEF
+
+Directories on card (optional):
+DDF (FCI with SFI of directory)
+--Directory
+
+
+PSE = If present, contains DDF 1.PAY.SYS.DDF01
+ADF = Application Definition File (response to SELECT APP AID)
+DDF = 1PAY.SYS.DDF01 (Beskrivelse av innhold) which is mapped onto a DF within the card, may or may not be the MF
+SFI = File Index used for the selection of AEFs
+AEF = file that can contain one or more records
+
+Any ADF or DDF in the card is referenced by its DF name
+ADF corresponds to the AID or contains the AID as the beginning of the DF name. Each DF name shall be unique within a given card.
+
+SFIs are used for the selection of AEFs. Any AEF within a given application is referenced by a SFI coded on 5 bits in the range 1 to 30. A SFI shall be unique within an application.
+
+After a successful SELECT command, the file system path is set to the selected PSE/DDF/ADF.
+Subsequent commands apply to AEFs associated with the selected PSE, DDF, or ADF using SFIs.
+
+The directory is not required to have entries for all DDFs and ADFs in the card, and following the chain of DDFs may not reveal all applications supported by the card. However, if the PSE exists, only applications that are revealed by following the chain of DDFs beginning with the initial directory can be assured of international interoperability.
+
+
+TODO:
+
+----------------------------
+TODO EMV: (1st priority)
+----------------------------
+
+Check correct ordering of commands (GET PO/INTERNAL AUTH etc) according to EMV spec.
+
+OSX Support?: 
+-http://forums.sun.com/thread.jspa?threadID=5424569
+-http://smartcardservices.macosforge.org/trac/ticket/6
+
+Identifying an EMV card (how to do this? presence or absence of 1PAY.SYS.DDF01 is not enough)[check EMV spec]
+(The PSE could be missing. A terminal can select an APP directly)
+
+PSE alternatives (book 1 page 161)
+
+1 Supports PSE? N:goto 3
+2 SupportedAID found using the Payment System Directory selection method? Y:Goto 4, N:goto 3
+3 Use "List of AIDs"-method
+4 Final selection (book 1 page 165)
+
+PSE example (when PSE present)
+-SELECT DDF 1PAY.SYS.DDF01 of PSE to find Payment APPs (returns SFI of Directory Elementary File/PSD) [This establishes the PSE and makes the initial Payment System Directory accessible]
+--if returns SW != 9000 -> use "list of AIDs"-method (book 1, side 162), else continue
+-for recnums 1-X (until SW==6A83): READ RECORD in Directory Elementary File/Payment system directory (returns record) 
+--record listing ADF/DDFs (available apps)
+---If no records found -> use "list of AIDs"-method
+-SELECT desired APP (based on known AIDs, or on priority, or just interate all apps).
+-GET PROCESSING OPTIONS 
+--returns available Files (SFI records)
+--Iterate ALL files
+--Collect data from files
+--Use collected data to perform wanted operation (transaction)
+
+TVR page 187 book 3
+         132
+TVR set by Terminal - sent in CDOL to GENERATE AC
+The terminal shall also check the Last Online ATC Register for a zero value. If it is zero, the terminal shall set the "New card" bit in the TVR to 1.
+Issuer Action Codes - Interpreted as TVR bytes
+
+
+
+Check out MasterCard Paypass M/Chip spec (only available to licenced customers)
+
+SELECT APP by partial AID (partial name selection): see book 1 page 150
+
+
+
+-Alternatives 
+---brute force AIDs
+---direct select AID
+---select group of AIDs by using first n bytes of AID as DDF name
