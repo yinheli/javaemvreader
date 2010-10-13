@@ -42,9 +42,9 @@ public class SignedDynamicApplicationData {
     private SignedDynamicApplicationData(byte[] data, ICCPublicKey iccPublicKey) {
         this.decipheredData = data;
         this.iccPublicKey = iccPublicKey;
-//        validate();
     }
 
+    //This method must only be called after ALL application records have been read
     public boolean validate() {
         if (validationPerformed) { //Validation already run
             return isValid();

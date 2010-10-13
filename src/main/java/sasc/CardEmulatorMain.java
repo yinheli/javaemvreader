@@ -54,8 +54,9 @@ public class CardEmulatorMain {
                 }
 //            session.getChallenge(app);
             }
-            Log.debug("Finished Processing card.");
-            Log.debug("Dumping parsed data:");
+            Log.info("Finished Processing card.");
+            Log.info("Now dumping card data in a more readable form:");
+            Log.info("\n");
         } catch (TerminalException ex) {
             throw ex;
         } catch (EMVException ex) {

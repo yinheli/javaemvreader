@@ -19,7 +19,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
-import java.util.StringTokenizer;
 
 /**
  * ISO 3166-1
@@ -44,11 +43,10 @@ public class ISO3166_1 {
 
             String line;
             while((line = br.readLine()) != null){
-                if(line.trim().length() <= 0 || line.startsWith("#")){
+                if(line.trim().length() < 4 || line.startsWith("#")){
                     continue;
                 }
-                StringTokenizer st = new StringTokenizer(line);
-                map.put(st.nextToken(), st.nextToken());
+                map.put(line.substring(0, 3), line.substring(4));
             }
         }catch(IOException e){
             throw new RuntimeException(e);
@@ -72,7 +70,7 @@ public class ISO3166_1 {
 
         return map.get(code);
     }
-
+    
 }
 
 

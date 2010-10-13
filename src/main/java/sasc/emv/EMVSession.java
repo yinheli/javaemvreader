@@ -437,6 +437,7 @@ public class EMVSession {
 
     }
 
+    //TODO
     public void externalAuthenticate() throws TerminalException {
 
         Application app = currentCard.getSelectedApplication();
@@ -524,7 +525,49 @@ public class EMVSession {
         if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
             BERTLV tlv = EMVUtil.getNextTLV(new ByteArrayInputStream(getDataLogFormatResponse.getData()));
             app.setLogFormat(new LogFormat(tlv.getValueBytes()));
+
+            //Log Entry data element should be located in the FCI Issuer Discretionary Data
+            //If it is not, then the app does not support transaction logging.
+
+            //TODO
+//            if(app.getLogEntry != null){
+                readTransactionLog(app);
+//            }
+
         }
+    }
+
+    //TODO
+    private void readTransactionLog(Application app) throws TerminalException{
+//        //read all the log records
+//        for (ApplicationElementaryFile aef : app.getApplicationFileLocator().getApplicationElementaryFiles()) {
+//            int startRecordNumber = aef.getStartRecordNumber();
+//            int endRecordNumber = aef.getEndRecordNumber();
+//
+//            for (int recordNum = startRecordNumber; recordNum <= endRecordNumber; recordNum++) {
+//                Log.commandHeader("Send READ RECORD to read SFI " + aef.getSFI().getValue() + " record " + recordNum);
+//
+//                command = EMVCommands.readRecord(recordNum, aef.getSFI().getValue());
+//
+//                CardResponse readAppDataResponse = EMVUtil.sendCmd(terminal, command);
+//
+//                SW1 = (byte) readAppDataResponse.getSW1();
+//                SW2 = (byte) readAppDataResponse.getSW2();
+//
+//                if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
+//
+//                    EMVUtil.parseAppRecord(readAppDataResponse.getData(), app);
+//                    boolean isInvolvedInOfflineDataAuthentication = (recordNum - startRecordNumber + 1) <= aef.getNumRecordsInvolvedInOfflineDataAuthentication();
+//                    Record record = new Record(readAppDataResponse.getData(), recordNum, isInvolvedInOfflineDataAuthentication);
+//                    aef.setRecord(recordNum, record);
+//                } else {
+//                    //Any SW1 SW2 other than '9000' passed to the application layer as a result
+//                    //of reading any record shall cause the transaction to be terminated [spec]
+//                    throw new EMVException("Reading application data failed for SFI " + aef.getSFI().getValue() + " Record Number: " + recordNum);
+//                }
+//            }
+//
+//        }
     }
 
     public void bruteForceRecords() throws TerminalException {

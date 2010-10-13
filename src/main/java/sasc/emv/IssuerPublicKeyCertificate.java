@@ -44,9 +44,10 @@ public class IssuerPublicKeyCertificate {
     private boolean validationPerformed = false;
 
     public IssuerPublicKeyCertificate(CA ca) {
-        if(ca == null) {
-            throw new IllegalArgumentException("Argument 'ca' cannot be null");
-        }
+        //ca == null is permitted
+//        if(ca == null) {
+//            throw new IllegalArgumentException("Argument 'ca' cannot be null");
+//        }
         this.ca = ca;
         issuerPublicKey = new IssuerPublicKey();
     }
@@ -64,11 +65,16 @@ public class IssuerPublicKeyCertificate {
     }
 
     //Perform lazy validation, since we might not have all the data elements initially
+    //This method must only be called after ALL application records have been read
     public boolean validate() {
         if (validationPerformed) { //Validation already run
             return isValid();
         }
         validationPerformed = true;
+        if(this.ca == null){
+            isValid = false;
+            return isValid();
+        }
         CAPublicKey caPublicKey = ca.getPublicKey(caPublicKeyIndex);
 
         if (caPublicKey == null) {
@@ -210,7 +216,11 @@ public class IssuerPublicKeyCertificate {
 
             issuerPublicKey.dump(pw, indent + 3);
         } else {
-            pw.println(indentStr + "CERTIFICATE NOT VALID");
+            if(this.ca == null){
+                pw.println(indentStr + "NO CA CONFIGURED FOR THIS RID. UNABLE TO VALIDATE CERTIFICATE");
+            }else{
+                pw.println(indentStr + "CERTIFICATE NOT VALID");
+            }
         }
     }
 }

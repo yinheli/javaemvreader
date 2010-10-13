@@ -86,21 +86,31 @@ public class Explorer {
 
             cardConnection.disconnect(true);
 
-            Log.debug("Finished Processing card.");
-            Log.debug("Dumping parsed data:");
+            Log.info("Finished Processing card.");
+            Log.info("Now dumping card data in a more readable form:");
+            Log.info("\n");
+            //See the finally clause
         } catch (TerminalException ex) {
             ex.printStackTrace(System.err);
+            Log.info(ex.toString());
         } catch (UnsupportedCardException ex) {
             System.err.println("Unsupported card: " + ex.getMessage());
+            Log.info(ex.toString());
             if (cardConnection != null) {
                 System.err.println("ATR: " + Util.prettyPrintHexNoWrap(cardConnection.getATR()));
                 System.err.println(ATR_DB.searchATR(cardConnection.getATR()));
             }
         } catch (EMVException ex) {
             ex.printStackTrace(System.err);
+            Log.info(ex.toString());
         } finally {
             if (emvCard != null) {
-                emvCard.dump(Log.getPrintWriter(), 0);
+                try{
+                    emvCard.dump(Log.getPrintWriter(), 0);
+                }catch(RuntimeException ex){
+                    ex.printStackTrace(System.err);
+                }
+                Log.info("");
             }
         }
     }

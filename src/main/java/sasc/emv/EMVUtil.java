@@ -81,7 +81,12 @@ public class EMVUtil {
 
     public static void printResponse(CardResponse response) {
         Log.info("response hex    :\n" + Util.prettyPrintHex(Util.byteArrayToHexString(response.getData())));
-        Log.info("response SW1SW2 : " + Util.byte2Hex(response.getSW1()) + " " + Util.byte2Hex(response.getSW2()));
+        String swDescription = "";
+        String tmp = EMVUtil.getSWDescription(Util.short2Hex(response.getSW()));
+        if (tmp != null && tmp.trim().length() > 0) {
+            swDescription = " (" + tmp + ")";
+        }
+        Log.info("response SW1SW2 : " + Util.byte2Hex(response.getSW1()) + " " + Util.byte2Hex(response.getSW2()) + swDescription);
         Log.info("response ascii  : " + Util.getSafePrintChars(response.getData()));
         Log.info("response parsed :\n" + EMVUtil.prettyPrintAPDUResponse(response.getData()));
     }
@@ -255,7 +260,7 @@ public class EMVUtil {
             app.setApplicationInterchangeProfile(aip);
 
             if (valueBytesBis.available() % 4 != 0) {
-                throw new EMVException("Error parsing Processing Options: Invalid AFL length: " + bis.available());
+                throw new EMVException("Error parsing Processing Options: Invalid AFL length: " + valueBytesBis.available());
             }
 
             byte[] aflBytes = new byte[valueBytesBis.available()];
@@ -265,7 +270,20 @@ public class EMVUtil {
             app.setApplicationFileLocator(afl);
         } else if (tlv.getTag().equals(EMVTags.RESPONSE_MESSAGE_TEMPLATE_2)) {
             //AIP & AFL WITH delimiters (that is, including, including tag and length) and possibly other BER TLV tags (that might be proprietary)
-            app.addUnhandledRecord(tlv);
+            while (valueBytesBis.available() >= 2) {
+                tlv = EMVUtil.getNextTLV(valueBytesBis);
+                if (tlv.getTag().equals(EMVTags.APPLICATION_INTERCHANGE_PROFILE)) {
+                    byte[] aipBytes = tlv.getValueBytes();
+                    ApplicationInterchangeProfile aip = new ApplicationInterchangeProfile(aipBytes[0], aipBytes[1]);
+                    app.setApplicationInterchangeProfile(aip);
+                } else if (tlv.getTag().equals(EMVTags.APPLICATION_FILE_LOCATOR)) {
+                    byte[] aflBytes = tlv.getValueBytes();
+                    ApplicationFileLocator afl = new ApplicationFileLocator(aflBytes);
+                    app.setApplicationFileLocator(afl);
+                } else {
+                    app.addUnhandledRecord(tlv);
+                }
+            }
         } else {
             app.addUnhandledRecord(tlv);
         }
@@ -274,6 +292,9 @@ public class EMVUtil {
 
 
     }
+
+    //TODO convert this into "parseAppData", and make it generic for reading all application data (records + GPO + additional data)?
+    //
 
     public static void parseAppRecord(byte[] data, Application app) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
@@ -351,8 +372,11 @@ public class EMVUtil {
                 IssuerPublicKeyCertificate issuerCert = app.getIssuerPublicKeyCertificate();
                 if (issuerCert == null) {
                     CA ca = CA.getCA(app.getAID());
+                    
                     if(ca == null){
-                        throw new EMVException("No CA configured for AID: "+app.getAID().toString());
+                        //ca == null is permitted (we might not have the CA public keys for every exotic CA)
+                        Log.info("No CA configured for AID: "+app.getAID().toString());
+//                        throw new EMVException("No CA configured for AID: "+app.getAID().toString());
                     }
                     issuerCert = new IssuerPublicKeyCertificate(ca);
                     app.setIssuerPublicKeyCertificate(issuerCert);
@@ -450,9 +474,8 @@ public class EMVUtil {
             int extraIndent = (lengthBytes.length*3) + (tagBytes.length * 3);
 
             if (tag.isConstructed()) {
-                indentLength += extraIndent;
                 //Recursion
-                buf.append(prettyPrintAPDUResponse(valueBytes, indentLength));
+                buf.append(prettyPrintAPDUResponse(valueBytes, indentLength + extraIndent));
             } else {
                 buf.append("\n");
                 if (tag.getTagValueType() == TagValueType.DOL) {
@@ -656,5 +679,26 @@ public class EMVUtil {
             tagAndLengthList.add(new TagAndLength(tag, tagValueLength));
         }
         return tagAndLengthList;
+    }
+
+    public static String getSWDescription(String swStr){
+        for(SW sw : SW.values()){
+            if(sw.getSWString().equalsIgnoreCase(swStr)){
+                return sw.name();
+            }
+        }
+        
+        return "";
+    }
+
+    public static void main(String[] args){
+        Application app = new Application();
+
+        String gpoResponse = "77 0e 82 02 38 00 94 08 08 01 03 01 10 01 01 00";
+
+        parseProcessingOpts(Util.fromHexString(gpoResponse), app);
+
+        System.out.println(app.getApplicationFileLocator().toString());
+        System.out.println(app.getApplicationInterchangeProfile().toString());
     }
 }

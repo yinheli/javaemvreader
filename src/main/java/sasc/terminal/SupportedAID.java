@@ -112,6 +112,28 @@ public class SupportedAID {
 //        supportedAIDsList.add(new SupportedAID("INTERAC",                         new AID("a0 00 00 02 77 10 10"),    ApplicationSelectionIndicator.EXACT_MATCH, "Canadian domestic credit/debit card"));
 //        supportedAIDsList.add(new SupportedAID("BankAxept",                       new AID("d5 78 00 00 02 10 10"),    ApplicationSelectionIndicator.EXACT_MATCH, "Norwegian domestic debit card"));
 
+        //TODO
+//A0000000031010 VISA Credit Standard VISA credit card
+//A0000000032010 VISA Electron VISA Electron (Debit)
+//A0000000033010 VISA Interlink VISA Interlink
+//A0000000034010 Visa Specific Visa Specific
+//A0000000035010 Visa Specific Visa Specific
+//A0000000038010 VISA plus VISA plus
+//A0000000041010 MasterCard Credit Standard MasterCard
+//A0000000042010 MasterCard Specific MasterCard Specific
+//A0000000043010 MasterCard Specific MasterCard Specific
+//A0000000043060 Maestro (Debit) Maestro (Debit) Card
+//A0000000044010 MasterCard Specific MasterCard Specific
+//A0000000045010 MasterCard Specific MasterCard Specific
+//A0000000046000 Cirrus Mastercard Cirrus
+//A0000000250000 America Express American Express credit/debit
+//A0000001410001 Pagobancomat Italian domestic debit card
+//A0000002281010 SAMA Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)
+//A0000002771010 INTERAC Canadian domestic credit/debit card
+
+//a0 00 00 03 15 10 10 05 28                    PIN
+//a0 00 00 03 15 60 20                          Chipknip
+//a0 00 00 00 04 80 02                          SecureCode Auth
 
     }
 

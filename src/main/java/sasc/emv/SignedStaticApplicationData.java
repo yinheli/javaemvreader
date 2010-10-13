@@ -60,7 +60,10 @@ public class SignedStaticApplicationData {
         }
         validationPerformed = true; //'isValid' flag set further down
 
-        application.getIssuerPublicKeyCertificate().validate(); //Make sure the cert has been initialized
+        if(!application.getIssuerPublicKeyCertificate().validate()){ //Make sure the cert has been initialized
+            isValid = false;
+            return isValid();
+        }
 
         IssuerPublicKey issuerPublicKey = application.getIssuerPublicKeyCertificate().getIssuerPublicKey();
 
@@ -169,7 +172,11 @@ public class SignedStaticApplicationData {
             pw.println(indentStr + "Hash: " + Util.byteArrayToHexString(hash));
 
         } else {
-            pw.println(indentStr + "SIGNED DATA NOT VALID");
+            if(!application.getIssuerPublicKeyCertificate().validate()){
+                pw.println(indentStr + "ISSUER CERTIFICATE NOT VALID. UNABLE TO VALIDATE DATA");
+            }else{
+                pw.println(indentStr + "SIGNED DATA NOT VALID");
+            }
         }
     }
 }

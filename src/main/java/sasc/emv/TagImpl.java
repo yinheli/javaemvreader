@@ -37,7 +37,7 @@ public class TagImpl implements Tag {
     }
 
     public TagImpl(byte[] idBytes, TagValueType tagValueType, String name, String description) {
-        build(this.idBytes, tagValueType, name, description);
+        build(idBytes, tagValueType, name, description);
     }
 
     private void build(byte[] idBytes, TagValueType tagValueType, String name, String description) {

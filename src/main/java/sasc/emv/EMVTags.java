@@ -28,6 +28,12 @@ import sasc.util.ByteArrayWrapper;
  * or
  * 2. Tag enum: EMVTags iterates over all Tag enums, and adds to Map?
  *
+ * The coding of primitive context-specific class data objects in the ranges '80' to '9E' and '9F00' to '9F4F' is reserved for this specification.
+ * The coding of primitive context-specific class data objects in the range '9F50' to '9F7F' is reserved for the payment systems.
+ *
+ * TODO: Create tag lists (XML?) for individual payment systems (group by RID? or AID?)
+ * (see for example: VISA_VIS_ICC_Card_1.4.pdf for VISA specific tags)
+ *
  * @author sasc
  */
 public class EMVTags {
@@ -155,11 +161,15 @@ public class EMVTags {
     public static final Tag LOG_ENTRY                               = new TagImpl("9f4d", TagValueType.BINARY, "Log Entry", "Provides the SFI of the Transaction Log file and its number of records");
     public static final Tag MERCHANT_NAME_AND_LOCATION              = new TagImpl("9f4e", TagValueType.TEXT, "Merchant Name and Location", "Indicates the name and location of the merchant");
     public static final Tag LOG_FORMAT                              = new TagImpl("9f4f", TagValueType.BINARY, "Log Format", "List (in tag and length format) of data objects representing the logged data elements that are passed to the terminal when a transaction log record is read");
-    public static final Tag FCI_ISSUER_DISCRETIONARY_DATA           = new TagImpl("bf0c", TagValueType.BINARY, "File Control Information (FCI) Issuer Discretionary Data", "Issuer discretionary part of the FCI");
+    //'9F50' to '9F7F' are reserved for the payment systems (proprietary)
+    public static final Tag FCI_ISSUER_DISCRETIONARY_DATA           = new TagImpl("bf0c", TagValueType.BINARY, "File Control Information (FCI) Issuer Discretionary Data", "Issuer discretionary part of the FCI (e.g. O/S Manufacturer proprietary data)");
+
+    //TODO this tag is VISA specific
+//    public static final Tag APPLICATION_DEFAULT_ACTION              = new TagImpl("9f52", TagValueType.BINARY, "Application Default Action (ADA)", "Visa proprietary data element indicating the action a card should take when exception conditions occur");
 
 
     /**
-     * If the tag is not found, this method returns the "UNHANDLED TAG" containing 'tagBytes'
+     * If the tag is not found, this method returns the "[UNHANDLED TAG]" containing 'tagBytes'
      *
      * @param tagBytes
      * @return
@@ -167,7 +177,7 @@ public class EMVTags {
     public static Tag getNotNull(byte[] tagBytes){
         Tag tag = find(tagBytes);
         if(tag == null){
-            tag = new TagImpl(tagBytes, TagValueType.BINARY, "UNHANDLED TAG", "");
+            tag = new TagImpl(tagBytes, TagValueType.BINARY, "[UNHANDLED TAG]", "");
         }
         return tag;
     }
@@ -180,7 +190,7 @@ public class EMVTags {
     }
 
     private static void addTag(Tag tag){
-        //Use wrapper around, since the underlaying byte-array will not be changed in this case
+        //Use 'wrapper around', since the underlaying byte-array will not be changed in this case
         ByteArrayWrapper baw = ByteArrayWrapper.wrapperAround(tag.getTagBytes());
         if(tags.containsKey(baw)){
             throw new IllegalArgumentException("Tag already added "+tag);
@@ -309,6 +319,7 @@ public class EMVTags {
             addTag(LOG_ENTRY);
             addTag(MERCHANT_NAME_AND_LOCATION);
             addTag(LOG_FORMAT);
+//            addTag(APPLICATION_DEFAULT_ACTION); //TODO VISA specific. Move to XML file?
             addTag(FCI_ISSUER_DISCRETIONARY_DATA);
     }
 

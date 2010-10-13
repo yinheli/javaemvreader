@@ -6,7 +6,7 @@ response hex    :
 6f 20 84 0e 31 50 41 59 2e 53 59 53 2e 44 44 46
 30 31 a5 0e 88 01 02 5f 2d 04 6e 6f 65 6e 9f 11
 01 01
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : o ..1PAY.SYS.DDF01....._-.noen....
 response parsed :
 
@@ -29,7 +29,7 @@ response hex    :
 70 23 61 21 4f 07 a1 23 45 67 89 10 10 50 04 56
 49 53 41 9f 12 0c 56 49 53 41 20 43 6c 61 73 73
 69 63 87 01 02
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : p#a!O..#Eg...P.VISA...VISA Classic...
 response parsed :
 
@@ -52,7 +52,7 @@ response hex    :
 70 25 61 23 4f 07 d5 78 00 00 02 10 10 50 09 62
 61 6e 6b 61 78 65 70 74 9f 12 09 62 61 6e 6b 61
 78 65 70 74 87 01 01
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : p%a#O..x.....P.bankaxept...bankaxept...
 response parsed :
 
@@ -73,7 +73,7 @@ response parsed :
 00 B2 03 14 00
 response hex    :
 
-response SW1SW2 : 6a 83
+response SW1SW2 : 6a 83 (WRONG_P1_P2_RECORD_NOT_FOUND)
 response ascii  :
 response parsed :
 
@@ -87,7 +87,7 @@ response hex    :
 49 53 41 87 01 02 9f 38 06 9f 1a 02 5f 2a 02 5f
 2d 04 6e 6f 65 6e 9f 11 01 01 9f 12 0c 56 49 53
 41 20 43 6c 61 73 73 69 63
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : o7...#Eg....,P.VISA....8...._*._-.noen.......VISA Classic
 response parsed :
 
@@ -115,7 +115,7 @@ response parsed :
 80 A8 00 00 06 83 04 08 26 08 26
 response hex    :
 80 0a 5c 00 08 01 01 00 08 02 05 01
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : ..\.........
 response parsed :
 
@@ -132,7 +132,7 @@ response hex    :
 11 11 88 88 88 88 82 d1 20 32 01 12 34 56 78 90
 00 0f 5f 20 1a 53 4d 49 54 48 2f 4a 4f 48 4e 20
 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : pM...249500000000000101000000W.T........ 2..4Vx..._ .SMITH/JOHN
 response parsed :
 
@@ -158,7 +158,7 @@ response hex    :
 03 42 03 1f 00 9f 0d 05 f0 20 24 28 00 9f 0e 05
 00 50 80 00 00 9f 0f 05 f0 28 3c f8 00 5f 28 02
 05 78
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : pP_$...1_%....Z.T......._4.................B.A.^.B....... $(.....P.......(<.._(..x
 response parsed :
 
@@ -195,7 +195,7 @@ response hex    :
 9a 03 9c 01 9f 37 04 8d 17 8a 02 9f 02 06 9f 03
 06 9f 1a 02 95 05 5f 2a 02 9a 03 9c 01 9f 37 04
 5f 30 02 02 01 9f 4a 01 82
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : pG.B..x.D...................._*......7................_*......7._0....J..
 response parsed :
 
@@ -248,7 +248,7 @@ eb 25 41 84 5e 4d f8 a3 49 9f 32 01 03 92 24 5b
 c8 f7 38 4c 06 dc dc 35 97 51 d1 d4 31 52 0d f5
 ff 2d 43 47 4a 88 60 3c 9e fc a0 66 6a 1a 42 bd
 f0 a4 f5
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : p.........q...2:......i'm...s....#7..yP...MY..zT.Q....QOD@.+..L8:...r.N..^.i.......&..=r..).}.dF.......j2..d.5,.m.a..../.%'...r...:.E.....i.q.r..%A.^M..I.2...$[..8L...5.Q..1R...-CGJ.`<...fj.B....
 response parsed :
 
@@ -287,7 +287,7 @@ b3 51 f5 e4 66 18 75 1f 0a 5f fb 59 c7 76 1f f1
 a7 06 5e 7a 22 ec 9b d3 a0 06 f2 4d 29 40 9c 22
 88 87 c8 14 2a f1 37 da d9 f8 3c 64 96 32 ce ab
 8b 3c 1c d1 eb 58
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : p.....A|C>....N...k.D...'=.$.4.w.O)..Y...~...s...Q..f.u.._.Y.v..(......a..\ky..+......b....}g..NX&.....q.p..JJ....^z"......M)@."....*.7...<d.2...<...X
 response parsed :
 
@@ -309,7 +309,7 @@ response parsed :
 80 CA 9F 36 00
 response hex    :
 9f 36 02 00 79
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : .6..y
 response parsed :
 
@@ -322,7 +322,7 @@ response parsed :
 80 CA 9F 13 00
 response hex    :
 9f 13 02 00 67
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : ....g
 response parsed :
 
@@ -335,7 +335,7 @@ response parsed :
 80 CA 9F 17 00
 response hex    :
 9f 17 01 03
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : ....
 response parsed :
 
@@ -348,7 +348,7 @@ response parsed :
 80 CA 9F 4F 00
 response hex    :
 
-response SW1SW2 : 6a 81
+response SW1SW2 : 6a 81 (WRONG_P1_P2_FUNCTION_NOT_SUPPORTED)
 response ascii  :
 response parsed :
 
@@ -359,7 +359,7 @@ response parsed :
 00 20 00 80 08 24 12 34 ff ff ff ff ff
 response hex    :
 
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  :
 response parsed :
 
@@ -372,7 +372,7 @@ response hex    :
 6f 2e 84 07 d5 78 00 00 02 10 10 a5 23 50 09 62
 61 6e 6b 61 78 65 70 74 87 01 01 5f 2d 02 6e 6f
 9f 11 01 01 9f 12 09 62 61 6e 6b 61 78 65 70 74
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : o....x......#P.bankaxept..._-.no.......bankaxept
 response parsed :
 
@@ -397,7 +397,7 @@ response parsed :
 80 A8 00 00 02 83 00
 response hex    :
 80 06 18 00 08 01 01 00
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : ........
 response parsed :
 
@@ -416,7 +416,7 @@ response hex    :
 9f 37 04 8d 17 8a 02 9f 02 06 9f 03 06 9f 1a 02
 95 05 5f 2a 02 9a 03 9c 01 9f 37 04 8e 0a 00 00
 00 00 00 00 00 00 02 00 9f 0d 05 b0 40 04 88 00
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : pnZ..xRd.4Vx._4.._$...)W..xRd.4Vx.. 6..4Vx..............._*......7................_*......7.................@...
 response parsed :
 
@@ -460,7 +460,7 @@ response parsed :
 80 CA 9F 36 00
 response hex    :
 9f 36 02 01 73
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : .6..s
 response parsed :
 
@@ -473,7 +473,7 @@ response parsed :
 80 CA 9F 13 00
 response hex    :
 9f 13 02 01 72
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : ....r
 response parsed :
 
@@ -486,7 +486,7 @@ response parsed :
 80 CA 9F 17 00
 response hex    :
 9f 17 01 03
-response SW1SW2 : 90 00
+response SW1SW2 : 90 00 (SUCCESS)
 response ascii  : ....
 response parsed :
 
@@ -499,7 +499,7 @@ response parsed :
 80 CA 9F 4F 00
 response hex    :
 
-response SW1SW2 : 6a 81
+response SW1SW2 : 6a 81 (WRONG_P1_P2_FUNCTION_NOT_SUPPORTED)
 response ascii  :
 response parsed :
 
@@ -529,6 +529,8 @@ Answer To Reset (ATR)
 
          Application
             AID: a1 23 45 67 89 10 10
+               RID: a1 23 45 67 89
+               PIX: 10 10
             Label: VISA
             Preferred Name: VISA Classic
             Application Effective Date: Thu Feb 05 00:00:00 CET 2009
@@ -705,6 +707,8 @@ Answer To Reset (ATR)
 
          Application
             AID: d5 78 00 00 02 10 10
+               RID: d5 78 00 00 02 (Bankaxept [Norway])
+               PIX: 10 10
             Label: bankaxept
             Preferred Name: bankaxept
             Application Expiration Date: Thu Mar 29 00:00:00 CEST 2012

@@ -442,13 +442,16 @@ public class Application implements File {
         //Application Interchange Profile. The tag must represent the AIP available in the current application.
         //The value field of the AIP is to be concatenated to the current end of the input string.
         //The tag and length of the AIP are not included in the concatenation.
-        List<Tag> sdaTagList = this.getStaticDataAuthenticationTagList().getTagList();
-        if (sdaTagList != null && !sdaTagList.isEmpty()) {
-            if (sdaTagList.size() > 1 || sdaTagList.get(0) != EMVTags.APPLICATION_INTERCHANGE_PROFILE) {
-                throw new EMVException("SDA Tag list must contain only the 'Application Interchange Profile' tag: " + sdaTagList);
-            } else {
-                byte[] aipBytes = this.getApplicationInterchangeProfile().getBytes();
-                stream.write(aipBytes, 0, aipBytes.length);
+        StaticDataAuthenticationTagList sdaTagListObject = this.getStaticDataAuthenticationTagList();
+        if(sdaTagListObject != null){
+            List<Tag> sdaTagList = sdaTagListObject.getTagList();
+            if (sdaTagList != null && !sdaTagList.isEmpty()) {
+                if (sdaTagList.size() > 1 || sdaTagList.get(0) != EMVTags.APPLICATION_INTERCHANGE_PROFILE) {
+                    throw new EMVException("SDA Tag list must contain only the 'Application Interchange Profile' tag: " + sdaTagList);
+                } else {
+                    byte[] aipBytes = this.getApplicationInterchangeProfile().getBytes();
+                    stream.write(aipBytes, 0, aipBytes.length);
+                }
             }
         }
 
@@ -477,7 +480,9 @@ public class Application implements File {
 
         String indentStr = Util.getEmptyString(indent + 3);
 
-        pw.println(indentStr + "AID: " + aid);
+        if (aid != null) {
+            aid.dump(pw, indent + 3);
+        }
         pw.println(indentStr + "Label: " + getLabel());
         pw.println(indentStr + "Preferred Name: " + getPreferredName());
         if (applicationEffectiveDate != null) {

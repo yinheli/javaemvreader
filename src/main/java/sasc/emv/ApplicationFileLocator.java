@@ -61,4 +61,11 @@ public class ApplicationFileLocator {
         }
     }
 
+    public static void main(String[] args){
+        byte[] data = Util.fromHexString("08 01 01 00 10 01 05 00 18 01 01 01 18 02 02 00");
+        ApplicationFileLocator afl = new ApplicationFileLocator(data);
+        StringWriter sw = new StringWriter();
+        afl.dump(new PrintWriter(sw), 0);
+        System.out.println(sw.toString());
+    }
 }

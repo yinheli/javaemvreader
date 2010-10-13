@@ -1,0 +1,2 @@
+# RID; Applicant; Country
+D578000002; Bankaxept; Norway

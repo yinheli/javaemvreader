@@ -37,11 +37,11 @@ public class PAN {
         this(Util.byteArrayToHexString(panBytes));
     }
 
-    public PAN(String panStr) {
-        if (panStr.length() < 8 || panStr.length() > 19) {
-            throw new EMVException("Invalid PAN length: " + panStr.length());
+    public PAN(String inputString) {
+        if (inputString.length() < 8) {
+            throw new EMVException("Invalid PAN length: " + inputString.length());
         }
-        this.panStr = panStr;
+        this.panStr = inputString.toUpperCase();
         mii = Short.parseShort(panStr.substring(0, 1));
         iin = Integer.parseInt(panStr.substring(0, 6));
         //The PAN is transferred as 'cn' (compressed numeric):
@@ -53,6 +53,11 @@ public class PAN {
         if(trailingPadIndex != -1){
             panStr = panStr.substring(0, trailingPadIndex);
         }
+        //Check that actual PAN length (without padding, is not longer than 19 digits)
+        if (panStr.length() > 19) {
+            throw new EMVException("Invalid PAN length: " + panStr.length());
+        }
+
         accountNumber = Long.parseLong(panStr.substring(6, panStr.length() - 1));
         valid = PAN.isValidPAN(panStr);
 
@@ -151,5 +156,6 @@ public class PAN {
     public static void main(String[] args) {
         PAN pan = new PAN("5411118888888882");
         System.out.println(pan);
+        System.out.println(new PAN("6737200111111111112f"));
     }
 }

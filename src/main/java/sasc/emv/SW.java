@@ -62,4 +62,8 @@ public enum SW {
     public short getSW(){
         return sw;
     }
+
+    public String getSWString(){
+        return swStr;
+    }
 }

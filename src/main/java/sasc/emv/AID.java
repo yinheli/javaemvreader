@@ -15,7 +15,10 @@
  */
 package sasc.emv;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
+import sasc.RID_DB;
 import sasc.util.Util;
 
 /**
@@ -83,8 +86,24 @@ public class AID {
     }
 
     @Override
-    public String toString() {
-        return Util.prettyPrintHex(getAIDBytes());
+    public String toString(){
+        StringWriter sw = new StringWriter();
+        dump(new PrintWriter(sw), 0);
+        return sw.toString();
+    }
+
+    public void dump(PrintWriter pw, int indent){
+        pw.println(Util.getEmptyString(indent)+"AID: "+Util.prettyPrintHexNoWrap(getAIDBytes()));
+        String indentStr = Util.getEmptyString(indent+3);
+
+        RID ridFromDB = RID_DB.searchRID(rid);
+        String description = "";
+        if (ridFromDB != null) {
+            description = " (" + ridFromDB.getApplicant() + " [" + ridFromDB.getCountry() + "])";
+        }
+
+        pw.println(indentStr+"RID: "+Util.prettyPrintHexNoWrap(rid) + description);
+        pw.println(indentStr+"PIX: "+Util.prettyPrintHexNoWrap(pix));
     }
 
     @Override

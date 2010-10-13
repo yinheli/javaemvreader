@@ -67,7 +67,7 @@ public class ATR {
         pw.println(Util.getEmptyString(indent)+"Answer To Reset (ATR)");
         String indentStr = Util.getEmptyString(indent+3);
         List<String> descriptiveText = ATR_DB.searchATR(atrBytes);
-        pw.println(indentStr+Util.prettyPrintHex(atrBytes));
+        pw.println(indentStr+Util.prettyPrintHexNoWrap(atrBytes));
         if(descriptiveText != null){
             //Just use List/ArrayList.toString(), which prints [value1, value2] according to Javadoc API
             pw.println(indentStr+"Description From Public Database - "+descriptiveText);

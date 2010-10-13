@@ -58,12 +58,14 @@ public class ICCPublicKeyCertificate {
     }
 
     public ICCPublicKey getICCPublicKey() {
-        if(!validationPerformed){
-            validate();
-        }
-        return iccPublicKey;
+        //Don't validate just yet. Perform validation after ALL apprecords have been read
+//        if(!validationPerformed){
+//            validate();
+//        }
+        return iccPublicKey; //never null
     }
 
+    //This method must only be called after ALL application records have been read
     public boolean validate() {
         if (validationPerformed) { //Validation already run
             return isValid();
