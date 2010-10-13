@@ -43,6 +43,7 @@ public class Explorer {
         CardConnection cardConnection = null;
         try {
             TerminalProvider terminalProvider = TerminalAPIManager.getProvider(TerminalAPIManager.SelectionPolicy.ANY_PROVIDER);
+            Log.info(BuildProperties.getProperty("APP_NAME", "JER") + " built on "+BuildProperties.getProperty("BUILD_TIMESTAMP", "N/A"));
             Log.info("Please insert an EMV card into any attached reader.");
             cardConnection = terminalProvider.connectAnyTerminal(); //Waits for card present
 
