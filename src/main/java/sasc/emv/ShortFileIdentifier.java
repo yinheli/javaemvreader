@@ -57,8 +57,8 @@ public class ShortFileIdentifier {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Short File Identifier:");
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "Short File Identifier:");
+        String indentStr = Util.getSpaces(indent + 3);
 
         pw.println(indentStr + sfi + " (" + ShortFileIdentifier.getDescription(sfi) + ")");
 

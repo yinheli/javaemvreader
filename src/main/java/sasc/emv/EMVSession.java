@@ -15,11 +15,21 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.MasterFile;
+import sasc.util.Log;
+import sasc.common.UnsupportedCardException;
+import sasc.iso7816.SmartCardException;
+import sasc.iso7816.BERTLV;
+import sasc.iso7816.AID;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.Collection;
+import sasc.iso7816.Iso7816Commands;
+import sasc.terminal.KnownAIDList;
+import sasc.terminal.KnownAIDList.KnownAID;
 import sasc.terminal.CardResponse;
 import sasc.terminal.TerminalException;
 import sasc.terminal.CardConnection;
-import sasc.terminal.TerminalProfile;
 import sasc.util.Util;
 
 /**
@@ -32,10 +42,8 @@ public class EMVSession {
     private EMVCard currentCard = null;
     private SessionProcessingEnv sessionEnv;
     private CardConnection terminal;
-    //TODO find a better way to verify correct invocation of methods (flow)?
-    boolean cardInitalized = false;
-    boolean appProcessingInitialized = false;
-    boolean appDataRead = false;
+    //TODO find a better way to verify correct invocation of methods (flow)? EMVSessionState?
+    private boolean cardInitalized = false;
 
     public static EMVSession startSession(SessionProcessingEnv env, CardConnection terminal) {
         if (env == null || terminal == null) {
@@ -60,21 +68,52 @@ public class EMVSession {
     public EMVCard initCard() throws TerminalException {
 
         if (cardInitalized) {
-            throw new EMVException("Card already initalized. Create new Session to init new card.");
+            throw new SmartCardException("Card already initalized. Create new Session to init new card.");
         }
 
-        currentCard = new EMVCard(new sasc.terminal.ATR(terminal.getATR()));
+        currentCard = new EMVCard(new sasc.iso7816.ATR(terminal.getATR()));
         Log.debug("terminal: " + terminal);
 
         String command;
         int SW1;
         int SW2;
 
-        if (sessionEnv.readMasterFile()) {
-            //TODO implement MF reading
+        //TODO
+        //if (sessionEnv.yyy()
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException ex) {
+            ex.printStackTrace(System.err);
+            Thread.currentThread().interrupt();
+        }
+
+        if (sessionEnv.getWarmUpCard()) {
+            //Some cards/readers seem to misbehave on the first command 
+            //(maybe due to premature activation after insertion?)
+            //eg if the first command is "select PSE", then the card might
+            //return 6985 (Command not allowed; conditions of use not satisfied)
+            //We try to work around this by sending a "warm up" command to the card
+
+            Log.commandHeader("SELECT FILE NONEXISTINGFILE to warm up the card");
+
+            command = EMVAPDUCommands.selectByDFName(Util.fromHexString("4E 4F 4E 45 58 49 53 54 49 4E 47 46 49 4C 45"));
+
+            CardResponse selectNEFResponse = EMVUtil.sendCmd(terminal, command);
+
+            //Expected result: ?
+
+            SW1 = (byte) selectNEFResponse.getSW1();
+            SW2 = (byte) selectNEFResponse.getSW2();
+
+            //NO-OP
+        }
+
+        //Master file is not used in EMV, but let's see if it exists anyway...
+        if (sessionEnv.getReadMasterFile()) {
+            //TODO implement MF data parsing
             Log.commandHeader("SELECT FILE Master File (if available)");
 
-            command = EMVCommands.selectMasterFile();
+            command = Iso7816Commands.selectMasterFile();
 
             CardResponse selectMFResponse = EMVUtil.sendCmd(terminal, command);
 
@@ -82,30 +121,163 @@ public class EMVSession {
             SW2 = (byte) selectMFResponse.getSW2();
 
             if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
-                //What kind of data is returned by the select MF command?
+                //Do the select MF command ever return any data?
                 MasterFile mf = new MasterFile(selectMFResponse.getData());
                 getCurrentCard().setMasterFile(mf);
+            } else {
+
+                Log.commandHeader("SELECT FILE Master File by identifier (if available)");
+
+                command = Iso7816Commands.selectMasterFileByIdentifier();
+
+                CardResponse selectMFByIdResponse = EMVUtil.sendCmd(terminal, command);
+
+                SW1 = (byte) selectMFByIdResponse.getSW1();
+                SW2 = (byte) selectMFByIdResponse.getSW2();
+
+                if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
+                    //Do the select MF command ever return any data?
+                    MasterFile mf = new MasterFile(selectMFByIdResponse.getData());
+                    getCurrentCard().setMasterFile(mf);
+                }
             }
 
-            Log.commandHeader("SELECT FILE Master File by identifier (if available)");
+            //OK, master file is available. Try to read some known files
+            if (getCurrentCard().getMasterFile() != null) {
 
-            command = EMVCommands.selectMasterFileByIdentifier();
+                //EF.DIR
+                //DIR file (path='3F002F00'). contains a set of BER-TLV data objects
+                Log.commandHeader("SELECT FILE DIR File (if available)");
 
-            CardResponse selectMFByIdResponse = EMVUtil.sendCmd(terminal, command);
+                command = "00 A4 00 00 02 2F 00";
 
-            SW1 = (byte) selectMFByIdResponse.getSW1();
-            SW2 = (byte) selectMFByIdResponse.getSW2();
+                CardResponse selectDIRFileResponse = EMVUtil.sendCmd(terminal, command);
 
-            if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
-                //What kind of data is returned by the select MF command?
-                MasterFile mf = new MasterFile(selectMFByIdResponse.getData());
-                getCurrentCard().setMasterFile(mf);
+                SW1 = (byte) selectDIRFileResponse.getSW1();
+                SW2 = (byte) selectDIRFileResponse.getSW2();
+
+                if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
+                    //Do the select DIR File command ever return any data?
+
+
+                    int sfi = 0; //TODO what sfi to read? from historical bytes??
+
+                    byte recordNum = 1;
+                    do {
+
+                        Log.commandHeader("Send READ RECORD to read all records in SFI " + sfi);
+
+                        command = EMVAPDUCommands.readRecord((int) recordNum, sfi);
+
+                        CardResponse readRecordResponse = EMVUtil.sendCmd(terminal, command);
+
+                        SW1 = (byte) readRecordResponse.getSW1();
+                        SW2 = (byte) readRecordResponse.getSW2();
+
+                        if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
+                            BERTLV tlv = EMVUtil.getNextTLV(new ByteArrayInputStream(readRecordResponse.getData()));
+                            getCurrentCard().getMasterFile().addUnhandledRecord(tlv);
+                        }
+
+                        recordNum++;
+
+                    } while (SW1 == (byte) 0x90 && SW2 == (byte) 0x00); //while SW1SW2 != 6a83
+
+                    //Issue READ RECORDs
+                    //-> 00 b2 01 04 02
+                    //
+                    //<- 61 13 (re-read with length 13)
+                    //
+                    //   90 00
+                    //
+                    //   READ RECORD
+                    //-> 00 b2 01 04 15
+                    //
+                    //#02
+                    //-> 00 b2 02 04 02
+                    //...
+
+
+
+                }
+
+                //ATR file (path='3F002F01'). contains a set of BER-TLV data objects
+                //When the card provides indications in several places, 
+                //the indication valid for a given EF is the closest one to that 
+                //EF within the path from the MF to that EF.
+
+                Log.commandHeader("SELECT FILE ATR File (if available)");
+
+                command = "00 A4 00 00 02 2F 01";
+
+                CardResponse selectATRFileResponse = EMVUtil.sendCmd(terminal, command);
+
+                SW1 = (byte) selectATRFileResponse.getSW1();
+                SW2 = (byte) selectATRFileResponse.getSW2();
+
+                if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
+                    //Do the select ATR File command ever return any data?
+
+
+                    int sfi = 0; //TODO what sfi to read? from historical bytes?
+
+                    byte recordNum = 1;
+                    do {
+
+                        Log.commandHeader("Send READ RECORD to read all records in SFI " + sfi);
+
+                        command = EMVAPDUCommands.readRecord((int) recordNum, sfi);
+
+                        CardResponse readRecordResponse = EMVUtil.sendCmd(terminal, command);
+
+                        SW1 = (byte) readRecordResponse.getSW1();
+                        SW2 = (byte) readRecordResponse.getSW2();
+
+                        if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
+                            BERTLV tlv = EMVUtil.getNextTLV(new ByteArrayInputStream(readRecordResponse.getData()));
+                            getCurrentCard().getMasterFile().addUnhandledRecord(tlv);
+                        }
+
+                        recordNum++;
+
+                    } while (SW1 == (byte) 0x90 && SW2 == (byte) 0x00); //while SW1SW2 != 6a83
+
+                }
+
+
+                //TODO are these proprietary? or part of the master file?
+                //            Select EMVApplication Directory File (7F10)
+                //            00A40000027F10
+                //
+                //            Select Cyclic File (6E00)
+                //            00A40000026E00
             }
+
         }
+
+        /*
+        The terminal has a list containing the EMVApplication Identifier (AID) of
+        every EMV application that it is configured to support, and the terminal
+        must generate a candidate list of applications that are supported by
+        both the terminal and card. The terminal may attempt to obtain a
+        directory listing of all card applications from the card's PSE. If this
+        is not supported or fails to find a match, the terminal must iterate
+        through its list asking the card whether it supports each individual AID.
+        
+        If there are multiple applications in the completed candidate list,
+        or the application requires it, then the cardholder will be asked to
+        choose an application; otherwise it may be automatically selected
+         */
+
+
+        //First, try the "Payment System Directory selection method".
+        //if that fails, try direct selection by using a terminal resident list of supported AIDs
+
+        //TODO try to select the  PPSE (Proximity Payment System Environment) 2PAY.SYS.DDF01 ?
 
         Log.commandHeader("SELECT FILE 1PAY.SYS.DDF01 to get the PSE directory");
 
-        command = EMVCommands.selectPSE();
+        command = EMVAPDUCommands.selectPSE();
 
         CardResponse selectPSEdirResponse = EMVUtil.sendCmd(terminal, command);
 
@@ -139,9 +311,9 @@ public class EMVSession {
 
                 Log.commandHeader("Send READ RECORD to read all records in SFI " + sfi);
 
-                command = EMVCommands.readRecord((int) recordNum, sfi);
+                command = EMVAPDUCommands.readRecord((int) recordNum, sfi);
 
-                CardResponse selectReadRecordResponse = EMVUtil.sendCmd(terminal, command);
+                CardResponse readRecordResponse = EMVUtil.sendCmd(terminal, command);
 
                 //Example Response from the command above:
 
@@ -157,52 +329,147 @@ public class EMVSession {
                 //                  02
 
 
-                SW1 = (byte) selectReadRecordResponse.getSW1();
-                SW2 = (byte) selectReadRecordResponse.getSW2();
+                SW1 = (byte) readRecordResponse.getSW1();
+                SW2 = (byte) readRecordResponse.getSW2();
 
                 if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
-                    EMVUtil.parsePSERecord(selectReadRecordResponse.getData(), currentCard);
+                    EMVUtil.parsePSERecord(readRecordResponse.getData(), currentCard);
                 }
 
                 recordNum++;
 
             } while (SW1 == (byte) 0x90 && SW2 == (byte) 0x00); //while SW1SW2 != 6a83
 
-        } else {
-            //TODO
-            //An ICC need not contain PSE. Direct selection of Application might be used on some cards.
-            //For now we only support the PSE method
+        } else { // SW1SW2 = 6a81
+            //An ICC need not contain PSE. Direct selection of EMVApplication might be used on some cards.
             //PSE alternatives (EMV book 1 page 161)
-            throw new UnsupportedCardException("Unsupported card. PSE '1PAY.SYS.DDF01' not found");
+
+            Log.info("No PSE found. Attempting direct selection by AID to generate candidate list");
+
+            Collection<KnownAID> terminalCandidateList = KnownAIDList.getAIDs();
+
+            for (KnownAID terminalAIDCandidate : terminalCandidateList) {
+
+                //ICC support for the selection of a DF file using only a 
+                //partial DF name is not mandatory. However, if the ICC does 
+                //support partial name selection, it shall comply with the following:
+                //*If, after a DF file has been successfully selected, the terminal 
+                //repeats the SELECT command having P2 set to the Next Occurrence 
+                //option (see Table 42) and with the same partial DF name, the card 
+                //shall select a different DF file matching the partial name, 
+                //if such other DF file exists.
+                //Repeated issuing of the same command with no intervening application 
+                //level commands shall retrieve all such files, but shall retrieve 
+                //no file twice.
+                //After all matching DF files have been selected, repeating the same 
+                //command again shall result in no file being selected, and the card 
+                //shall respond with SW1 SW2 = '6A82' (file not found).
+
+
+                Log.commandHeader("Direct selection of Application to generate candidate list");
+                command = EMVAPDUCommands.selectByDFName(terminalAIDCandidate.getAID().getAIDBytes());
+                CardResponse selectAppResponse = EMVUtil.sendCmd(terminal, command);
+
+                //TODO merge data if AID already found (to prevent PARTIAL AID being listed as app in EMV card dump)
+                
+                if (selectAppResponse.getSW() == SW.WRONG_P1_P2_FUNCTION_NOT_SUPPORTED.getSW()) { //6a81
+                    throw new SmartCardException("'SELECT File using DF name = AID' not supported");
+                } else if (selectAppResponse.getSW() == SW.SELECTED_FILE_INVALIDATED.getSW()) {
+                    //App blocked
+                    Log.info("Application BLOCKED");
+                } else if (selectAppResponse.getSW() == SW.SUCCESS.getSW()) {
+
+                    if (terminalAIDCandidate.partialMatchAllowed()) {
+                        Log.debug("Partial match allowed. Selecting next occurrence");
+                        //TODO save record data from partial selection (eg 9f65)
+                        
+                        //TODO check this
+                        EMVApplication appCand2 = new EMVApplication();
+                        EMVUtil.parseFCIADF(selectAppResponse.getData(), appCand2);
+                        currentCard.addApplication(appCand2);
+                        //END TODO
+                        
+                        boolean hasNextOccurrence = true;
+                        while (hasNextOccurrence) {
+                            command = EMVAPDUCommands.selectByDFNameNextOccurrence(terminalAIDCandidate.getAID().getAIDBytes());
+                            selectAppResponse = EMVUtil.sendCmd(terminal, command);
+                            Log.debug("Select next occurrence SW: "+Util.short2Hex(selectAppResponse.getSW()) + " " + Util.short2Hex(SW.WRONG_P1_P2_FILE_NOT_FOUND.getSW()));
+                            if (selectAppResponse.getSW() == SW.WRONG_P1_P2_FUNCTION_NOT_SUPPORTED.getSW()) { //6a81
+                                throw new SmartCardException("'SELECT File using DF name = AID' not supported");
+                            } else if (selectAppResponse.getSW() == SW.SELECTED_FILE_INVALIDATED.getSW()) {
+                                //App blocked
+                                Log.info("Application BLOCKED");
+                            } else if (selectAppResponse.getSW() == SW.WRONG_P1_P2_FILE_NOT_FOUND.getSW()) {
+                                hasNextOccurrence = false;
+                                Log.debug("No more occurrences");
+                            } else if (selectAppResponse.getSW() == SW.SUCCESS.getSW()) {
+
+                                EMVApplication appCandidate = new EMVApplication();
+                                appCandidate.setAID(terminalAIDCandidate.getAID());
+                                try {
+                                    EMVUtil.parseFCIADF(selectAppResponse.getData(), appCandidate); //Check if FCI can be parsed (if the app is a valid EMV app)
+                                    EMVApplication app = new EMVApplication(); //HACK: Fresh new application with just AID. FCI ADF will be parsed again later on AID select
+                                    app.setAID(terminalAIDCandidate.getAID());
+                                    currentCard.addApplication(app);
+                                } catch (SmartCardException parseEx) {
+                                    //The application is not a valid EMV app
+                                    Log.info("Unable to parse FCI ADF for AID=" + terminalAIDCandidate.getAID() + ". Skipping");
+                                }
+                            }
+
+                        }
+                    } else {
+
+                        EMVApplication appCandidate = new EMVApplication();
+                        appCandidate.setAID(terminalAIDCandidate.getAID());
+                        try {
+                            EMVUtil.parseFCIADF(selectAppResponse.getData(), appCandidate); //Check if FCI can be parsed (if the app is a valid EMV app)
+                            EMVApplication app = new EMVApplication(); //HACK: Fresh new application with just AID. FCI ADF will be parsed again later on AID select
+                            app.setAID(terminalAIDCandidate.getAID());
+                            currentCard.addApplication(app);
+                        } catch (SmartCardException parseEx) {
+                            //The application is not a valid EMV app
+                            Log.info("Unable to parse FCI ADF for AID=" + terminalAIDCandidate.getAID() + ". Skipping");
+                        }
+                    }
+                }
+            }
         }
+
+        if (currentCard.getApplications().isEmpty()) { //Never null
+            throw new UnsupportedCardException("No PSE '1PAY.SYS.DDF01' or application(s) found. Might not be an EMV card");
+        }
+
         cardInitalized = true;
         return currentCard;
     }
 
-    public void selectApplication(Application app) throws TerminalException {
+    public void selectApplication(EMVApplication app) throws TerminalException {
 
         if (app == null) {
             throw new IllegalArgumentException("Parameter 'app' cannot be null");
         }
         if (!cardInitalized) {
-            throw new EMVException("Card not initialized. Call initCard() first");
+            throw new SmartCardException("Card not initialized. Call initCard() first");
         }
-        Application currentSelectedApp = currentCard.getSelectedApplication();
+        EMVApplication currentSelectedApp = currentCard.getSelectedApplication();
         if (currentSelectedApp != null && app.getAID().equals(currentSelectedApp.getAID())) {
-            throw new EMVException("Application already selected. AID: " + app.getAID());
+            throw new SmartCardException("Application already selected. AID: " + app.getAID());
         }
 
         AID aid = app.getAID();
         String command;
 
         Log.commandHeader("Select application by AID");
-        command = EMVCommands.select(aid.getAIDBytes());
+        command = EMVAPDUCommands.selectByDFName(aid.getAIDBytes());
 
         CardResponse selectAppResponse = EMVUtil.sendCmd(terminal, command);
 
         if (selectAppResponse.getSW() == SW.SELECTED_FILE_INVALIDATED.getSW()) {
             //App blocked
-            throw new EMVException("Application " + Util.byteArrayToHexString(aid.getAIDBytes()) + " blocked");
+            Log.info("Application BLOCKED");
+            //TODO abort execution if app blocked?
+            //throw new SmartCardException("EMVApplication " + Util.byteArrayToHexString(aid.getAIDBytes()) + " blocked");
         }
 
         EMVUtil.parseFCIADF(selectAppResponse.getData(), app);
@@ -255,13 +522,13 @@ public class EMVSession {
 
     public void initiateApplicationProcessing() throws TerminalException {
 
-        Application app = currentCard.getSelectedApplication();
+        EMVApplication app = currentCard.getSelectedApplication();
 
         if (app == null) {
-            throw new EMVException("No application selected. Call selectApplication(Application) first");
+            throw new SmartCardException("No application selected. Call selectApplication(Application) first");
         }
         if (app.isInitializedOnICC()) {
-            throw new EMVException("Application already initialized for processing. AID=" + app.getAID());
+            throw new SmartCardException("Application already initialized for processing. AID=" + app.getAID());
         }
 
 
@@ -278,14 +545,7 @@ public class EMVSession {
 
         DOL pdol = app.getPDOL();
 
-        if (pdol != null && pdol.getTagAndLengthList().size() > 0) {
-            byte[] pdolResponseData = TerminalProfile.constructDOLResponse(pdol);
-            command = "80 A8 00 00";
-            command += " " + Util.int2Hex(pdolResponseData.length + 2) + " 83 " + Util.int2Hex(pdolResponseData.length);
-            command += " " + Util.prettyPrintHexNoWrap(pdolResponseData);
-        } else {
-            command = "80 A8 00 00 02 83 00";
-        }
+        command = EMVAPDUCommands.getProcessingOpts(pdol);
 
         CardResponse getProcessingOptsResponse = EMVUtil.sendCmd(terminal, command);
 
@@ -296,66 +556,75 @@ public class EMVSession {
 
             EMVUtil.parseProcessingOpts(getProcessingOptsResponse.getData(), app);
             app.setInitializedOnICC();
-        }
-    }
+//    }
+//
+//    //TODO:
+//    //The Read EMVApplication Data function is performed immediately following the Initiate EMVApplication Processing function
+//    //...so is there any point in having 2 methods? merge this into initializeAppProcessing() ?
+//    public void readApplicationData() throws TerminalException {
+//
+//        EMVApplication app = currentCard.getSelectedApplication();
+//
+//        verifyAppInitialized(app);
+//
+//        String command;
+//        int SW1;
+//        int SW2;
 
-    //TODO:
-    //The Read Application Data function is performed immediately following the Initiate Application Processing function
-    //...so is there any point in having 2 methods? merge this into initializeAppProcessing() ?
-    public void readApplicationData() throws TerminalException {
+            //read all the records indicated in the AFL
+            for (ApplicationElementaryFile aef : app.getApplicationFileLocator().getApplicationElementaryFiles()) {
+                int startRecordNumber = aef.getStartRecordNumber();
+                int endRecordNumber = aef.getEndRecordNumber();
 
-        Application app = currentCard.getSelectedApplication();
+                for (int recordNum = startRecordNumber; recordNum <= endRecordNumber; recordNum++) {
+                    Log.commandHeader("Send READ RECORD to read SFI " + aef.getSFI().getValue() + " record " + recordNum);
 
-        verifyAppInitialized(app);
+                    command = EMVAPDUCommands.readRecord(recordNum, aef.getSFI().getValue());
 
-        String command;
-        int SW1;
-        int SW2;
+                    CardResponse readAppDataResponse = EMVUtil.sendCmd(terminal, command);
 
-        //read all the records indicated in the AFL
-        for (ApplicationElementaryFile aef : app.getApplicationFileLocator().getApplicationElementaryFiles()) {
-            int startRecordNumber = aef.getStartRecordNumber();
-            int endRecordNumber = aef.getEndRecordNumber();
+                    SW1 = (byte) readAppDataResponse.getSW1();
+                    SW2 = (byte) readAppDataResponse.getSW2();
 
-            for (int recordNum = startRecordNumber; recordNum <= endRecordNumber; recordNum++) {
-                Log.commandHeader("Send READ RECORD to read SFI " + aef.getSFI().getValue() + " record " + recordNum);
+                    if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
 
-                command = EMVCommands.readRecord(recordNum, aef.getSFI().getValue());
-
-                CardResponse readAppDataResponse = EMVUtil.sendCmd(terminal, command);
-
-                SW1 = (byte) readAppDataResponse.getSW1();
-                SW2 = (byte) readAppDataResponse.getSW2();
-
-                if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
-
-                    EMVUtil.parseAppRecord(readAppDataResponse.getData(), app);
-                    boolean isInvolvedInOfflineDataAuthentication = (recordNum - startRecordNumber + 1) <= aef.getNumRecordsInvolvedInOfflineDataAuthentication();
-                    Record record = new Record(readAppDataResponse.getData(), recordNum, isInvolvedInOfflineDataAuthentication);
-                    aef.setRecord(recordNum, record);
-                } else {
-                    //Any SW1 SW2 other than '9000' passed to the application layer as a result
-                    //of reading any record shall cause the transaction to be terminated [spec]
-                    throw new EMVException("Reading application data failed for SFI " + aef.getSFI().getValue() + " Record Number: " + recordNum);
+                        EMVUtil.parseAppRecord(readAppDataResponse.getData(), app);
+                        boolean isInvolvedInOfflineDataAuthentication = (recordNum - startRecordNumber + 1) <= aef.getNumRecordsInvolvedInOfflineDataAuthentication();
+                        Record record = new Record(readAppDataResponse.getData(), recordNum, isInvolvedInOfflineDataAuthentication);
+                        aef.setRecord(recordNum, record);
+                    } else {
+                        //Any SW1 SW2 other than '9000' passed to the application layer as a result
+                        //of reading any record shall cause the transaction to be terminated [spec]
+                        throw new SmartCardException("Reading application data failed for SFI " + aef.getSFI().getValue() + " Record Number: " + recordNum);
+                    }
                 }
+
             }
+            app.setAllAppRecordsInAFLRead();
 
+
+            //After receiving the GET PROCESSING OPTIONS C-APDU, the card application checks whether the flow conditions
+            //needed to process this command are fulfilled.
+            //-First, it checks that there is currently an application selected in the card
+            //-Second, the card checks that this is the first time in the current card session that the terminal issues
+            // the GET PROCESSING OPTIONS command
+            //
+            //If any of these conditions are not respected, the card responds with SW1SW2=6985 ("Command not allowed; conditions of use not satisfied")
+
+
+            //(page 98 book 3):
+            //After all records identified by the AFL have been processed,
+            //the Static Data Authentication Tag List is processed, if it exists.
+            //If the Static Data Authentication Tag List exists, it shall contain
+            //only the tag for the EMVApplication Interchange Profile.
         }
-
-        //After recieving the GET PROCESSING OPTIONS C-APDU, the card application checks whether the flow conditions
-        //needed to process this command are fulfilled.
-        //-First, it checks that there is currently an application selected in the card
-        //-Second, the card checks that this is the first time in the current card session that the terminal issues
-        // the GET PROCESSING OPTIONS command
-        //
-        //If any of these conditions are not respected, the card responds with SW1SW2=6985 ("Command not allowed; conditions of use not satisfied")
-
     }
 
     //TODO this method is just for testing. Must be merged into some AUTHENTICATE/TRANSACTION method
+    //make "private"
     public void getChallenge() throws TerminalException {
 
-        Application app = currentCard.getSelectedApplication();
+        EMVApplication app = currentCard.getSelectedApplication();
 
         verifyAppInitialized(app);
 
@@ -364,19 +633,38 @@ public class EMVSession {
 //        int SW2;
 
         Log.commandHeader("GET CHALLENGE");
-        command = EMVCommands.getChallenge();
+        command = EMVAPDUCommands.getChallenge();
 
-        CardResponse getChallengeResponse = EMVUtil.sendCmd(terminal, command);
+        //TODO test RNG speed bits/sec
+//        int NUM_ROUNDS = 100;
+//        int numBytes = 0;
+//        long start = System.nanoTime();
+//        for(int i=0; i<NUM_ROUNDS; i++){
+//            CardResponse getChallengeResponse = EMVUtil.sendCmdNoParse(terminal, command);
+//            numBytes += getChallengeResponse.getData().length;
+//        }
+//        long time = System.nanoTime() - start;
+//        double secs = time/1000000000;
+//        int numBits = numBytes*8;
+//        
+//        double bitsPrSec = numBits/secs;
+//        System.out.println("time: "+time+"ns");
+//        System.out.println("secs: "+secs);
+//        System.out.println("numBits: "+numBits);
+//        System.out.println("Bits/sec: "+bitsPrSec);
+        
+        //Parse raw bytes only, no BERTLV
+        CardResponse getChallengeResponse = EMVUtil.sendCmdNoParse(terminal, command);
     }
 
     public void verifyPIN(int pin, boolean transmitInPlaintext) throws TerminalException {
 
-        Application app = currentCard.getSelectedApplication();
+        EMVApplication app = currentCard.getSelectedApplication();
 
         verifyAppInitialized(app);
 
         String command;
-        command = EMVCommands.verifyPIN(pin, transmitInPlaintext);
+        command = EMVAPDUCommands.verifyPIN(pin, transmitInPlaintext);
         Log.commandHeader("VERIFY (PIN)");
 
         CardResponse verifyResponse = EMVUtil.sendCmd(terminal, command);
@@ -384,7 +672,7 @@ public class EMVSession {
         //TODO handle correctly
         if (verifyResponse.getSW() != SW.SUCCESS.getSW()) {
             if (verifyResponse.getSW() == SW.COMMAND_NOT_ALLOWED_AUTHENTICATION_METHOD_BLOCKED.getSW()) {
-                throw new EMVException("No more retries left. CVM blocked");
+                throw new SmartCardException("No more retries left. CVM blocked");
             }
             if (verifyResponse.getSW1() == (byte) 0x63 && (verifyResponse.getSW2() & 0xF0) == (byte) 0xC0) {
                 int numRetriesLeft = (verifyResponse.getSW2() & 0x0F);
@@ -394,26 +682,48 @@ public class EMVSession {
 
     }
 
-    private void verifyAppInitialized(Application app) {
+    private void verifyAppInitialized(EMVApplication app) {
         if (app == null) {
-            throw new EMVException("No application selected. Call selectApplication(Application) and initializeApplicationProcessing() first");
+            throw new SmartCardException("No application selected. Call selectApplication(Application) and initializeApplicationProcessing() first");
         }
         if (!app.isInitializedOnICC()) {
-            throw new EMVException("Application not initialized on ICC initializeApplicationProcessing() first");
+            throw new SmartCardException("Application not initialized on ICC initializeApplicationProcessing() first");
         }
     }
 
-    //TODO (page 98 book 3):
-    //After all records identified by the AFL have been processed,
-    //the Static Data Authentication Tag List is processed, if it exists.
-    //If the Static Data Authentication Tag List exists, it shall contain
-    //only the tag for the Application Interchange Profile.
+    private void verifyAllAppRecordsInAFLRead(EMVApplication app) {
+        if (app == null) {
+            throw new SmartCardException("No application selected. Call selectApplication(Application) and initializeApplicationProcessing() first");
+        }
+        if (!app.isAllAppRecordsInAFLRead()) {
+            throw new SmartCardException("Records indicated in the Application File Locator have not been read.");
+        }
+    }
+
+    private void verifyDDASupported(EMVApplication app) {
+        if (app == null) {
+            throw new SmartCardException("No application selected. Call selectApplication(Application) and initializeApplicationProcessing() first");
+        }
+        if (!app.getApplicationInterchangeProfile().isDDASupported()) {
+            throw new SmartCardException("DDA not supported. Cannot perform INTERNAL AUTHENTICATE");
+        }
+        if (app.getICCPublicKeyCertificate() == null) {
+            throw new SmartCardException("DDA supported, but no ICC Public Key Certificate found");
+        }
+        //Do not validate ICCPK Certificate here, as we might want to test INTERNAL AUTHENTICATE regardless of they ICCPK's validity
+        //(for a production ready EMV terminal, we would want to validate the cert though)
+
+    }
+
     //TODO not implemented yet
+    //TODO call this method at the appropriate stage (when Terminal/ICC indicates DDA should be performed)
     public void internalAuthenticate() throws TerminalException {
 
-        Application app = currentCard.getSelectedApplication();
+        EMVApplication app = currentCard.getSelectedApplication();
 
         verifyAppInitialized(app);
+        verifyAllAppRecordsInAFLRead(app);
+        verifyDDASupported(app);
 
         String command;
         int SW1;
@@ -421,34 +731,54 @@ public class EMVSession {
 
         Log.commandHeader("Send INTERNAL AUTHENTICATE command");
 
-        String challenge = Util.prettyPrintHexNoWrap(Util.generateRandomBytes(4));
-
-        //TODO
         byte[] authenticationRelatedData = null; //data according to DDOL
 
-        command = EMVCommands.internalAuthenticate(authenticationRelatedData);
+        DOL ddol = app.getDDOL();
+        if (ddol != null) {
+            authenticationRelatedData = EMVTerminalProfile.constructDOLResponse(ddol);
+        }
+        if (authenticationRelatedData == null) {
+            authenticationRelatedData = EMVTerminalProfile.getDefaultDDOLResponse();
+        }
+
+        command = EMVAPDUCommands.internalAuthenticate(authenticationRelatedData);
         //The data field of the command message contains the authentication-related data proprietary to an application. It is coded according to the DDOL as defined in Book 2.
 
-        //The response contains the "Signed Dynamic Application Data"
+        //The response contains the "Signed Dynamic EMVApplication Data"
         //See Table 15, book 2 (page 79)
         CardResponse internalAuthenticateResponse = EMVUtil.sendCmd(terminal, command);
 
-        //TODO parse "Signed Dynamic Application Data"
+        SW1 = (byte) internalAuthenticateResponse.getSW1();
+        SW2 = (byte) internalAuthenticateResponse.getSW2();
 
+        if (SW1 == (byte) 0x90 && SW2 == (byte) 0x00) {
+            if (app.getSignedDynamicApplicationData() != null) {
+                throw new SmartCardException("Signed Dynamic Application Data exists. DDA already performed?");
+            }
+            SignedDynamicApplicationData sdad = SignedDynamicApplicationData.parseSignedData(internalAuthenticateResponse.getData(), app.getICCPublicKeyCertificate().getICCPublicKey(), authenticationRelatedData);
+
+            app.setSignedDynamicApplicationData(sdad);
+            
+        }
     }
 
-    //TODO
-    public void externalAuthenticate() throws TerminalException {
+    /**
+     * 
+     * @param cryptogram mandatory 8 bytes from issuer
+     * @param proprietaryData optional 1-8 bytes (proprietary)
+     * @throws TerminalException 
+     */
+    public void externalAuthenticate(byte[] cryptogram, byte[] proprietaryData) throws TerminalException {
 
-        Application app = currentCard.getSelectedApplication();
+        EMVApplication app = currentCard.getSelectedApplication();
 
         verifyAppInitialized(app);
 
         String command;
 
         Log.commandHeader("Send EXTERNAL AUTHENTICATE command");
-
-        command = EMVCommands.externalAuthenticate(null, null);
+        
+        command = EMVAPDUCommands.externalAuthenticate(cryptogram, proprietaryData);
         CardResponse externalAuthenticateResponse = EMVUtil.sendCmd(terminal, command);
         //No data field is returned in the response message
         //'9000' indicates a successful execution of the command.
@@ -456,19 +786,66 @@ public class EMVSession {
 
         if (externalAuthenticateResponse.getSW() != SW.SUCCESS.getSW()) {
             if (externalAuthenticateResponse.getSW() == SW.AUTHENTICATION_FAILED.getSW()) {
-                throw new EMVException("Issuer authentication failed");
+                throw new SmartCardException("Issuer authentication failed");
             }
-            throw new EMVException("Unexpected response: " + Util.short2Hex(externalAuthenticateResponse.getSW()));
+            throw new SmartCardException("Unexpected response: " + Util.short2Hex(externalAuthenticateResponse.getSW()));
         }
     }
 
-    public void generateAC() throws TerminalException {
-        throw new UnsupportedOperationException("Not implemented yet");
+    public void generateAC(byte[] iccDynamicNumber) throws TerminalException {
+        /*
+        p1
+        0x00 = AAC = reject transaction (EMVApplication Authentication Cryptogram)
+        0x40 = TC = proceed offline (Transaction Certificate)
+        0x80 = ARQC = go online (Authorisation Request Cryptogram)
+        +
+        0x00 = CDA signature not requested
+        0x10 = CDA signature requested
+        */
+ 
+        EMVApplication app = currentCard.getSelectedApplication();
+
+        verifyAppInitialized(app);
+
+        String command;
+
+        Log.commandHeader("Send GENERATE APPLICATION CRYPTOGRAM command");
+        
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        byte[] authorizedAmount = Util.fromHexString("00 00 00 00 00 01");
+        byte[] secondaryAmount = Util.fromHexString("00 00 00 00 00 00");
+        byte[] tvr = Util.fromHexString("00 00 00 00 00");
+        byte[] transactionCurrencyCode = Util.fromHexString("09 78");
+        byte[] transactionDate = Util.fromHexString("09 07 30");
+        byte[] transactionType = Util.fromHexString("21");
+        byte[] terminalUnpredictableNumber = Util.generateRandomBytes(4);
+        //iccDynamicNumber
+        byte[] dataAuthCode = app.getSignedStaticApplicationData().getDataAuthenticationCode();
+        
+        buf.write(authorizedAmount, 0, authorizedAmount.length);
+        buf.write(secondaryAmount, 0, secondaryAmount.length);
+        buf.write(tvr, 0, tvr.length);
+        buf.write(transactionCurrencyCode, 0, transactionCurrencyCode.length);
+        buf.write(transactionDate, 0, transactionDate.length);
+        buf.write(transactionType, 0, transactionType.length);
+        buf.write(terminalUnpredictableNumber, 0, terminalUnpredictableNumber.length);
+        buf.write(iccDynamicNumber, 0, iccDynamicNumber.length);
+        buf.write(dataAuthCode, 0, dataAuthCode.length);
+
+        command = EMVAPDUCommands.generateAC((byte)0x40, buf.toByteArray());
+        CardResponse generateACResponse = EMVUtil.sendCmd(terminal, command);
+        //'9000' indicates a successful execution of the command.
+
+        if (generateACResponse.getSW() != SW.SUCCESS.getSW()) {
+            throw new SmartCardException("Unexpected response: " + Util.short2Hex(generateACResponse.getSW()));
+        }else{
+            //TODO
+        }
     }
 
     public void readAdditionalData() throws TerminalException {
 
-        Application app = currentCard.getSelectedApplication();
+        EMVApplication app = currentCard.getSelectedApplication();
 
         verifyAppInitialized(app);
 
@@ -477,7 +854,7 @@ public class EMVSession {
         int SW2;
 
         Log.commandHeader("Send GET DATA command to find the Application Transaction Counter (ATC)");
-        command = "80 CA 9F 36 00";
+        command = EMVAPDUCommands.getApplicationTransactionCounter();
         CardResponse getDataATCResponse = EMVUtil.sendCmd(terminal, command);
 
         SW1 = (byte) getDataATCResponse.getSW1();
@@ -489,7 +866,7 @@ public class EMVSession {
         }
 
         Log.commandHeader("Send GET DATA command to find the Last Online ATC Register");
-        command = "80 CA 9F 13 00";
+        command = EMVAPDUCommands.getLastOnlineATCRegister();
         CardResponse getDataLastOnlineATCRegisterResponse = EMVUtil.sendCmd(terminal, command);
 
         SW1 = (byte) getDataLastOnlineATCRegisterResponse.getSW1();
@@ -502,7 +879,7 @@ public class EMVSession {
         }
 
         Log.commandHeader("Send GET DATA command to find the PIN Try Counter");
-        command = "80 CA 9F 17 00";
+        command = EMVAPDUCommands.getPINTryConter();
         CardResponse getDataPINTryCounterResponse = EMVUtil.sendCmd(terminal, command);
 
         SW1 = (byte) getDataPINTryCounterResponse.getSW1();
@@ -514,9 +891,9 @@ public class EMVSession {
         }
 
         //If the Log Entry data element is present in the FCI Issuer Discretionary Data,
-        //then get the Log Format (and continue on reading the log records...)
+        //then get the Log Format (and proceed to read the log records...)
         Log.commandHeader("Send GET DATA command to find the Log Format");
-        command = "80 CA 9F 4F 00";
+        command = EMVAPDUCommands.getLogFormat();
         CardResponse getDataLogFormatResponse = EMVUtil.sendCmd(terminal, command);
 
         SW1 = (byte) getDataLogFormatResponse.getSW1();
@@ -526,19 +903,20 @@ public class EMVSession {
             BERTLV tlv = EMVUtil.getNextTLV(new ByteArrayInputStream(getDataLogFormatResponse.getData()));
             app.setLogFormat(new LogFormat(tlv.getValueBytes()));
 
+            //TODO
             //Log Entry data element should be located in the FCI Issuer Discretionary Data
             //If it is not, then the app does not support transaction logging.
 
             //TODO
 //            if(app.getLogEntry != null){
-                readTransactionLog(app);
+            readTransactionLog(app);
 //            }
 
         }
     }
 
     //TODO
-    private void readTransactionLog(Application app) throws TerminalException{
+    private void readTransactionLog(EMVApplication app) throws TerminalException {
 //        //read all the log records
 //        for (ApplicationElementaryFile aef : app.getApplicationFileLocator().getApplicationElementaryFiles()) {
 //            int startRecordNumber = aef.getStartRecordNumber();
@@ -547,7 +925,7 @@ public class EMVSession {
 //            for (int recordNum = startRecordNumber; recordNum <= endRecordNumber; recordNum++) {
 //                Log.commandHeader("Send READ RECORD to read SFI " + aef.getSFI().getValue() + " record " + recordNum);
 //
-//                command = EMVCommands.readRecord(recordNum, aef.getSFI().getValue());
+//                command = EMVAPDUCommands.readRecord(recordNum, aef.getSFI().getValue());
 //
 //                CardResponse readAppDataResponse = EMVUtil.sendCmd(terminal, command);
 //
@@ -563,7 +941,7 @@ public class EMVSession {
 //                } else {
 //                    //Any SW1 SW2 other than '9000' passed to the application layer as a result
 //                    //of reading any record shall cause the transaction to be terminated [spec]
-//                    throw new EMVException("Reading application data failed for SFI " + aef.getSFI().getValue() + " Record Number: " + recordNum);
+//                    throw new SmartCardException("Reading application data failed for SFI " + aef.getSFI().getValue() + " Record Number: " + recordNum);
 //                }
 //            }
 //
@@ -572,10 +950,10 @@ public class EMVSession {
 
     public void bruteForceRecords() throws TerminalException {
 
-        Application app = currentCard.getSelectedApplication();
+        EMVApplication app = currentCard.getSelectedApplication();
 
         if (app == null) {
-            throw new EMVException("No application selected. Call selectApplication(Application) and initializeApplicationProcessing() first");
+            throw new SmartCardException("No application selected. Call selectApplication(Application) and initializeApplicationProcessing() first");
         }
 
         String command;
@@ -593,7 +971,7 @@ public class EMVSession {
 
             for (int recordNum = 1; recordNum <= 255; recordNum++) {
 
-                command = EMVCommands.readRecord(recordNum, sfi);
+                command = EMVAPDUCommands.readRecord(recordNum, sfi);
 
                 CardResponse readRecordsResponse = EMVUtil.sendCmd(terminal, command);
 
@@ -608,8 +986,7 @@ public class EMVSession {
                     numRecordsFound++;
                 }
             }
-
         }
-        System.out.println("Number of Records found: "+numRecordsFound);
+        System.out.println("Number of Records found: " + numRecordsFound);
     }
 }

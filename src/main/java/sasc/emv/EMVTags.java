@@ -15,6 +15,10 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.TagValueType;
+import sasc.iso7816.TagImpl;
+import sasc.iso7816.Tag;
+import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import sasc.util.ByteArrayWrapper;
@@ -39,7 +43,6 @@ import sasc.util.ByteArrayWrapper;
 public class EMVTags {
 
     private static LinkedHashMap<ByteArrayWrapper, Tag> tags = new LinkedHashMap<ByteArrayWrapper, Tag>();
-
     //One byte tags
     public static final Tag ISSUER_IDENTIFICATION_NUMBER            = new TagImpl("42", TagValueType.NUMERIC, "Issuer Identification Number (IIN)", "The number that identifies the major industry and the card issuer and that forms the first part of the Primary Account Number (PAN)");
     public static final Tag AID_CARD                                = new TagImpl("4f", TagValueType.BINARY, "Application Identifier (AID) - card", "Identifies the application as described in ISO/IEC 7816-5");
@@ -163,10 +166,41 @@ public class EMVTags {
     public static final Tag LOG_FORMAT                              = new TagImpl("9f4f", TagValueType.BINARY, "Log Format", "List (in tag and length format) of data objects representing the logged data elements that are passed to the terminal when a transaction log record is read");
     //'9F50' to '9F7F' are reserved for the payment systems (proprietary)
     public static final Tag FCI_ISSUER_DISCRETIONARY_DATA           = new TagImpl("bf0c", TagValueType.BINARY, "File Control Information (FCI) Issuer Discretionary Data", "Issuer discretionary part of the FCI (e.g. O/S Manufacturer proprietary data)");
-
-    //TODO this tag is VISA specific
+    //TODO these tags are VISA specific
+    //Create a class that maps AID+Tag -> ProprietaryTag
 //    public static final Tag APPLICATION_DEFAULT_ACTION              = new TagImpl("9f52", TagValueType.BINARY, "Application Default Action (ADA)", "Visa proprietary data element indicating the action a card should take when exception conditions occur");
+//    public static final Tag VISA_SOMETHING                          = new TagImpl("9f65", TagValueType.BINARY, "", ""); //Maximum length of data field in command message?
+    //9f53 Consecutive Transaction Limit (International)
+    //9f54 Cumulative Total Transaction Amount Limit
+    //9f55 Geographic Indicator
+    //9f58 Lower Consecutive Offline Limit
+    //9f59 Upper Consecutive Offline Limit
+    //9f5c Cumulative Total Transaction Amount Upper Limit
+    //9f72 Consecutive Transaction Limit (International--Country)
+    //9f75 Cumulative Transaction Amount Limit--Dual Currency
+    //9f77 VLP Funds Limit
+    //9f78 VLP Single Transaction Limit
+    //9f79 VLP Available Funds (Decremented during Card Action Analysis for offline approved VLP transactions)
+    //9f7f Card Production Life Cycle (CPLC) History File Identifiers
+    //TODO
 
+    /* ISO7816 interindustry data tags */
+//ISO7816_II_CATEGORY_TLV         0x80
+//ISO7816_II_CATEGORY_NOT_TLV     0x00
+    public static final Tag ISO7816_TAG_II_CARD_SERVICE             = new TagImpl("43", TagValueType.BINARY, "ISO 7816 Card Service", "");
+    public static final Tag ISO7816_TAG_II_INITIAL_ACCESS_DATA      = new TagImpl("44", TagValueType.BINARY, "ISO 7816 Initial Access Data", "");
+    public static final Tag ISO7816_TAG_II_CARD_ISSUER_DATA         = new TagImpl("45", TagValueType.BINARY, "ISO 7816 Card Issuer Data", "");
+    public static final Tag ISO7816_TAG_II_PRE_ISSUING              = new TagImpl("46", TagValueType.BINARY, "ISO 7816 Pre Issuing", "");
+    public static final Tag ISO7816_TAG_II_CARD_CAPABILITIES        = new TagImpl("47", TagValueType.BINARY, "ISO 7816 Card Capabilities", "");
+//public static final Tag ISO7816_TAG_II_AID                      = new TagImpl("4f", TagValueType.BINARY, "Card Capabilities", "");
+//ISO7816_TAG_II_ALLOCATION_SCHEME        0x78
+//ISO7816_TAG_II_STATUS_LCS               0x81
+//ISO7816_TAG_II_STATUS_SW                0x82
+//ISO7816_TAG_II_STATUS_LCS_SW            0x83
+//
+///* Other interindustry data tags */
+//
+//IASECC_TAG_II_IO_BUFFER_SIZES           0xE0
 
     /**
      * If the tag is not found, this method returns the "[UNHANDLED TAG]" containing 'tagBytes'
@@ -174,9 +208,9 @@ public class EMVTags {
      * @param tagBytes
      * @return
      */
-    public static Tag getNotNull(byte[] tagBytes){
+    public static Tag getNotNull(byte[] tagBytes) {
         Tag tag = find(tagBytes);
-        if(tag == null){
+        if (tag == null) {
             tag = new TagImpl(tagBytes, TagValueType.BINARY, "[UNHANDLED TAG]", "");
         }
         return tag;
@@ -185,155 +219,44 @@ public class EMVTags {
     /**
      * Returns null if Tag not found
      */
-    public static Tag find(byte[] tagBytes){
+    public static Tag find(byte[] tagBytes) {
         return tags.get(ByteArrayWrapper.wrapperAround(tagBytes));
     }
 
-    private static void addTag(Tag tag){
+    private static void addTag(Tag tag) {
         //Use 'wrapper around', since the underlaying byte-array will not be changed in this case
         ByteArrayWrapper baw = ByteArrayWrapper.wrapperAround(tag.getTagBytes());
-        if(tags.containsKey(baw)){
-            throw new IllegalArgumentException("Tag already added "+tag);
+        if (tags.containsKey(baw)) {
+            throw new IllegalArgumentException("Tag already added " + tag);
         }
         tags.put(baw, tag);
     }
 
-    static{
-            addTag(ISSUER_IDENTIFICATION_NUMBER);
-            addTag(AID_CARD);
-            addTag(APPLICATION_LABEL);
-            addTag(TRACK_2_EQV_DATA);
-            addTag(PAN);
-            addTag(APPLICATION_TEMPLATE);
-            addTag(FCI_TEMPLATE);
-            addTag(RECORD_TEMPLATE);
-            addTag(ISSUER_SCRIPT_TEMPLATE_1);
-            addTag(ISSUER_SCRIPT_TEMPLATE_2);
-            addTag(DD_TEMPLATE);
-            addTag(RESPONSE_MESSAGE_TEMPLATE_2);
-            addTag(RESPONSE_MESSAGE_TEMPLATE_1);
-            addTag(AMOUNT_AUTHORISED_BINARY);
-            addTag(APPLICATION_INTERCHANGE_PROFILE);
-            addTag(COMMAND_TEMPLATE);
-            addTag(DEDICATED_FILE_NAME);
-            addTag(ISSUER_SCRIPT_COMMAND);
-            addTag(APPLICATION_PRIORITY_INDICATOR);
-            addTag(SFI);
-            addTag(AUTHORISATION_CODE);
-            addTag(AUTHORISATION_RESPONSE_CODE);
-            addTag(CDOL1);
-            addTag(CDOL2);
-            addTag(CVM_LIST);
-            addTag(CA_PUBLIC_KEY_INDEX_CARD);
-            addTag(ISSUER_PUBLIC_KEY_CERT);
-            addTag(ISSUER_AUTHENTICATION_DATA);
-            addTag(ISSUER_PUBLIC_KEY_REMAINDER);
-            addTag(SIGNED_STATIC_APP_DATA);
-            addTag(APPLICATION_FILE_LOCATOR);
-            addTag(TVR);
-            addTag(TDOL);
-            addTag(TC_HASH_VALUE);
-            addTag(TRANSACTION_PIN_DATA);
-            addTag(TRANSACTION_DATE);
-            addTag(TRANSACTION_STATUS_INFORMATION);
-            addTag(TRANSACTION_TYPE);
-            addTag(DDF_NAME);
-            addTag(FCI_PROPRIETARY_TEMPLATE);
-//
-//            //TWO BYTE TAGS
-            addTag(CARDHOLDER_NAME);
-            addTag(APP_EXPIRATION_DATE);
-            addTag(APP_EFFECTIVE_DATE);
-            addTag(ISSUER_COUNTRY_CODE);
-            addTag(TRANSACTION_CURRENCY_CODE);
-            addTag(LANGUAGE_PREFERENCE);
-            addTag(SERVICE_CODE);
-            addTag(PAN_SEQUENCE_NUMBER);
-            addTag(TRANSACTION_CURRENCY_EXP);
-            addTag(ISSUER_URL);
-            addTag(BANK_IDENTIFIER_CODE);
-            addTag(ISSUER_COUNTRY_CODE_ALPHA2);
-            addTag(ISSUER_COUNTRY_CODE_ALPHA3);
-            addTag(ACQUIRER_IDENTIFIER);
-            addTag(AMOUNT_AUTHORISED_NUMERIC);
-            addTag(AMOUNT_OTHER_NUMERIC);
-            addTag(AMOUNT_OTHER_BINARY);
-            addTag(APP_DISCRETIONARY_DATA);
-            addTag(AID_TERMINAL);
-            addTag(APP_USAGE_CONTROL);
-            addTag(APP_VERSION_NUMBER_CARD);
-            addTag(APP_VERSION_NUMBER_TERMINAL);
-            addTag(CARDHOLDER_NAME_EXTENDED);
-            addTag(ISSUER_ACTION_CODE_DEFAULT);
-            addTag(ISSUER_ACTION_CODE_DENIAL);
-            addTag(ISSUER_ACTION_CODE_ONLINE);
-            addTag(ISSUER_APPLICATION_DATA);
-            addTag(ISSUER_CODE_TABLE_INDEX);
-            addTag(APP_PREFERRED_NAME);
-            addTag(LAST_ONLINE_ATC_REGISTER);
-            addTag(LOWER_CONSEC_OFFLINE_LIMIT);
-            addTag(MERCHANT_CATEGORY_CODE);
-            addTag(MERCHANT_IDENTIFIER);
-            addTag(PIN_TRY_COUNTER);
-            addTag(ISSUER_SCRIPT_IDENTIFIER);
-            addTag(TERMINAL_COUNTRY_CODE);
-            addTag(TERMINAL_FLOOR_LIMIT);
-            addTag(TERMINAL_IDENTIFICATION);
-            addTag(TERMINAL_RISK_MANAGEMENT_DATA);
-            addTag(INTERFACE_DEVICE_SERIAL_NUMBER);
-            addTag(TRACK1_DISCRETIONARY_DATA);
-            addTag(TRACK2_DISCRETIONARY_DATA);
-            addTag(TRANSACTION_TIME);
-            addTag(CA_PUBLIC_KEY_INDEX_TERMINAL);
-            addTag(UPPER_CONSEC_OFFLINE_LIMIT);
-            addTag(APP_CRYPTOGRAM);
-            addTag(CRYPTOGRAM_INFORMATION_DATA);
-            addTag(ICC_PIN_ENCIPHERMENT_PUBLIC_KEY_CERT);
-            addTag(ICC_PIN_ENCIPHERMENT_PUBLIC_KEY_EXP);
-            addTag(ICC_PIN_ENCIPHERMENT_PUBLIC_KEY_REM);
-            addTag(ISSUER_PUBLIC_KEY_EXP);
-            addTag(TERMINAL_CAPABILITIES);
-            addTag(CVM_RESULTS);
-            addTag(TERMINAL_TYPE);
-            addTag(APP_TRANSACTION_COUNTER);
-            addTag(UNPREDICTABLE_NUMBER);
-            addTag(PDOL);
-            addTag(POINT_OF_SERVICE_ENTRY_MODE);
-            addTag(AMOUNT_REFERENCE_CURRENCY);
-            addTag(ADDITIONAL_TERMINAL_CAPABILITIES);
-            addTag(TRANSACTION_SEQUENCE_COUNTER);
-            addTag(APP_REFERENCE_CURRENCY);
-            addTag(TRANSACTION_REFERENCE_CURRENCY_CODE);
-            addTag(TRANSACTION_REFERENCE_CURRENCY_EXP);
-            addTag(APPLICATION_CURRENCY_CODE);
-            addTag(APP_REFERENCE_CURRECY_EXPONENT);
-            addTag(APP_CURRENCY_EXPONENT);
-            addTag(DATA_AUTHENTICATION_CODE);
-            addTag(ICC_PUBLIC_KEY_CERT);
-            addTag(ICC_PUBLIC_KEY_EXP);
-            addTag(ICC_PUBLIC_KEY_REMAINDER);
-            addTag(DDOL);
-            addTag(SDA_TAG_LIST);
-            addTag(SIGNED_DYNAMIC_APPLICATION_DATA);
-            addTag(ICC_DYNAMIC_NUMBER);
-            addTag(LOG_ENTRY);
-            addTag(MERCHANT_NAME_AND_LOCATION);
-            addTag(LOG_FORMAT);
-//            addTag(APPLICATION_DEFAULT_ACTION); //TODO VISA specific. Move to XML file?
-            addTag(FCI_ISSUER_DISCRETIONARY_DATA);
+    static {
+        Field[] fields = EMVTags.class.getFields();
+        for (Field f : fields) {
+            if (f.getType() == Tag.class) {
+                try {
+                    Tag t = (Tag) f.get(null);
+                    addTag(t);
+                } catch (IllegalAccessException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
         System.out.println(find(new byte[]{(byte) 0x42})); //IIN
         System.out.println(find(new byte[]{(byte) 0x5f, (byte) 0x20})); //CARDHOLDER_NAME
         System.out.println(getNotNull(new byte[]{(byte) 0x5f, (byte) 0x21})); //UNDEFINED
     }
 
-    public static Iterator iterator(){
+    public static Iterator iterator() {
         return tags.values().iterator();
     }
 
-    private EMVTags(){
+    private EMVTags() {
         //Do not instantiate
     }
 }

@@ -18,10 +18,9 @@ package sasc.terminal.smartcardio;
 import javax.smartcardio.Card;
 import javax.smartcardio.CardChannel;
 import javax.smartcardio.CardException;
+import javax.smartcardio.CardTerminal;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
-import sasc.emv.EMVSession;
-import sasc.emv.SessionProcessingEnv;
 import sasc.terminal.CardResponse;
 import sasc.terminal.Terminal;
 import sasc.terminal.TerminalException;
@@ -38,10 +37,12 @@ import sasc.util.Util;
 public class SmartcardioCardConnection implements CardConnection {
 
     private Card card;
+    private CardTerminal smartCardIOTerminal;
     private CardChannel channel;
 
-    public SmartcardioCardConnection(Card card) {
+    public SmartcardioCardConnection(Card card, CardTerminal smartCardIOTerminal) {
         this.card = card;
+        this.smartCardIOTerminal = smartCardIOTerminal;
         channel = card.getBasicChannel();
     }
 
@@ -72,17 +73,18 @@ public class SmartcardioCardConnection implements CardConnection {
 
     @Override
     public Terminal getTerminal() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException("Not implemented yet");
+//        return new SmartCardIOTerminal(smartCardIOTerminal);
     }
 
     @Override
     public String getConnectionInfo() {
         return channel.toString();
     }
-
+    
     @Override
-    public EMVSession startSession(SessionProcessingEnv env) {
-        return EMVSession.startSession(env, this);
+    public String getProtocol(){
+        return this.card.getProtocol();
     }
 
     @Override
@@ -90,6 +92,35 @@ public class SmartcardioCardConnection implements CardConnection {
         try {
             card.disconnect(attemptReset);
             return true;
+        } catch (CardException ex) {
+            throw new TerminalException(ex);
+        }
+    }
+
+    /**
+     * Perform warm reset
+     * 
+     */
+    @Override
+    public void resetCard() throws TerminalException {
+        try {
+            //From scuba:
+            // WARNING: Woj: the meaning of the reset flag is actually
+            // reversed w.r.t. to the official documentation, false means
+            // that the card is going to be reset, true means do not reset
+            // This is a bug in the smartcardio implementation from SUN
+            // Moreover, Linux PCSC implementation goes numb if you try to
+            // disconnect a card that is not there anymore.
+
+            // From sun/security/smartcardio/CardImpl.java:
+            // SCardDisconnect(cardId, (reset ? SCARD_LEAVE_CARD : SCARD_RESET_CARD));
+            // (http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/6-b14/sun/security/smartcardio/CardImpl.java?av=f)
+            // The BUG: http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=7047033
+            if (smartCardIOTerminal.isCardPresent()) {
+                card.disconnect(false);
+            }
+            card = smartCardIOTerminal.connect("*");
+            channel = card.getBasicChannel();
         } catch (CardException ex) {
             throw new TerminalException(ex);
         }

@@ -1,4 +1,11 @@
+
+
+
 TODO:
+
+-Generic test framework for Smartcards (including intelligent SC emulator and terminal emulator)
+-Implement the full EMV MasterCard(M/chip/Paypass) and VISA test specifications.
+
 
 
 ROOT(MF)
@@ -78,7 +85,19 @@ Check out MasterCard Paypass M/Chip spec (only available to licenced customers)
 
 SELECT APP by partial AID (partial name selection): see book 1 page 150
 
+Other AIDs
+PIV AID:     A0 00 00 03 08 00 00 10 00 xx yy
+        eg   a0 00 00 03 08 00 00 10 00 01 00 ( ID-ONE PIV BIO )
+MS IDMP AID: A0 00 00 03 97 42 54 46 59 xx yy
+MS PNP AID:  A0 00 00 03 97 43 49 44 5F 01 00
+(Windows 7 introduces a class minidriver for PIV-compatible cards and cards that support the IDMP card edge)
 
+NDEF Tag Application D2 76 00 00 85 01 01
+(Section C: NFC Tag type 4 spec
+
+
+FF CA 00 00 00 (PCSC 2.01 Get card uid)
+)
 
 -Alternatives 
 ---brute force AIDs
@@ -87,5 +106,13 @@ SELECT APP by partial AID (partial name selection): see book 1 page 150
 
 
 
+
+
 Linux SmartcardIO:
 http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=500762
+
+EMV Security:
+http://www.chipandspin.co.uk/
+
+EMV Tutorial
+http://www.openscdp.org/scripts/tutorial/emv/index.html

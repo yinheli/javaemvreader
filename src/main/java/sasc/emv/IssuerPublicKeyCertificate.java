@@ -15,6 +15,8 @@
  */
 package sasc.emv;
 
+import sasc.util.Log;
+import sasc.iso7816.SmartCardException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -78,7 +80,7 @@ public class IssuerPublicKeyCertificate {
         CAPublicKey caPublicKey = ca.getPublicKey(caPublicKeyIndex);
 
         if (caPublicKey == null) {
-            throw new EMVException("No suitable CA Public Key found");
+            throw new SmartCardException("No suitable CA Public Key found");
         }
         //Decipher data using RSA
         byte[] recoveredBytes = Util.performRSA(signedBytes, caPublicKey.getExponent(), caPublicKey.getModulus());
@@ -88,13 +90,13 @@ public class IssuerPublicKeyCertificate {
         ByteArrayInputStream bis = new ByteArrayInputStream(recoveredBytes);
 
         if (bis.read() != 0x6a) { //Header
-            throw new EMVException("Header != 0x6a");
+            throw new SmartCardException("Header != 0x6a");
         }
 
         certFormat = (byte) bis.read();
 
         if (certFormat != 0x02) {
-            throw new EMVException("Invalid certificate format");
+            throw new SmartCardException("Invalid certificate format");
         }
 
         byte[] issuerIdentifierPaddedBytes = new byte[4];
@@ -142,7 +144,6 @@ public class IssuerPublicKeyCertificate {
 
         bis.read(hash, 0, hash.length);
 
-        //TODO check hash validation
         ByteArrayOutputStream hashStream = new ByteArrayOutputStream();
 
         hashStream.write(certFormat);
@@ -173,11 +174,11 @@ public class IssuerPublicKeyCertificate {
         int trailer = bis.read();
 
         if (trailer != 0xbc) {//Trailer
-            throw new EMVException("Trailer != 0xbc");
+            throw new SmartCardException("Trailer != 0xbc");
         }
 
         if (bis.available() > 0) {
-            throw new EMVException("Error parsing certificate. Bytes left=" + bis.available());
+            throw new SmartCardException("Error parsing certificate. Bytes left=" + bis.available());
         }
         isValid = true;
         return true;
@@ -195,8 +196,8 @@ public class IssuerPublicKeyCertificate {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Issuer Public Key Certificate");
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "Issuer Public Key Certificate");
+        String indentStr = Util.getSpaces(indent + 3);
 
         if (!validationPerformed) {
             validate();

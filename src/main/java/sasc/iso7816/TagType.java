@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.iso7816;
 
 /**
  * Seem EMV Book 3 Annex B

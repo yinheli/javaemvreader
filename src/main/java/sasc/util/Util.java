@@ -34,7 +34,7 @@ import java.util.StringTokenizer;
  */
 public class Util {
 
-    public static String getEmptyString(int length) {
+    public static String getSpaces(int length) {
         StringBuilder buf = new StringBuilder(length);
 
         for (int i = 0; i < length; i++) {
@@ -53,7 +53,7 @@ public class Util {
 
             int nextPos = i+1;
             if (wrapLines && nextPos % 32 == 0 && nextPos != in.length()) {
-                buf.append("\n").append(getEmptyString(indent));
+                buf.append("\n").append(getSpaces(indent));
             } else if (nextPos % 2 == 0 && nextPos != in.length()) {
                 buf.append(" ");
             }
@@ -71,6 +71,10 @@ public class Util {
 
     public static String prettyPrintHexNoWrap(byte[] data) {
         return Util.prettyPrintHex(Util.byteArrayToHexString(data), 0, false);
+    }
+    
+    public static String prettyPrintHexNoWrap(String in) {
+        return Util.prettyPrintHex(in, 0, false);
     }
 
     public static String prettyPrintHex(String in) {
@@ -155,7 +159,7 @@ public class Util {
     }
 
     public static int byteToInt(byte first, byte second) {
-        int value = first & 0xFF << 8;
+        int value = (first & 0xFF) << 8;
         value += second & 0xFF;
         return value;
     }
@@ -190,7 +194,7 @@ public class Util {
     /**
      * Converts a byte array into a hex string.
      * @param byteArray the byte array source
-     * @return a hexstring representing the byte array
+     * @return a hex string representing the byte array
      */
     public static String byteArrayToHexString(final byte[] byteArray) {
         if (byteArray == null) {
@@ -347,7 +351,7 @@ public class Util {
     /**
      * This method converts the literal hex representation of a byte to an int.
      * eg 0x70 = 70 (int)
-     * @param b
+     * @param hex
      */
     public static int numericHexToInt(String hex) {
         hex = Util.removeSpaces(hex);
@@ -415,7 +419,7 @@ public class Util {
     /**
      *
      * @param val
-     * @param bitPos The leftmost bit is 8
+     * @param bitPos The leftmost bit is 8 (the most significant bit)
      * @return
      */
     public static boolean isBitSet(byte val, int bitPos) {
@@ -427,6 +431,21 @@ public class Util {
         }
         return false;
     }
+    
+//    /**
+//     *
+//     * @param val
+//     * @return
+//     */
+//    public static int numBitsSet(byte val) {
+//        int numBitsSet = 0;
+//        for(int i=1; i<=8; i++){
+//            if(Util.isBitSet(val, i)){
+//                numBitsSet++;
+//            }
+//        }
+//        return numBitsSet;
+//    }
 
     /**
      *

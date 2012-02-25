@@ -15,10 +15,14 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.SmartCardException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 import sasc.util.Util;
 
 /**
@@ -30,9 +34,10 @@ public class CAPublicKey {
     private byte[] modulus = null;
     private int index;
     private String description;
-    private String expirationDate; //TODO: java.util.Date
-    private int hashAlgorithmIndicator; //TODO should this be here?
-    private int publicKeyAlgorithmIndicator; //TODO should this be here?
+    private Date expirationDate;
+    private int hashAlgorithmIndicator;
+    private int publicKeyAlgorithmIndicator;
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH);
     
     //A check value calculated on the concatenation of all parts of the 
     //Certification Authority Public Key:
@@ -51,7 +56,11 @@ public class CAPublicKey {
         this.publicKeyAlgorithmIndicator = publicKeyAlgorithmIndicator;
         this.hashAlgorithmIndicator = hashAlgorithmIndicator;
         this.description = description;
-        this.expirationDate = expirationDate;
+        try {
+            this.expirationDate = DATE_FORMAT.parse(expirationDate);
+        } catch (ParseException ex) {
+            throw new SmartCardException("Expiration date not valid. Must be in the format dd MMM yyyy, (where MMM is the english name of the month), but was: "+expirationDate);
+        }
     }
 
     public int getIndex(){
@@ -75,7 +84,7 @@ public class CAPublicKey {
     }
 
     public Date getExpirationDate(){
-        throw new UnsupportedOperationException("Not implemented yet");
+        return (Date)expirationDate.clone();
     }
 
     public int getHashAlgorithmIndicator(){
@@ -86,6 +95,10 @@ public class CAPublicKey {
         return publicKeyAlgorithmIndicator;
     }
 
+    public String getDescription(){
+        return description;
+    }
+
     @Override
     public String toString() {
         StringWriter sw = new StringWriter();
@@ -94,8 +107,8 @@ public class CAPublicKey {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "CA Public Key");
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "CA Public Key");
+        String indentStr = Util.getSpaces(indent + 3);
 
         pw.println(indentStr + "Size: "+getKeyLengthInBytes()*8+"-bit");
         pw.println(indentStr + "Exponent:");

@@ -15,6 +15,8 @@
  */
 package sasc.emv;
 
+import sasc.util.Log;
+import sasc.iso7816.SmartCardException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -33,7 +35,7 @@ import sasc.util.Util;
  */
 public class SignedStaticApplicationData {
 
-    private Application application;
+    private EMVApplication application;
     private boolean isValid = false;
     private byte[] signedBytes;
     private byte signedDataFormat;
@@ -42,7 +44,7 @@ public class SignedStaticApplicationData {
     private byte[] hash = new byte[20];
     private boolean validationPerformed = false;
 
-    public SignedStaticApplicationData(Application app) {
+    public SignedStaticApplicationData(EMVApplication app) {
         this.application = app;
     }
 
@@ -52,6 +54,10 @@ public class SignedStaticApplicationData {
 
     public IssuerPublicKeyCertificate getIssuerPublicKeyCertificate() {
         return application.getIssuerPublicKeyCertificate();
+    }
+    
+    public byte[] getDataAuthenticationCode(){
+        return Arrays.copyOf(dataAuthenticationCode, dataAuthenticationCode.length);
     }
 
     public boolean validate() {
@@ -70,7 +76,7 @@ public class SignedStaticApplicationData {
         //If the Signed Static Application Data has a length different from
         //the length of the Issuer Public Key Modulus, SDA has failed.
         if (signedBytes.length != issuerPublicKey.getModulus().length) {
-            throw new EMVException("Invalid Signed Data: Signed data length (" + signedBytes.length + ") != Issuer Public Key Modulus length(" + issuerPublicKey.getModulus().length + ")");
+            throw new SmartCardException("Invalid Signed Data: Signed data length (" + signedBytes.length + ") != Issuer Public Key Modulus length(" + issuerPublicKey.getModulus().length + ")");
         }
 
         byte[] decipheredBytes = Util.performRSA(signedBytes, issuerPublicKey.getExponent(), issuerPublicKey.getModulus());
@@ -78,13 +84,13 @@ public class SignedStaticApplicationData {
         ByteArrayInputStream stream = new ByteArrayInputStream(decipheredBytes);
 
         if (stream.read() != 0x6a) { //Header
-            throw new EMVException("Header != 0x6a");
+            throw new SmartCardException("Header != 0x6a");
         }
 
         signedDataFormat = (byte) stream.read();
 
         if (signedDataFormat != 0x03) { //Always 0x03
-            throw new EMVException("Invalid Signed Data format");
+            throw new SmartCardException("Invalid Signed Data format");
         }
 
         hashAlgorithmIndicator = stream.read() & 0xFF;
@@ -112,8 +118,9 @@ public class SignedStaticApplicationData {
         hashStream.write(padding, 0, padding.length);
 
         byte[] offlineAuthenticationRecords = application.getOfflineDataAuthenticationRecords();
+
         Log.debug("OfflineDataAuthenticationRecords: "+Util.prettyPrintHex(offlineAuthenticationRecords));
-//        System.out.println("OfflineDataAuthenticationRecords: "+Util.prettyPrintHex(offlineAuthenticationRecords));
+
         hashStream.write(offlineAuthenticationRecords, 0, offlineAuthenticationRecords.length);
 
         byte[] sha1Result = null;
@@ -132,11 +139,11 @@ public class SignedStaticApplicationData {
         int trailer = stream.read();
 
         if (trailer != 0xbc) {//Trailer always 0xbc
-            throw new EMVException("Trailer != 0xbc");
+            throw new SmartCardException("Trailer != 0xbc");
         }
 
         if (stream.available() > 0) {
-            throw new EMVException("Error parsing Signed Static Application Data. Bytes left=" + stream.available());
+            throw new SmartCardException("Error parsing Signed Static Application Data. Bytes left=" + stream.available());
         }
 
         //Upon completion of the offline data authentication function, the terminal shall set the
@@ -159,8 +166,8 @@ public class SignedStaticApplicationData {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Signed Static Application Data");
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "Signed Static Application Data");
+        String indentStr = Util.getSpaces(indent + 3);
 
         if (!validationPerformed) {
             validate();

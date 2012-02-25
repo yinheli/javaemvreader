@@ -34,7 +34,7 @@ public class CVRule {
     byte[] secondAmountFieldYBytes;
     String secondAmountFieldYStr;
 
-    //TODO send in Application Currency Code
+    //TODO send in param Application Currency Code?
     public CVRule(byte firstByte, byte secondByte, byte[] amountFieldX, byte[] secondAmountFieldY) {
         this.firstByte = firstByte;
         this.secondByte = secondByte;
@@ -160,7 +160,7 @@ public class CVRule {
     //'0A' - '7F' RFU
     //'80' - 'FF' Reserved for use by individual payment systems
 
-    public String getConditionCode() {
+    public String getConditionCodeDescription() {
         switch (secondByte) {
             case 0x00:
                 return "Always";
@@ -200,11 +200,11 @@ public class CVRule {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Cardholder Verification Rule");
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "Cardholder Verification Rule");
+        String indentStr = Util.getSpaces(indent + 3);
 
         pw.println(indentStr + "Rule: "+getRuleString());
-        pw.println(indentStr + "Condition Code: "+getConditionCode());
+        pw.println(indentStr + "Condition Code: "+getConditionCodeDescription());
 
         pw.println(indentStr + getCVMUnsuccessfulRuleString());
 

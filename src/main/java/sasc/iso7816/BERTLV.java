@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.iso7816;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,7 +40,7 @@ public class BERTLV {
     public BERTLV(Tag tag, int length, byte[] rawEncodedLengthBytes, byte[] valueBytes) {
         if (length != valueBytes.length) {
             //Assert
-            throw new RuntimeException("length != bytes.length");
+            throw new IllegalArgumentException("length != bytes.length");
         }
         this.tag = tag;
         this.rawEncodedLengthBytes = rawEncodedLengthBytes;

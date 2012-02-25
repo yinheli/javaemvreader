@@ -15,11 +15,13 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.SmartCardException;
+
 /**
  *
  * @author sasc
  */
-public class SignedDataException extends EMVException{
+public class SignedDataException extends SmartCardException{
 
     public SignedDataException(String message){
         super(message);

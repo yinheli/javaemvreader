@@ -16,7 +16,7 @@
 package sasc.terminal;
 
 /**
- *
+ * //TODO change name to ICCResponse
  * @author sasc
  */
 public interface CardResponse {

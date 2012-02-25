@@ -13,22 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.iso7816;
 
 /**
  *
  * @author sasc
  */
-public class EMVException extends RuntimeException{
-
-    public EMVException(String message){
-        super(message);
-    }
-
-    public EMVException(String message, Throwable cause){
-        super(message, cause);
-    }
-    public EMVException(Throwable cause){
-        super(cause);
-    }
+public enum TagValueType {
+    //COMPRESSED_NUMERIC (trailing 'F's),
+    BINARY, NUMERIC, TEXT, MIXED, DOL, TEMPLATE,
 }
+

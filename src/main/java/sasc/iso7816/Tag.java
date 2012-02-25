@@ -13,20 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.iso7816;
 
 /**
  *
  * @author sasc
  */
-public class UnsupportedCardException extends EMVException{
-    public UnsupportedCardException(String msg){
-        super(msg);
+public interface Tag {
+
+    public enum Class{
+        UNIVERSAL, APPLICATION, CONTEXT_SPECIFIC, PRIVATE
     }
-    public UnsupportedCardException(String msg, Throwable cause){
-        super(msg, cause);
-    }
-    public UnsupportedCardException(Throwable cause){
-        super(cause);
-    }
+
+    boolean isConstructed();
+
+    byte[] getTagBytes();
+
+    String getName();
+
+    String getDescription();
+
+    TagType getType();
+
+    TagValueType getTagValueType();
+
+    Class getTagClass();
+
+    int getNumTagBytes();
+
 }
+
+

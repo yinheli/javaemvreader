@@ -72,9 +72,9 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
             //wait for a card to be inserted
             while (true) {
                 terminals.waitForChange();
-                for (CardTerminal terminal : terminals.list(javax.smartcardio.CardTerminals.State.CARD_INSERTION)) {
-                    Card _card = terminal.connect("*");
-                    return new SmartcardioCardConnection(_card);
+                for (CardTerminal smartCardIOTerminal : terminals.list(javax.smartcardio.CardTerminals.State.CARD_INSERTION)) {
+                    Card _card = smartCardIOTerminal.connect("*");
+                    return new SmartcardioCardConnection(_card, smartCardIOTerminal);
                 }
             }
         } catch (CardException ex) {
@@ -85,8 +85,9 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
     @Override
     public CardConnection connectTerminal(String name) throws TerminalException {
         try {
-            Card _card = terminals.getTerminal(name).connect("*");
-            return new SmartcardioCardConnection(_card);
+            CardTerminal smartCardIOTerminal = terminals.getTerminal(name);
+            Card _card = smartCardIOTerminal.connect("*");
+            return new SmartcardioCardConnection(_card, smartCardIOTerminal);
         } catch (CardException ex) {
             throw new TerminalException(ex);
         } 
@@ -95,8 +96,9 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
     @Override
     public CardConnection connectTerminal(int index) throws TerminalException {
         try {
-            Card _card = terminals.list().get(index).connect("*");
-            return new SmartcardioCardConnection(_card);
+            CardTerminal smartCardIOTerminal = terminals.list().get(index);
+            Card _card = smartCardIOTerminal.connect("*");
+            return new SmartcardioCardConnection(_card, smartCardIOTerminal);
         } catch (CardException ex) {
             throw new TerminalException(ex);
         } catch (IndexOutOfBoundsException ex){
@@ -111,18 +113,18 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
 
     private class TerminalImpl implements Terminal {
 
-        CardTerminal terminal;
+        CardTerminal smartCardIOTerminal;
         Card card = null;
 
-        public TerminalImpl(CardTerminal terminal) {
-            this.terminal = terminal;
+        public TerminalImpl(CardTerminal smartCardIOTerminal) {
+            this.smartCardIOTerminal = smartCardIOTerminal;
         }
 
         @Override
         public CardConnection connect() throws TerminalException {
             try {
-                card = terminal.connect("*");
-                return new SmartcardioCardConnection(card);
+                card = smartCardIOTerminal.connect("*");
+                return new SmartcardioCardConnection(card, smartCardIOTerminal);
             } catch (CardException ex) {
                 throw new TerminalException(ex);
             }
@@ -132,11 +134,11 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         public String getTerminalInfo() {
             String cardPresent = null;
             try{
-                cardPresent = terminal.isCardPresent()?"Card Present":"No card present";
+                cardPresent = smartCardIOTerminal.isCardPresent()?"Card Present":"No card present";
             }catch(CardException ex){
                 //Ignore
             }
-            return "Name: "+terminal.getName() + " (Description: "+terminal.toString()+") "+cardPresent;
+            return "Name: "+smartCardIOTerminal.getName() + " (Description: "+smartCardIOTerminal.toString()+") "+cardPresent;
         }
     }
 }

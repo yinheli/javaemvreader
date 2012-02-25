@@ -16,6 +16,7 @@
 package sasc.emv;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.NoSuchAlgorithmException;
@@ -29,22 +30,23 @@ import sasc.util.Util;
 public class SignedDynamicApplicationData {
 
     private byte header;
+    private byte signedDataFormat;
     private byte hashAlgorithmIndicator;
     private byte iccDynamicDataLenght;
-    private byte[] iccDynamicData;
+    private byte[] iccDynamicNumber;
     private byte[] hashResult;
     private byte[] decipheredData;
     private byte trailer;
-    private ICCPublicKey iccPublicKey;
+    private byte[] terminalDynamicData;
     private boolean isValid = false;
     private boolean validationPerformed = false;
 
-    private SignedDynamicApplicationData(byte[] data, ICCPublicKey iccPublicKey) {
+    private SignedDynamicApplicationData(byte[] data, byte[] terminalDynamicData) {
         this.decipheredData = data;
-        this.iccPublicKey = iccPublicKey;
+        this.terminalDynamicData = terminalDynamicData;
     }
 
-    //This method must only be called after ALL application records have been read
+    //DDA/Internal Auth must be performed after all app records have been read.
     public boolean validate() {
         if (validationPerformed) { //Validation already run
             return isValid();
@@ -59,20 +61,44 @@ public class SignedDynamicApplicationData {
             throw new SignedDataException("Header != 0x6a");
         }
 
+        signedDataFormat = (byte) stream.read();
+
+        if (signedDataFormat != (byte) 0x05) {
+            throw new SignedDataException("Signed Data Format != 0x05");
+        }
+
         hashAlgorithmIndicator = (byte) stream.read(); //We currently only support SHA-1
         iccDynamicDataLenght = (byte) stream.read();
 
-        iccDynamicData = new byte[iccDynamicDataLenght];
+        iccDynamicNumber = new byte[iccDynamicDataLenght];
 
-        int bytesRead = stream.read(iccDynamicData, 0, stream.available()-21); //iccDynamicDataLenght
+        stream.read(iccDynamicNumber, 0, iccDynamicDataLenght);
+
+        //Now read padding bytes (0xbb), if available
+        //The padding bytes are used in hash validation
+        byte[] padding = new byte[stream.available()-21];
+        stream.read(padding, 0, padding.length);
 
         hashResult = new byte[20];
 
         stream.read(hashResult, 0, 20);
 
+        ByteArrayOutputStream hashStream = new ByteArrayOutputStream();
+
+        //EMV Book 2, page 67, table 15
+
+        //Header not included in hash
+        hashStream.write(signedDataFormat);
+        hashStream.write(hashAlgorithmIndicator);
+        hashStream.write((byte)iccDynamicDataLenght);
+        hashStream.write(iccDynamicNumber, 0, iccDynamicNumber.length);
+        hashStream.write(padding, 0, padding.length);
+        hashStream.write(terminalDynamicData, 0, terminalDynamicData.length);
+        //Trailer not included in hash
+
         byte[] sha1Result = null;
         try {
-            sha1Result = Util.calculateSHA1(iccDynamicData);
+            sha1Result = Util.calculateSHA1(hashStream.toByteArray());
         } catch (NoSuchAlgorithmException ex) {
             throw new SignedDataException("SHA-1 hash algorithm not available", ex);
         }
@@ -94,7 +120,7 @@ public class SignedDynamicApplicationData {
         return isValid;
     }
 
-    public static SignedDynamicApplicationData parseSignedData(byte[] data, ICCPublicKey iccPublicKey) {
+    public static SignedDynamicApplicationData parseSignedData(byte[] data, ICCPublicKey iccPublicKey, byte[] terminalDynamicData) {
 
         byte[] expBytesICC = iccPublicKey.getExponent();
         byte[] modBytesICC = iccPublicKey.getModulus();
@@ -105,7 +131,7 @@ public class SignedDynamicApplicationData {
 
         byte[] decipheredBytes = Util.performRSA(data, expBytesICC, modBytesICC);
 
-        return new SignedDynamicApplicationData(decipheredBytes, iccPublicKey);
+        return new SignedDynamicApplicationData(decipheredBytes, terminalDynamicData);
     }
 
     @Override
@@ -116,8 +142,8 @@ public class SignedDynamicApplicationData {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Signed Dynamic Application Data");
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "Signed Dynamic Application Data");
+        String indentStr = Util.getSpaces(indent + 3);
 
         if(!validationPerformed){
             validate();
@@ -125,11 +151,11 @@ public class SignedDynamicApplicationData {
 
         if (isValid()) {
             pw.println(indentStr + "Hash Algorithm Indicator: " + hashAlgorithmIndicator +" (=SHA-1)");
-            pw.println(indentStr + "ICC Dynamic Data: " + Util.byteArrayToHexString(iccDynamicData));
+            pw.println(indentStr + "ICC Dynamic Data: " + Util.byteArrayToHexString(iccDynamicNumber));
             pw.println(indentStr + "Hash: " + Util.byteArrayToHexString(hashResult));
 
         } else {
-            pw.println(indentStr + "SIGNED DATA NOT VALID");
+            pw.println(indentStr + "SIGNED DYNAMIC DATA NOT VALID");
         }
     }
 

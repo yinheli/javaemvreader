@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.terminal;
+package sasc.iso7816;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.List;
 import sasc.ATR_DB;
-import sasc.emv.Log;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -30,6 +31,7 @@ public class ATR {
     private byte[] atrBytes;
     private IsoATR isoATR = null;
     private boolean isIsoCompliant = false;
+    private String errorMsg = "";
 
     public ATR(byte[] atrBytes){
         this.atrBytes = atrBytes;
@@ -38,7 +40,7 @@ public class ATR {
             isoATR = IsoATR.parse(atrBytes);
             isIsoCompliant = true;
         }catch(IsoATR.ParseException ex){
-            //Ignore
+            errorMsg = ex.getMessage();
             Log.debug(ex.getMessage());
         }
 
@@ -64,26 +66,28 @@ public class ATR {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"Answer To Reset (ATR)");
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+"Answer To Reset (ATR)");
+        String indentStr = Util.getSpaces(indent+3);
         List<String> descriptiveText = ATR_DB.searchATR(atrBytes);
         pw.println(indentStr+Util.prettyPrintHexNoWrap(atrBytes));
         if(descriptiveText != null){
             //Just use List/ArrayList.toString(), which prints [value1, value2] according to Javadoc API
-            pw.println(indentStr+"Description From Public Database - "+descriptiveText);
+            pw.println(indentStr+"Description From Public Database - "+Arrays.toString(descriptiveText.toArray()));
         }
 
         if(isIsoCompliant()){
             isoATR.dump(pw, indent+3);
         }else{
-            pw.println(indentStr+"ATR is not ISO compliant");
+            pw.println(indentStr+"ATR is not ISO compliant ("+errorMsg+")");
         }
 
     }
 
     public static void main(String[] args){
-        byte[] atrBytes = new byte[]{(byte)0x3F, (byte)0x24, (byte)0x00, (byte)0x30, (byte)0x42, (byte)0x30, (byte)0x30};
-        ATR atr = new ATR(atrBytes);
-        System.out.println(atr.toString());
+        System.out.println(new ATR(Util.fromHexString("3F 24 00 30 42 30 30")));
+        System.out.println(new ATR(Util.fromHexString("3A 00"))); //Invalid convention
+        System.out.println(new ATR(Util.fromHexString("3B 20"))); //Missing interface characters
+        System.out.println(new ATR(Util.fromHexString("3B 34 00 00"))); //No historical bytes
+        System.out.println(new ATR(Util.fromHexString("3B 80 01"))); //TCK not present
     }
 }

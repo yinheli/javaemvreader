@@ -68,8 +68,8 @@ public class IssuerPublicKey {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Issuer Public Key");
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "Issuer Public Key");
+        String indentStr = Util.getSpaces(indent + 3);
 
         pw.println(indentStr + "Length: "+getKeyLengthInBytes()*8+"bit");
         pw.println(indentStr + "Exponent:");

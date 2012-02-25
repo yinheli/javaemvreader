@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.TagAndLength;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
@@ -41,8 +42,8 @@ public class LogFormat {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"Log Format:");
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+"Log Format:");
+        String indentStr = Util.getSpaces(indent+3);
 
         for(TagAndLength tagAndLength : formatList){
             int length = tagAndLength.getLength();

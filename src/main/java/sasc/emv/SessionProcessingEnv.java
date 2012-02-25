@@ -23,6 +23,7 @@ public class SessionProcessingEnv {
     private boolean maskPersonalInformation = false;
     private boolean bruteForceSFIRecords = false;
     private boolean readMasterFile = false;
+    private boolean warmUpCard = true;
     //TODO
     //-Try to SELECT known AIDs from a list (To find AIDs not listed in the PSE)
     //-etc
@@ -31,12 +32,20 @@ public class SessionProcessingEnv {
         
     }
     
-    public boolean readMasterFile(){
+    public boolean getReadMasterFile(){
         return readMasterFile;
     }
     
-    public void setReadMasterFile(){
-        readMasterFile = true;
+    public void setReadMasterFile(boolean value){
+        readMasterFile = value;
+    }
+    
+    public boolean getWarmUpCard(){
+        return warmUpCard;
+    }
+    
+    public void setWarmUpCard(boolean value){
+        warmUpCard = value;
     }
 
 }

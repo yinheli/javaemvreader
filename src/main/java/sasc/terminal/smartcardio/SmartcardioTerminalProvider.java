@@ -22,23 +22,24 @@ import sasc.terminal.TerminalException;
 import sasc.terminal.TerminalProvider;
 
 /**
- *
+ * Reflection Wrapper
+ * 
  * @author sasc
  */
-public class SmartcardioTerminalProvider implements TerminalProvider{
+public class SmartcardioTerminalProvider implements TerminalProvider {
 
     private static boolean isSmartcardIOAvailable = false;
     private static TerminalProvider terminalProvider = null;
+    private static String implementationClassName = SmartcardioTerminalProvider.class.getName() + "Impl";
 
     //Reflection stuff:
     // http://www.jroller.com/eu/entry/dealing_with_api_compatibility
     // http://wiki.forum.nokia.com/index.php/How_to_use_an_optional_API_in_Java_ME
-
-    static{
+    static {
 
         //Hack:
         //since the SmartcardIO classes have not been loaded yet, we can set these
-        //systemprops here (and not depend on the user setting them on the Command Line):
+        //system properties here (and not depend on the user setting them on the Command Line):
         //TODO: check if these are valid on OSX
         System.setProperty("sun.security.smartcardio.t0GetResponse", "false");
         System.setProperty("sun.security.smartcardio.t1GetResponse", "false");
@@ -47,7 +48,7 @@ public class SmartcardioTerminalProvider implements TerminalProvider{
         try {
             // this will throw an exception if "JSR-268 Java Smart Card I/O API" is missing
             Class.forName("javax.smartcardio.TerminalFactory");
-            Class c = Class.forName(SmartcardioTerminalProvider.class.getName()+"Impl");
+            Class c = Class.forName(implementationClassName);
             terminalProvider = (TerminalProvider) (c.newInstance());
             isSmartcardIOAvailable = true;
         } catch (ClassNotFoundException ex) {
@@ -58,8 +59,12 @@ public class SmartcardioTerminalProvider implements TerminalProvider{
             ex.printStackTrace(System.err);
         }
     }
+    
+    static void setTerminalProvider(String newName){
+        implementationClassName = newName;
+    }
 
-    public static boolean isSmartcardioAvailable(){
+    public static boolean isSmartcardioAvailable() {
         return isSmartcardIOAvailable;
     }
 
@@ -87,5 +92,4 @@ public class SmartcardioTerminalProvider implements TerminalProvider{
     public String getProviderInfo() {
         return terminalProvider.getProviderInfo();
     }
-
 }

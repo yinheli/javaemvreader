@@ -1,4 +1,5 @@
-
+<!-- Dummy data used to emulate an EMV card -->
+<!-- If modified, the Signed Static Data needs to be updated -->
 <EMVCard>
     <ATR>3B 67 00 00 A6 40 40 00 09 90 00</ATR>
     <!--<MasterFile></MasterFile>-->

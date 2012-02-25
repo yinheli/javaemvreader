@@ -167,9 +167,9 @@ public class ApplicationUsageControl {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"Application Usage Control");
+        pw.println(Util.getSpaces(indent)+"Application Usage Control");
 
-        String indentStr = Util.getEmptyString(indent+3);
+        String indentStr = Util.getSpaces(indent+3);
 
         pw.println(indentStr + getValidForDomesticCashTransactionsString());
         pw.println(indentStr + getValidForInternationalCashTransactionsString());

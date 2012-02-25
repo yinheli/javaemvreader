@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.TagAndLength;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -97,8 +98,8 @@ public class DOL {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+type.getDescription());
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+type.getDescription());
+        String indentStr = Util.getSpaces(indent+3);
 
         for(TagAndLength tagAndLength : tagAndLengthList){
             int length = tagAndLength.getLength();

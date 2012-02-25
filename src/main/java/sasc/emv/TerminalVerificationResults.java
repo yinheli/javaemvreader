@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.SmartCardException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.BitSet;
@@ -24,7 +25,7 @@ import sasc.util.Util;
  * Terminal Verification Results (TVR)
  * Status of the different functions as seen from the terminal
  *
- * Dataflow: Terminal -> ICC
+ * Data flow: Terminal -> ICC
  * (Terminal constructs TVR and transmits to card)
  * 
  *
@@ -88,7 +89,7 @@ public class TerminalVerificationResults {
 
     TerminalVerificationResults(byte[] data) {
         if (data.length != 5) {
-            throw new EMVException("TVR must be initialized with 5 bytes. Length=" + data.length);
+            throw new SmartCardException("TVR must be initialized with 5 bytes. Length=" + data.length);
         }
         this.bitSet = Util.byteArray2BitSet(data);
     }
@@ -338,9 +339,9 @@ public class TerminalVerificationResults {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Terminal Verification Results");
+        pw.println(Util.getSpaces(indent) + "Terminal Verification Results");
 
-        String indentStr = Util.getEmptyString(indent + 3);
+        String indentStr = Util.getSpaces(indent + 3);
 
         for (int i = bitSet.size() - 1; i >= 0; i--) {
             //print the leftmost set bit first

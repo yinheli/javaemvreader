@@ -13,10 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.iso7816;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import sasc.util.Util;
 
 /**
@@ -25,9 +28,18 @@ import sasc.util.Util;
  */
 public class MasterFile implements File {
     private byte[] data;
+    private List<BERTLV> unhandledRecords = new ArrayList<BERTLV>();
 
     public MasterFile(byte[] data){
         this.data = data;
+    }
+    
+    public void addUnhandledRecord(BERTLV bertlv) {
+        unhandledRecords.add(bertlv);
+    }
+
+    public List<BERTLV> getUnhandledRecords() {
+        return Collections.unmodifiableList(unhandledRecords);
     }
 
     @Override
@@ -38,8 +50,19 @@ public class MasterFile implements File {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Master File");
+        pw.println(Util.getSpaces(indent) + "Master File");
 
-        pw.println(Util.getEmptyString(indent+3) + Util.prettyPrintHex(Util.byteArrayToHexString(data), indent+3));
+        pw.println(Util.getSpaces(indent+3) + Util.prettyPrintHex(Util.byteArrayToHexString(data), indent+3));
+        
+        pw.println("");
+        
+        if (!unhandledRecords.isEmpty()) {
+            pw.println(Util.getSpaces(indent + 3) + "UNHANDLED RECORDS (" + unhandledRecords.size() + " found):");
+
+            for (BERTLV tlv : unhandledRecords) {
+                pw.println(Util.getSpaces(indent + 6) + tlv.getTag() + " " + tlv);
+            }
+        }
+
     }
 }

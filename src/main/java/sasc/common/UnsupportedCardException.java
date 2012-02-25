@@ -13,34 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.common;
+
+import sasc.iso7816.SmartCardException;
 
 /**
  *
  * @author sasc
  */
-public interface Tag {
-
-    public enum Class{
-        UNIVERSAL, APPLICATION, CONTEXT_SPECIFIC, PRIVATE
+public class UnsupportedCardException extends SmartCardException {
+    public UnsupportedCardException(String msg){
+        super(msg);
     }
-
-    boolean isConstructed();
-
-    byte[] getTagBytes();
-
-    String getName();
-
-    String getDescription();
-
-    TagType getType();
-
-    TagValueType getTagValueType();
-
-    Class getTagClass();
-
-    int getNumTagBytes();
-
+    public UnsupportedCardException(String msg, Throwable cause){
+        super(msg, cause);
+    }
+    public UnsupportedCardException(Throwable cause){
+        super(cause);
+    }
 }
-
-

@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.SmartCardException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -29,7 +30,7 @@ import sasc.util.Util;
  */
 public class ICCPublicKeyCertificate {
 
-    private Application application;
+    private EMVApplication application;
     private IssuerPublicKeyCertificate issuerPublicKeyCert;
     private ICCPublicKey iccPublicKey;
     private boolean isValid = false;
@@ -43,7 +44,7 @@ public class ICCPublicKeyCertificate {
     private byte[] hash = new byte[20];
     private boolean validationPerformed = false;
 
-    public ICCPublicKeyCertificate(Application application, IssuerPublicKeyCertificate issuerPublicKeyCert) {
+    public ICCPublicKeyCertificate(EMVApplication application, IssuerPublicKeyCertificate issuerPublicKeyCert) {
         this.application = application;
         this.issuerPublicKeyCert = issuerPublicKeyCert;
         this.iccPublicKey = new ICCPublicKey();
@@ -72,7 +73,10 @@ public class ICCPublicKeyCertificate {
         }
         validationPerformed = true;
 
-        issuerPublicKeyCert.validate(); //Init the cert
+        if(!issuerPublicKeyCert.validate()){ //Init the cert
+            isValid = false;
+            return isValid();
+        }
 
         IssuerPublicKey issuerPublicKey = issuerPublicKeyCert.getIssuerPublicKey();
 
@@ -81,13 +85,13 @@ public class ICCPublicKeyCertificate {
         ByteArrayInputStream bis = new ByteArrayInputStream(recoveredBytes);
 
         if (bis.read() != 0x6a) { //Header
-            throw new EMVException("Header != 0x6a");
+            throw new SmartCardException("Header != 0x6a");
         }
 
         certFormat = (byte) bis.read();
 
         if (certFormat != 0x04) { //Always 0x04
-            throw new EMVException("Invalid certificate format");
+            throw new SmartCardException("Invalid certificate format");
         }
 
         bis.read(pan, 0, pan.length);
@@ -125,9 +129,9 @@ public class ICCPublicKeyCertificate {
 
         bis.read(hash, 0, hash.length);
 
-        //TODO check hash validation
         ByteArrayOutputStream hashStream = new ByteArrayOutputStream();
 
+        //Header not included in hash
         hashStream.write(certFormat);
         hashStream.write(pan, 0, pan.length);
         hashStream.write(certExpirationDate, 0, certExpirationDate.length);
@@ -143,6 +147,7 @@ public class ICCPublicKeyCertificate {
 
         byte[] offlineAuthenticationRecords = application.getOfflineDataAuthenticationRecords();
         hashStream.write(offlineAuthenticationRecords, 0, offlineAuthenticationRecords.length);
+        //Trailer not included in hash
 
         byte[] sha1Result = null;
         try {
@@ -159,11 +164,11 @@ public class ICCPublicKeyCertificate {
         int trailer = bis.read();
 
         if (trailer != 0xbc) {//Trailer
-            throw new EMVException("Trailer != 0xbc");
+            throw new SmartCardException("Trailer != 0xbc");
         }
 
         if (bis.available() > 0) {
-            throw new EMVException("Error parsing certificate. Bytes left=" + bis.available());
+            throw new SmartCardException("Error parsing certificate. Bytes left=" + bis.available());
         }
         isValid = true;
         return true;
@@ -181,8 +186,8 @@ public class ICCPublicKeyCertificate {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "ICC Public Key Certificate");
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "ICC Public Key Certificate");
+        String indentStr = Util.getSpaces(indent + 3);
 
         if(!validationPerformed){
             validate();

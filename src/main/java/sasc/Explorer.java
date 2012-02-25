@@ -16,14 +16,15 @@
  */
 package sasc;
 
-import sasc.emv.Application;
-import sasc.emv.AID;
+import sasc.util.BuildProperties;
+import sasc.emv.EMVApplication;
+import sasc.iso7816.AID;
 import sasc.emv.EMVCard;
-import sasc.emv.EMVException;
+import sasc.iso7816.SmartCardException;
 import sasc.emv.EMVSession;
-import sasc.emv.Log;
+import sasc.util.Log;
 import sasc.emv.SessionProcessingEnv;
-import sasc.emv.UnsupportedCardException;
+import sasc.common.UnsupportedCardException;
 import sasc.terminal.CardConnection;
 import sasc.terminal.TerminalAPIManager;
 import sasc.terminal.TerminalException;
@@ -46,7 +47,8 @@ public class Explorer {
             Log.info(BuildProperties.getProperty("APP_NAME", "JER") + " built on "+BuildProperties.getProperty("BUILD_TIMESTAMP", "N/A"));
             Log.info("Please insert an EMV card into any attached reader.");
             cardConnection = terminalProvider.connectAnyTerminal(); //Waits for card present
-
+            Log.info("OK, card found");
+            
             //TODO check prefs to see if we should
             // - initCard normally
             // - what app to select (by name or all) (or use list of known AIDs), or brute force AIDs
@@ -57,19 +59,25 @@ public class Explorer {
             //Ideally the top level functions should be 'explore' (read as much data as possible, see above), or 'perform transaction' (production level function)
 
             SessionProcessingEnv env = new SessionProcessingEnv();
+            env.setReadMasterFile(true);
+            
 
-            EMVSession session = cardConnection.startSession(env);
+            EMVSession session = EMVSession.startSession(env, cardConnection);
 
 
             AID visaClassicAID = new AID("a0 00 00 00 03 10 10");
 
             emvCard = session.initCard();
-            for (Application app : emvCard.getApplications()) {
+            for (EMVApplication app : emvCard.getApplications()) {
                 session.selectApplication(app);
-                session.initiateApplicationProcessing(); //GET PROCESSING OPTIONS
-
-                //The Read Application Data function is performed immediately following the Initiate Application Processing function
-                session.readApplicationData(); //READ RECORD(s)
+                session.initiateApplicationProcessing(); //GET PROCESSING OPTIONS + READ RECORD(s)
+                //The Read EMVApplication Data function is performed immediately following the Initiate EMVApplication Processing function
+                
+                if(!app.isInitializedOnICC()){
+                    //Skip if GPO failed
+                    continue;
+                }
+//                session.readApplicationData(); //
                 session.readAdditionalData(); //ATC, Last Online ATC, PIN Try Counter, Log Format
 
                 //verifyPIN works with plaintext PIN for VISA Classic
@@ -79,6 +87,12 @@ public class Explorer {
 //                        }
 
                 session.getChallenge();
+                
+                //session.verifySSAD();
+                
+                session.internalAuthenticate();
+                
+                //session.generateAC();
 
                 //next steps: ?
                 //-terminal shall perform offline data authentication
@@ -87,6 +101,7 @@ public class Explorer {
 
             cardConnection.disconnect(true);
 
+            Log.info("\n");
             Log.info("Finished Processing card.");
             Log.info("Now dumping card data in a more readable form:");
             Log.info("\n");
@@ -101,7 +116,7 @@ public class Explorer {
                 System.err.println("ATR: " + Util.prettyPrintHexNoWrap(cardConnection.getATR()));
                 System.err.println(ATR_DB.searchATR(cardConnection.getATR()));
             }
-        } catch (EMVException ex) {
+        } catch (SmartCardException ex) {
             ex.printStackTrace(System.err);
             Log.info(ex.toString());
         } finally {
@@ -112,6 +127,8 @@ public class Explorer {
                     ex.printStackTrace(System.err);
                 }
                 Log.info("");
+            }else if(cardConnection != null){
+                Log.info(new sasc.iso7816.ATR(cardConnection.getATR()).toString());
             }
         }
     }

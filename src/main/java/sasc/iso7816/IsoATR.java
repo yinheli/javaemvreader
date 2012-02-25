@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.terminal;
+package sasc.iso7816;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -141,8 +141,8 @@ public class IsoATR {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"ISO Compliant Answer To Reset (ATR)");
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+"ISO Compliant Answer To Reset (ATR)");
+        String indentStr = Util.getSpaces(indent+3);
 
         pw.println(indentStr+"Convention - "+convention);
         pw.println(indentStr+"Protocol - "+protocol);

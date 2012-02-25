@@ -22,7 +22,7 @@ import java.io.InputStreamReader;
 import java.io.SequenceInputStream;
 import java.util.HashMap;
 import java.util.StringTokenizer;
-import sasc.emv.RID;
+import sasc.iso7816.RID;
 import sasc.util.Util;
 
 /**
@@ -93,8 +93,8 @@ public class RID_DB {
 
     }
 
-    public static RID searchRID(byte[] atr) {
-        return ridMap.get(Util.byteArrayToHexString(atr).toUpperCase());
+    public static RID searchRID(byte[] rid) {
+        return ridMap.get(Util.byteArrayToHexString(rid).toUpperCase());
     }
 
     public static void main(String[] args) {

@@ -15,10 +15,13 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.MasterFile;
+import sasc.iso7816.BERTLV;
+import sasc.iso7816.AID;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import sasc.terminal.ATR;
+import sasc.iso7816.ATR;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -33,12 +36,16 @@ import sasc.util.Util;
  */
 public class EMVCard {
 
-    private Map<AID, Application> applicationsMap = new LinkedHashMap<AID, Application>();
-    private Application selectedApp = null;
+    private Map<AID, EMVApplication> applicationsMap = new LinkedHashMap<AID, EMVApplication>();
+    private EMVApplication selectedApp = null;
     private ATR atr = null;
     private DDF pse = null;
     private MasterFile mf = null;
     private List<BERTLV> unhandledRecords = new ArrayList<BERTLV>();
+    
+    public enum Type{
+        CONTACTED, CONTACTLESS;
+    }
 
     public EMVCard(ATR atr) {
         this.atr = atr;
@@ -47,27 +54,34 @@ public class EMVCard {
     public void setMasterFile(MasterFile mf) {
         this.mf = mf;
     }
+    
+    public MasterFile getMasterFile() {
+        return this.mf;
+    }
 
-    public void addApplication(Application app) {
-        if (applicationsMap.containsKey(app.getAID())) {
-            throw new IllegalArgumentException("Application already added: " + app.getAID() + " " + app.getPreferredName());
+    public void addApplication(EMVApplication app) {
+//        if (applicationsMap.containsKey(app.getAID())) {
+//            throw new IllegalArgumentException("EMVApplication already added: " + app.getAID() + " " + app.getPreferredName());
+//        }
+        if(app.getAID() == null){
+            throw new IllegalArgumentException("Invalid Application object: AID == null");
         }
         applicationsMap.put(app.getAID(), app);
     }
 
-    public Application getSelectedApplication() {
+    public EMVApplication getSelectedApplication() {
         return selectedApp;
     }
 
-    public void setSelectedApplication(Application app) {
+    public void setSelectedApplication(EMVApplication app) {
         this.selectedApp = app;
     }
 
-    public Application getApplication(AID aid) {
+    public EMVApplication getApplication(AID aid) {
         return selectedApp;
     }
 
-    public Collection<Application> getApplications() {
+    public Collection<EMVApplication> getApplications() {
         return Collections.unmodifiableCollection(applicationsMap.values());
     }
 
@@ -96,9 +110,9 @@ public class EMVCard {
 
     //Dump all information read from card
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "======================================");
-        pw.println(Util.getEmptyString(indent) + "               [EMVCard]              ");
-        pw.println(Util.getEmptyString(indent) + "======================================");
+        pw.println(Util.getSpaces(indent) + "======================================");
+        pw.println(Util.getSpaces(indent) + "               [EMVCard]              ");
+        pw.println(Util.getSpaces(indent) + "======================================");
         atr.dump(pw, indent);
 
         pw.println("");
@@ -112,17 +126,18 @@ public class EMVCard {
         }
 
         if (!unhandledRecords.isEmpty()) {
-            pw.println(Util.getEmptyString(indent + 3) + "UNHANDLED GLOBAL RECORDS (" + unhandledRecords.size() + " found):");
-        }
-        for (BERTLV tlv : unhandledRecords) {
-            pw.println(Util.getEmptyString(indent + 6) + tlv.getTag() + " " + tlv);
+            pw.println(Util.getSpaces(indent + 3) + "UNHANDLED GLOBAL RECORDS (" + unhandledRecords.size() + " found):");
+
+            for (BERTLV tlv : unhandledRecords) {
+                pw.println(Util.getSpaces(indent + 6) + tlv.getTag() + " " + tlv);
+            }
         }
         pw.println("");
 
         pw.println("");
-        pw.println(Util.getEmptyString(indent + 6) + "Applications (" + getApplications().size() + " found):");
+        pw.println(Util.getSpaces(indent + 6) + "Applications (" + getApplications().size() + " found):");
         pw.println("");
-        for (Application app : getApplications()) {
+        for (EMVApplication app : getApplications()) {
             app.dump(pw, indent + 9);
         }
 

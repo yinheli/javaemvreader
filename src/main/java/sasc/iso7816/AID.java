@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.iso7816;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -24,7 +24,7 @@ import sasc.util.Util;
 /**
  * Application Identifier (AID)
  *
- * See Book 1 page 153
+ * See EMV Book 1 page 153
  * @author sasc
  */
 public class AID {
@@ -39,10 +39,10 @@ public class AID {
             throw new IllegalArgumentException("Arguments 'rid' and 'pix' cannot be null");
         }
         if (rid.length != 5) {
-            throw new EMVException("RID length != 5. Length=" + rid.length);
+            throw new IllegalArgumentException("RID length != 5. Length=" + rid.length);
         }
         if (pix.length > 11) {
-            throw new EMVException("PIX length > 11. Length=" + pix.length);
+            throw new IllegalArgumentException("PIX length > 11. Length=" + pix.length);
         }
         this.rid = rid;
         this.pix = pix;
@@ -54,6 +54,9 @@ public class AID {
         }
         if (aid.length < 5) {
             throw new IllegalArgumentException("AID length < 5. Length=" + aid.length);
+        }
+        if (aid.length > 16) {
+            throw new IllegalArgumentException("AID length > 16. Length=" + aid.length);
         }
         rid = new byte[5];
         System.arraycopy(aid, 0, rid, 0, rid.length);
@@ -93,8 +96,8 @@ public class AID {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"AID: "+Util.prettyPrintHexNoWrap(getAIDBytes()));
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+"AID: "+Util.prettyPrintHexNoWrap(getAIDBytes()));
+        String indentStr = Util.getSpaces(indent+3);
 
         RID ridFromDB = RID_DB.searchRID(rid);
         String description = "";

@@ -27,5 +27,22 @@ package sasc.emv;
  * @author sasc
  */
 public class CryptogramInformationData {
-
+    private byte cidByte;
+    
+    public CryptogramInformationData(byte cid){
+        this.cidByte = cid;
+    }
+    
+    public String getTEXT(){
+        switch(cidByte & 0xC0) {
+            case 0x00:
+                return "AAC";
+            case 0x40:
+                return "TC";
+            case 0x80:
+                return "ARQC";
+            default: // 0xC0
+                return "RFU";                
+        }
+    }
 }

@@ -1,25 +1,100 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Simple Example of how a list of supported/known AIDs could be constructed -->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Simple list of supported/known AIDs -->
+<!-- AID minimum 5 bytes (the RID) -->
+<!-- Supported="false" are known but unsupported AIDs (supported means in a transaction context. Unsupported AIDs can still be read) -->
+<!-- ASI = Application Selection Indicator. PARTIAL_MATCH or EXACT_MATCH -->
 <AIDList>
-	<Application AID="A0000000031010" Supported="yes">
-              <Name>VISA</Name>
-              <ApplicationSelectionIndicator>EXACT_MATCH</ApplicationSelectionIndicator>
-              <Description></Description>
-        </Application>
+    <Application AID="A000000003"            Supported="true"  ASI="PARTIAL_MATCH" Name="VISA" Description=""/>
+    <Application AID="A000000003 000000"     Supported="false" ASI="EXACT_MATCH"   Name="VISA Card Manager" Description="Visa Proprietary Card Manager AID for OpenPlatform cards"/>
+    <Application AID="A000000003 1010"       Supported="true"  ASI="EXACT_MATCH"   Name="VISA Debit/Credit (Classic)" Description="Standard/Gold VISA credit card"/>
+    <Application AID="A000000003 101001"     Supported="false" ASI="EXACT_MATCH"   Name="VISA Credit" Description=""/>
+    <Application AID="A000000003 101002"     Supported="false" ASI="EXACT_MATCH"   Name="VISA Debit" Description=""/>
+    <Application AID="A000000003 2010"       Supported="false" ASI="EXACT_MATCH"   Name="VISA Electron" Description="VISA Electron (Debit)"/>
+    <Application AID="A000000003 2020"       Supported="false" ASI="EXACT_MATCH"   Name="VISA" Description="V PAY"/>
+    <Application AID="A000000003 3010"       Supported="false" ASI="EXACT_MATCH"   Name="VISA Interlink" Description=""/>
+    <Application AID="A000000003 4010"       Supported="false" ASI="EXACT_MATCH"   Name="Visa Specific" Description=""/>
+    <Application AID="A000000003 5010"       Supported="false" ASI="EXACT_MATCH"   Name="Visa Specific" Description=""/>
+    <Application AID="A000000003 8010"       Supported="false" ASI="EXACT_MATCH"   Name="VISA Plus" Description=""/>
+    <Application AID="A000000003 999910"     Supported="false" ASI="EXACT_MATCH"   Name="VISA ATM" Description=""/>
 
-	<Application AID="A0000000032010"/>
-	<Application AID="A0000000033010"/>
-	<Application AID="A0000000034010"/>
-	<Application AID="A0000000035010"/>
-	<Application AID="A0000000041010"/>
-	<Application AID="A0000000042010"/>
-	<Application AID="A0000000043010"/>
-	<Application AID="A0000000043060"/>
-	<Application AID="A0000000044010"/>
-	<Application AID="A0000000045010"/>
-	<Application AID="A0000000421010"/>
-	<Application AID="A0000000422010"/>
-	<Application AID="A0000000423010"/>
-	<Application AID="A0000000424010"/>
-	<Application AID="A0000000425010"/>
+    <Application AID="A000000004 1010"       Supported="false" ASI="EXACT_MATCH"   Name="MasterCard Credit" Description="Standard MasterCard"/>
+    <Application AID="A000000004 2010"       Supported="false" ASI="EXACT_MATCH"   Name="MasterCard Specific" Description=""/>
+    <Application AID="A000000004 3010"       Supported="false" ASI="EXACT_MATCH"   Name="MasterCard Specific" Description=""/>
+    <Application AID="A000000004 3060"       Supported="false" ASI="EXACT_MATCH"   Name="Maestro (Debit)" Description=""/>
+    <Application AID="A000000004 4010"       Supported="false" ASI="EXACT_MATCH"   Name="MasterCard Specific" Description=""/>
+    <Application AID="A000000004 5010"       Supported="false" ASI="EXACT_MATCH"   Name="MasterCard Specific" Description=""/>
+    <Application AID="A000000004 6000"       Supported="false" ASI="EXACT_MATCH"   Name="Cirrus" Description="Mastercard Cirrus (Interbank Network)"/>
+    <Application AID="A000000004 8002"       Supported="false" ASI="EXACT_MATCH"   Name="SecureCode Auth" Description=""/>
+
+    <Application AID="A000000005 0001"       Supported="false" ASI="EXACT_MATCH"   Name="Maestro UK" Description="UK Domestic Maestro - Switch (debit card)"/>
+    <Application AID="A000000005 0002"       Supported="false" ASI="EXACT_MATCH"   Name="Solo" Description="UK Domestic Maestro - Switch (debit card)"/>
+
+    <Application AID="A000000024 01"         Supported="false" ASI="EXACT_MATCH"   Name="Self Service" Description=""/>
+
+    <Application AID="A000000025"            Supported="false" ASI="PARTIAL_MATCH" Name="America Express" Description=""/>
+    <Application AID="A000000025 0000"       Supported="false" ASI="EXACT_MATCH"   Name="America Express" Description="American Express credit/debit"/>
+    <Application AID="A000000025 01"         Supported="false" ASI="EXACT_MATCH"   Name="America Express" Description="American Express"/>
+
+    <Application AID="A000000025 010701"     Supported="false" ASI="EXACT_MATCH"   Name="ExpressPay" Description=""/>
+    <Application AID="A000000029 1010"       Supported="false" ASI="EXACT_MATCH"   Name="Link" Description="Link (UK) ATM Network"/>
+
+
+    <Application AID="A000000042 1010"       Supported="false" ASI="EXACT_MATCH"   Name="CB" Description="Groupement des Cartes Bancaires"/>
+    <Application AID="A000000042 2010"       Supported="false" ASI="EXACT_MATCH"   Name="" Description=""/>
+    <Application AID="A000000042 3010"       Supported="false" ASI="EXACT_MATCH"   Name="" Description=""/>
+    <Application AID="A000000042 4010"       Supported="false" ASI="EXACT_MATCH"   Name="" Description=""/>
+    <Application AID="A000000042 5010"       Supported="false" ASI="EXACT_MATCH"   Name="" Description=""/>
+
+    <Application AID="A000000069 00"         Supported="false" ASI="EXACT_MATCH"   Name="Monéo" Description=""/>
+
+    <Application AID="A000000141 0001"       Supported="false" ASI="EXACT_MATCH"   Name="Pagobancomat" Description="Consorzio BANCOMAT (Italian domestic debit card)"/>
+
+    <Application AID="A000000228 1010"       Supported="false" ASI="EXACT_MATCH"   Name="SAMA" Description="Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)"/>
+
+    <Application AID="A000000277 1010"       Supported="false" ASI="EXACT_MATCH"   Name="INTERAC" Description="Canadian domestic credit/debit card"/>
+
+    <Application AID="A000000315 10100528"   Supported="false" ASI="EXACT_MATCH"   Name="PIN" Description=""/>
+    <Application AID="A000000315 6020"       Supported="false" ASI="EXACT_MATCH"   Name="Chipknip" Description=""/>
+
+    <Application AID="A000000359 1010028001" Supported="false" ASI="EXACT_MATCH"   Name="ZKA" Description="Girocard"/>
+
+    <Application AID="B012345678"            Supported="false" ASI="EXACT_MATCH"   Name="Maestro TEST" Description=""/>
+
+    <!-- D = Category id for national registration + Country code according to ISO 3166 -->
+    <Application AID="D578000002 1010"       Supported="true"  ASI="EXACT_MATCH"   Name="Bankaxept" Description="Norwegian domestic debit card"/>
+
+        <!--
+
+A000000009 = sim.toolkit packages
+
+A000000018 1001 = prefix for com.gemplus.javacard.util packages
+A000000018 434D = gemplus card manager (CM = ascii for 434D) , security domain for some GCX/GXP cards
+
+A000000042 = emv ????? (CB FRANCE)
+
+A000000063 50 4B 43 53 2D 31 35 = "PKCS-15"
+A000000063 57 41 50 2D 57 49 4D = "WAP-WIM" (WIM)
+A000000069 = moneo
+A000000087 = RID of 3GPP/ETSI (UICC, USIM, USAT)
+
+A000000132 = org.javacardforum -> biometry
+
+A000000167 = FIPS ???? (IBM GERMANY)
+
+A000000247 1001 = issuer stored data application (machine readable travel documents (MRTD))
+A000000247 2001 = application for hashes, digital signature, and certificate (The last three digits of the PIX shall be used to denote future version levels.)(machine readable travel documents (MRTD))
+
+
+D276000005 = Giesecke & Devrient
+
+D276000025 45500100 = Girocard (Geldkarte) in Germany
+
+D276000060 = Wolfgang Rankl
+
+D276000085 = NFC Forum
+
+D276000118 = Giesecke & Devrient Java Card Telecommunikation
+
+-->
+
 </AIDList>

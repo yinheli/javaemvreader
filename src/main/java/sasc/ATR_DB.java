@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -32,7 +34,6 @@ import sasc.util.Util;
  *
  * + some additional ATRs
  *
- * TODO: The ATRs in Rousseau's list are in regular expression form
  *
  * @author sasc
  */
@@ -55,18 +56,20 @@ public class ATR_DB {
             String line;
             String currentATR = null;
             while((line = br.readLine()) != null){
-                if(line.startsWith("#")  || line.trim().length() == 0){
+                if(line.startsWith("#")  || line.trim().length() == 0){ //comment ^#/ empty line ^$/
                     continue;
                 }else if(line.startsWith("\t") && currentATR != null){
                     atrMap.get(currentATR).addDescriptiveText(line.replace("\t", "").trim());
 //                    Log.debug("Adding descriptive text for ATR="+currentATR+" "+line.replace("\t", ""));
                 }else if(line.startsWith("3")){ // ATR hex
-                    currentATR = Util.removeSpaces(line).toUpperCase();
+                    currentATR = line.toUpperCase().trim();
                     if(!atrMap.containsKey(currentATR)){
                         atrMap.put(currentATR, new PublicATR(line));
                     }
                 }else{
-                    throw new RuntimeException("SOMETHING UNEXPECTED HAPPEND. currentATR="+currentATR+" Line="+line);
+                    Log.debug("Encountered unexpected line in atr list: currentATR="+currentATR+" Line="+line);
+                    //Just skip
+                    //throw new RuntimeException("Encountered unexpected line in atr list: currentATR="+currentATR+" Line="+line);
                 }
             }
         }catch(IOException e){
@@ -101,11 +104,11 @@ public class ATR_DB {
         String atr;
         List<String> descriptiveText = new ArrayList<String>();
 
-        public PublicATR(String atr){
+        private PublicATR(String atr){
             this.atr = atr; //With spaces between bytes
         }
 
-        public void addDescriptiveText(String text){
+        private void addDescriptiveText(String text){
             descriptiveText.add(text);
         }
 
@@ -114,13 +117,21 @@ public class ATR_DB {
         }
 
     }
+    
+    public static Map<String, PublicATR> getAll(){
+        return Collections.unmodifiableMap(atrMap);
+    }
 
 
     public static List<String> searchATR(byte[] atr){
-        //TODO use Regex to match ATR. Pattern/Matcher
-        PublicATR publicATR = atrMap.get(Util.byteArrayToHexString(atr).toUpperCase());
-        if(publicATR != null){
-            return publicATR.getDescriptiveText();
+        String atrStr = Util.prettyPrintHexNoWrap(atr).toUpperCase();
+        for(String atrPatternStr : atrMap.keySet()){
+            if(atrStr.matches("^"+atrPatternStr+"$")){
+                PublicATR publicATR = atrMap.get(atrPatternStr);
+                if(publicATR != null){
+                    return publicATR.getDescriptiveText();
+                }
+            }
         }
         return null;
     }
@@ -129,6 +140,7 @@ public class ATR_DB {
         System.out.println(ATR_DB.searchATR(new byte[]{(byte)0x3B, (byte)0x90, (byte)0x95, (byte)0x80, (byte)0x1F, (byte)0xC3, (byte)0x59}));
         System.out.println(ATR_DB.searchATR(new byte[]{(byte)0x3B, (byte)0x04, (byte)0xA2, (byte)0x13, (byte)0x10, (byte)0x91}));
         System.out.println(ATR_DB.searchATR(new byte[]{(byte)0x3B, (byte)0x67, (byte)0x00, (byte)0x00, (byte)0xa6, (byte)0x40, (byte)0x40, (byte)0x00, (byte)0x09, (byte)0x90, (byte)0x00}));
+        System.out.println(ATR_DB.searchATR(new byte[]{(byte)0x3B, (byte)0x24, (byte)0x00, (byte)0x01, (byte)0x02, (byte)0x03, (byte)0x45}));
 //        3b 67 00 00 a6 40 40 00 09 90 00 
     }
 }

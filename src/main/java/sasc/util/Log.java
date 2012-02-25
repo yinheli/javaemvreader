@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.util;
 
 import java.io.PrintWriter;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,7 +54,7 @@ public class Log {
     }
 
     public static void debug(String msg) {
-        logInternal(msg, Level.DEBUG);
+        logInternal("DEBUG: " + msg, Level.DEBUG);
     }
 
     public static void info(String msg) {

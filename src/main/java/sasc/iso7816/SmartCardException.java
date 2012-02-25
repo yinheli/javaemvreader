@@ -13,14 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.iso7816;
 
 /**
  *
  * @author sasc
  */
-public enum TagValueType {
-    //COMPRESSED_NUMERIC (trailing 'F's),
-    BINARY, NUMERIC, TEXT, MIXED, DOL, TEMPLATE,
-}
+public class SmartCardException extends RuntimeException{
 
+    public SmartCardException(String message){
+        super(message);
+    }
+
+    public SmartCardException(String message, Throwable cause){
+        super(message, cause);
+    }
+    public SmartCardException(Throwable cause){
+        super(cause);
+    }
+}

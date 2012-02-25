@@ -15,7 +15,7 @@
  *  under the License.
  */
 
-package sasc.emv;
+package sasc.iso7816;
 
 import java.util.Arrays;
 import sasc.util.Util;
@@ -36,7 +36,7 @@ public class RID {
             throw new IllegalArgumentException("Argument 'rid' cannot be null");
         }
         if (rid.length != 5) {
-            throw new EMVException("RID length != 5. Length=" + rid.length);
+            throw new SmartCardException("RID length != 5. Length=" + rid.length);
         }
         if(applicant == null){
             applicant = "";

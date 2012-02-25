@@ -13,12 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.iso7816;
+
+import sasc.iso7816.Tag;
 
 /**
  *
  * @author sasc
  */
-interface File {
-    //TODO
+public class TagAndLength {
+    private Tag tag;
+    private int length;
+
+    public TagAndLength(Tag tag, int length){
+        this.tag = tag;
+        this.length = length;
+    }
+
+    public Tag getTag(){
+        return tag;
+    }
+
+    public int getLength(){
+        return length;
+    }
+
+    @Override
+    public String toString(){
+        return tag.toString() + " " + length;
+    }
+
 }

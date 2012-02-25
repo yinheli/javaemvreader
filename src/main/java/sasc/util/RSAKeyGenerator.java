@@ -52,7 +52,7 @@ public class RSAKeyGenerator {
 
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
         AlgorithmParameterSpec spec = new RSAKeyGenParameterSpec(numBits, BigInteger.valueOf(exponent));
-        keyGen.initialize(spec);
+        keyGen.initialize(spec); //For production code: also specify SecureRandom
         KeyPair keyPair = keyGen.genKeyPair();
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
@@ -75,16 +75,17 @@ public class RSAKeyGenerator {
         System.out.println(Util.prettyPrintHex(rsaPrivKey.getModulus()));
         System.out.println("\nRSA Private Key Exponent Hex:");
         System.out.println(Util.prettyPrintHex(rsaPrivKey.getPrivateExponent()));
-        System.out.println("\nRSA Public  Key Exponent Hex:");
+        System.out.println("\nRSA Public Key Exponent Hex:");
         System.out.println(Util.prettyPrintHex(rsaPublicKey.getPublicExponent()));
     }
 
     public static void main(String[] args) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 
+        //From EMV docs:
         //The value of the Issuer Public Key Exponent and the ICC Public Key Exponent is determined by the issuer.
         //The Certification Authority, Issuer, and ICC Public Key Exponents shall be equal to 3 or 216 + 1.
 
-        // Generate a 1152-bit RSA key pair
+        // Generate a 1152-bit RSA key pair with exponent == 3
         dump(generateRSAKeys(1152, 3));
     }
 }

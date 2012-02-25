@@ -60,8 +60,8 @@ public class ApplicationPriorityIndicator {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"Application Priority Indicator");
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+"Application Priority Indicator");
+        String indentStr = Util.getSpaces(indent+3);
         pw.println(indentStr+getMayBeselectedWithoutCardholderConfirmationString());
         if(isPriorityAssigned()){
             pw.println(indentStr+"Selection Priority: "+getSelectionPriority() + " (1 is highest)");

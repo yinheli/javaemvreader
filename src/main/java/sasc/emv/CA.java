@@ -15,6 +15,8 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.SmartCardException;
+import sasc.iso7816.AID;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -61,7 +63,7 @@ public class CA {
                 XMLElement caElement = (XMLElement) caObject;
                 byte[] rid = Util.fromHexString(caElement.getStringAttribute("RID"));
                 if (rid.length != 5) {
-                    throw new EMVException("Unexpected RID length: " + rid.length + ". Length must be 5 bytes. RID=" + Util.prettyPrintHexNoWrap(rid));
+                    throw new SmartCardException("Unexpected RID length: " + rid.length + ". Length must be 5 bytes. RID=" + Util.prettyPrintHexNoWrap(rid));
                 }
 
                 CA ca = new CA();
@@ -108,7 +110,7 @@ public class CA {
                             }
                             byte[] sha1ChecksumResult = calculateCAPublicKeyCheckSum(ca.getRID(), Util.intToByteArray(index), mod, exp);
                             if (!Arrays.equals(hash, sha1ChecksumResult)) {
-                                throw new EMVException("Checksum not correct for key index " + index + " for CA RID " + Util.prettyPrintHexNoWrap(ca.getRID()) + ". Expected " + Util.byteArrayToHexString(hash) + " but was " + Util.byteArrayToHexString(sha1ChecksumResult));
+                                throw new SmartCardException("Checksum not correct for key index " + index + " for CA RID " + Util.prettyPrintHexNoWrap(ca.getRID()) + ". Expected " + Util.byteArrayToHexString(hash) + " but was " + Util.byteArrayToHexString(sha1ChecksumResult));
                             }
                             CAPublicKey pk = new CAPublicKey(index, exp, mod, sha1ChecksumResult, publicKeyAlgorithmIndicator, hashAlgorithmIndicator, description, expirationDate);
                             ca.setPublicKey(index, pk);
@@ -139,7 +141,7 @@ public class CA {
         try {
             sha1Result = Util.calculateSHA1(stream.toByteArray());
         } catch (NoSuchAlgorithmException ex) {
-            throw new EMVException("SHA-1 hash algorithm not available", ex);
+            throw new SmartCardException("SHA-1 hash algorithm not available", ex);
         }
         return sha1Result;
     }

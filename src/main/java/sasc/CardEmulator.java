@@ -22,9 +22,9 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import nanoxml.XMLElement;
-import sasc.emv.AID;
+import sasc.iso7816.AID;
 import sasc.emv.EMVSession;
-import sasc.emv.Log;
+import sasc.util.Log;
 import sasc.emv.SW;
 import sasc.emv.SessionProcessingEnv;
 import sasc.terminal.CardResponse;
@@ -37,6 +37,7 @@ import sasc.util.Util;
  * An ICC emulator that uses data loaded from XML-file
  *
  * TODO write a better emulator that actually behaves like an ICC.
+ * Maybe write a functional JavaCard EMV implementation that can also be used as an emulator..?
  * 
  * @author sasc
  */
@@ -48,6 +49,16 @@ public class CardEmulator implements CardConnection {
 
     public CardEmulator(String filename) throws TerminalException {
         _initFromFile(filename);
+    }
+
+    @Override
+    public void resetCard() throws TerminalException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public String getProtocol() {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     //Some simple data containers
@@ -459,11 +470,6 @@ public class CardEmulator implements CardConnection {
     @Override
     public Terminal getTerminal() {
         throw new UnsupportedOperationException("Not supported.");
-    }
-
-    @Override
-    public EMVSession startSession(SessionProcessingEnv env) {
-        return EMVSession.startSession(env, this);
     }
 
     @Override

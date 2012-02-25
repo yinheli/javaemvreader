@@ -57,8 +57,8 @@ public class Record{
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"Record: "+getRecordNumber());
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+"Record: "+getRecordNumber());
+        String indentStr = Util.getSpaces(indent+3);
         pw.println(indentStr+"Length: "+rawDataIncTag.length);
         pw.println(indentStr+"Involved In Offline Data Authentication: "+
                 isInvolvedInOfflineDataAuthentication());

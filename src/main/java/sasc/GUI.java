@@ -27,7 +27,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import org.jdesktop.application.SingleFrameApplication;
-import sasc.emv.Log;
+import sasc.util.Log;
 
 /**
  *
@@ -39,11 +39,13 @@ public class GUI extends SingleFrameApplication {
 
     @Override
     protected void startup() {
-        redirectSystemStreams();
         JFrame mainFrame = this.getMainFrame();
                 mainFrame.setName("mainFrame");
 
         console = new JTextArea("");
+        
+        redirectSystemStreams();
+        
         JScrollPane scrollPane = new JScrollPane(console);
         console.setName("console");
         show(scrollPane);

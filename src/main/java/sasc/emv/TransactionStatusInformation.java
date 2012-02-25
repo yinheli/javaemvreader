@@ -149,8 +149,8 @@ public class TransactionStatusInformation {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"Transaction Status Information:");
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+"Transaction Status Information:");
+        String indentStr = Util.getSpaces(indent+3);
 
         pw.println(indentStr+getOfflineDataAuthenticationWasPerformedString());
         pw.println(indentStr+getCardholderVerificationWasPerformedString());

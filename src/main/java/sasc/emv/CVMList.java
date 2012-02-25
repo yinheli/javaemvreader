@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.SmartCardException;
 import java.io.ByteArrayInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -39,7 +40,7 @@ public class CVMList {
         byte[] secondAmountField = new byte[4];
         bis.read(amountField, 0, amountField.length);
         bis.read(secondAmountField, 0, secondAmountField.length);
-        if(bis.available() % 2 != 0 ) throw new EMVException("CMVRules data is not a multiple of 2. Length="+data.length);
+        if(bis.available() % 2 != 0 ) throw new SmartCardException("CMVRules data is not a multiple of 2. Length="+data.length);
         while(bis.available() > 0){
             byte[] tmp = new byte[2];
             bis.read(tmp, 0, tmp.length);
@@ -55,7 +56,7 @@ public class CVMList {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Cardholder Verification Method (CVM) List:");
+        pw.println(Util.getSpaces(indent) + "Cardholder Verification Method (CVM) List:");
 
         for(CVRule cvRule : cvRules){
             cvRule.dump(pw, indent+3);

@@ -15,9 +15,6 @@
  */
 package sasc.terminal;
 
-import sasc.emv.EMVSession;
-import sasc.emv.SessionProcessingEnv;
-
 /**
  *
  * @author sasc
@@ -31,8 +28,13 @@ public interface CardConnection {
     Terminal getTerminal();
 
     String getConnectionInfo();
-
-    EMVSession startSession(SessionProcessingEnv env);
+    
+    String getProtocol();
+    
+    /**
+     * Attempt a warm reset
+     */
+    void resetCard() throws TerminalException;
 
     /**
      *

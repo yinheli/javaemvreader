@@ -15,6 +15,8 @@
  */
 package sasc.emv;
 
+import sasc.util.Log;
+import sasc.iso7816.AID;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.StringTokenizer;
@@ -73,10 +75,9 @@ public class SASCIntegrationTest {
 
         
         emvCard = session.initCard();
-        for(Application app : emvCard.getApplications()){
+        for(EMVApplication app : emvCard.getApplications()){
             session.selectApplication(app);
             session.initiateApplicationProcessing();
-            session.readApplicationData();
             session.readAdditionalData();
             if (targetAID.equals(app.getAID())) {
                 session.verifyPIN(1234, true);

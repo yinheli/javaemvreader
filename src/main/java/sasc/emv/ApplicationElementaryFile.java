@@ -15,6 +15,8 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.File;
+import sasc.iso7816.SmartCardException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
@@ -37,18 +39,18 @@ public class ApplicationElementaryFile implements File{
 
     public ApplicationElementaryFile(byte[] data){
         if(data.length != 4){
-            throw new EMVException("Applicaton Elementary File length must be equal to 4. Data length="+data.length);
+            throw new SmartCardException("Applicaton Elementary File length must be equal to 4. Data length="+data.length);
         }
 
         int sfiNumber = data[0] >> 3; 
         sfi = new ShortFileIdentifier(sfiNumber);
         startRecordNumber = data[1] & 0xFF;
         if(startRecordNumber == 0){
-            throw new EMVException("Applicaton Elementary File: Start Record number cannot be 0");
+            throw new SmartCardException("Applicaton Elementary File: Start Record number cannot be 0");
         }
         endRecordNumber = data[2] & 0xFF;
         if(endRecordNumber < startRecordNumber){
-            throw new EMVException("Applicaton Elementary File: End Record number ("+endRecordNumber+") < Start Record number ("+startRecordNumber+")");
+            throw new SmartCardException("Applicaton Elementary File: End Record number ("+endRecordNumber+") < Start Record number ("+startRecordNumber+")");
         }
         numRecordsInvolvedInOfflineDataAuthentication = data[3] & 0xFF;
     }
@@ -93,8 +95,8 @@ public class ApplicationElementaryFile implements File{
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent)+"Application Elementary File");
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent)+"Application Elementary File");
+        String indentStr = Util.getSpaces(indent+3);
         if(sfi != null){
             sfi.dump(pw, indent+3);
         }

@@ -15,8 +15,10 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.SmartCardException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import sasc.IIN_DB;
 import sasc.util.ISO3166_1;
 import sasc.util.Util;
 
@@ -28,7 +30,13 @@ import sasc.util.Util;
 public class PAN {
 
     private short mii;
-    private int iin;
+    
+    //Issuer Identification Number, aka BIN
+    //BIN - Bank Identification Number, commonly (and wrongly) referred to as "Bin Number". 
+    //This is the first six digits of the number on many types of card including 
+    //credit cards and debit cards. As other issuers besides banks participate in card schemes, 
+    //the term IIN (Issuer Identification Number) is replacing BIN.
+    private int iin; 
     private long accountNumber;
     private String panStr;
     private boolean valid;
@@ -39,7 +47,7 @@ public class PAN {
 
     public PAN(String inputString) {
         if (inputString.length() < 8) {
-            throw new EMVException("Invalid PAN length: " + inputString.length());
+            throw new SmartCardException("Invalid PAN length: " + inputString.length());
         }
         this.panStr = inputString.toUpperCase();
         mii = Short.parseShort(panStr.substring(0, 1));
@@ -55,7 +63,7 @@ public class PAN {
         }
         //Check that actual PAN length (without padding, is not longer than 19 digits)
         if (panStr.length() > 19) {
-            throw new EMVException("Invalid PAN length: " + panStr.length());
+            throw new SmartCardException("Invalid PAN length: " + panStr.length());
         }
 
         accountNumber = Long.parseLong(panStr.substring(6, panStr.length() - 1));
@@ -113,8 +121,8 @@ public class PAN {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Primary Account Number (PAN) - " + panStr);
-        String indentStr = Util.getEmptyString(indent + 3);
+        pw.println(Util.getSpaces(indent) + "Primary Account Number (PAN) - " + panStr);
+        String indentStr = Util.getSpaces(indent + 3);
         switch (getMajorIndustryIdentifier()) {
             case 0:
                 pw.println(indentStr + "Major Industry Identifier = 0 (ISO/TC 68 and other industry assignments)");
@@ -148,7 +156,12 @@ public class PAN {
                 pw.println(indentStr + "Country Code (ISO 3166-1): " + panStr.substring(1, 4) + " (=" + ISO3166_1.getCountryForCode(panStr.substring(1, 4)) + ")");
                 break;
         }
-        pw.println(indentStr + "Issuer Identifier Number: " + iin);
+        IIN_DB.IIN iinLookup = IIN_DB.searchIIN(iin);
+        String iinDescription = "";
+        if(iinLookup != null){
+            iinDescription = " ("+iinLookup.getDescription()+")";
+        }
+        pw.println(indentStr + "Issuer Identifier Number: " + iin + iinDescription);
         pw.println(indentStr + "Account Number: " + accountNumber);
         pw.println(indentStr + "Check Digit: " + getCheckDigit() + " ("+(isValid()?"Valid":"Invalid")+")");
     }

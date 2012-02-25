@@ -15,6 +15,8 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.Tag;
+import sasc.iso7816.SmartCardException;
 import java.io.ByteArrayInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -41,7 +43,7 @@ public class StaticDataAuthenticationTagList {
         if(!(tagList.size() == 1 && tagList.get(0).equals(EMVTags.APPLICATION_INTERCHANGE_PROFILE))){
             //If the Static Data Authentication Tag List exists, it shall contain
             //only the tag for the Application Interchange Profile.
-            throw new EMVException("Only ApplicationInterchangeProfile is allowed in the Static Data Authentication Tag List. List="+tagList);
+            throw new SmartCardException("Only ApplicationInterchangeProfile is allowed in the Static Data Authentication Tag List. List="+tagList);
         }
     }
 
@@ -57,8 +59,8 @@ public class StaticDataAuthenticationTagList {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getEmptyString(indent) + "Static Data Authentication Tag List");
-        String indentStr = Util.getEmptyString(indent+3);
+        pw.println(Util.getSpaces(indent) + "Static Data Authentication Tag List");
+        String indentStr = Util.getSpaces(indent+3);
 
         for(Tag tag : tagList){
             pw.println(indentStr+tag.getName());

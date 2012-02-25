@@ -15,6 +15,12 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.File;
+import sasc.iso7816.TagAndLength;
+import sasc.iso7816.Tag;
+import sasc.iso7816.SmartCardException;
+import sasc.iso7816.BERTLV;
+import sasc.iso7816.AID;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -33,9 +39,10 @@ import sasc.util.Util;
  *
  * @author sasc
  */
-public class Application implements File {
+public class EMVApplication implements File {
 
     private boolean isInitializedOnICC = false;
+    private boolean allAppRecordsRead = false;
     private ApplicationUsageControl auc = null;
     private ApplicationInterchangeProfile aip = null;
     private ApplicationPriorityIndicator api = null;
@@ -61,6 +68,7 @@ public class Application implements File {
     private DOL cdol1 = null;
     private DOL cdol2 = null;
     private SignedStaticApplicationData signedStaticAppData = null;
+    private SignedDynamicApplicationData signedDynamicAppData = null;
     private PAN pan = null;
     private int panSequenceNumber = -1; //Identifies and differentiates cards with the same PAN
     private CVMList cvmList = null;
@@ -78,11 +86,14 @@ public class Application implements File {
     private TransactionStatusInformation transactionStatusInformation = new TransactionStatusInformation();
     private List<BERTLV> unhandledRecords = new ArrayList<BERTLV>();
 
-    public Application() {
+    public EMVApplication() {
     }
 
-    public void setAID(AID aid) {
-        this.aid = aid;
+    public void setAID(AID _aid) {
+        if(this.aid != null && !Arrays.equals(this.aid.getAIDBytes(), _aid.getAIDBytes())){
+            throw new SmartCardException("Attempting to assign a different AID value. Current: " + Util.prettyPrintHexNoWrap(this.aid.getAIDBytes()) + " new: " + Util.prettyPrintHexNoWrap(_aid.getAIDBytes()));
+        }
+        this.aid = _aid;
     }
 
     public ApplicationUsageControl getApplicationUsageControl() {
@@ -206,6 +217,18 @@ public class Application implements File {
     }
 
     public void setDDOL(DOL ddol) {
+        if(ddol == null){
+            throw new IllegalArgumentException("DDOL cannot be null");
+        }
+        boolean unpredictableNumberFound = false;
+        for(TagAndLength tal : ddol.getTagAndLengthList()) {
+            if(tal.getTag().equals(EMVTags.UNPREDICTABLE_NUMBER)){
+                unpredictableNumberFound = true;
+            }
+        }
+        if(!unpredictableNumberFound){
+            throw new IllegalArgumentException("DDOL must contain the Unpredictable Number (tag 0x9F37)");
+        }
         this.ddol = ddol;
     }
 
@@ -241,6 +264,14 @@ public class Application implements File {
         this.signedStaticAppData = signedStaticAppData;
     }
 
+    public SignedDynamicApplicationData getSignedDynamicApplicationData() {
+        return signedDynamicAppData;
+    }
+
+    public void setSignedDynamicApplicationData(SignedDynamicApplicationData signedDynamicAppData) {
+        this.signedDynamicAppData = signedDynamicAppData;
+    }
+
     public void setCDOL1(DOL cdol1) {
         this.cdol1 = cdol1;
     }
@@ -251,7 +282,7 @@ public class Application implements File {
 
     public void setExpirationDate(byte[] dateBytes) {
         if (dateBytes.length != 3) {
-            throw new EMVException("Byte array length must be 3. Length=" + dateBytes.length);
+            throw new SmartCardException("Byte array length must be 3. Length=" + dateBytes.length);
         }
         int YY = Util.numericByteToInt(dateBytes[0]);
         int MM = Util.numericByteToInt(dateBytes[1]);
@@ -268,7 +299,7 @@ public class Application implements File {
 
     public void setEffectiveDate(byte[] dateBytes) {
         if (dateBytes.length != 3) {
-            throw new EMVException("Byte array length must be 3. Length=" + dateBytes.length);
+            throw new SmartCardException("Byte array length must be 3. Length=" + dateBytes.length);
         }
         int YY = Util.numericByteToInt(dateBytes[0]);
         int MM = Util.numericByteToInt(dateBytes[1]);
@@ -447,7 +478,7 @@ public class Application implements File {
             List<Tag> sdaTagList = sdaTagListObject.getTagList();
             if (sdaTagList != null && !sdaTagList.isEmpty()) {
                 if (sdaTagList.size() > 1 || sdaTagList.get(0) != EMVTags.APPLICATION_INTERCHANGE_PROFILE) {
-                    throw new EMVException("SDA Tag list must contain only the 'Application Interchange Profile' tag: " + sdaTagList);
+                    throw new SmartCardException("SDA Tag list must contain only the 'Application Interchange Profile' tag: " + sdaTagList);
                 } else {
                     byte[] aipBytes = this.getApplicationInterchangeProfile().getBytes();
                     stream.write(aipBytes, 0, aipBytes.length);
@@ -468,6 +499,16 @@ public class Application implements File {
         return isInitializedOnICC;
     }
 
+    //The allAppRecordsRead methods are only used to indicate that
+    //all the records indicated in the AFL have been read
+    public void setAllAppRecordsInAFLRead() {
+        allAppRecordsRead = true;
+    }
+
+    public boolean isAllAppRecordsInAFLRead() {
+        return allAppRecordsRead;
+    }
+
     @Override
     public String toString() {
         StringWriter sw = new StringWriter();
@@ -476,9 +517,9 @@ public class Application implements File {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Application");
+        pw.println(Util.getSpaces(indent) + "Application");
 
-        String indentStr = Util.getEmptyString(indent + 3);
+        String indentStr = Util.getSpaces(indent + 3);
 
         if (aid != null) {
             aid.dump(pw, indent + 3);
@@ -567,6 +608,9 @@ public class Application implements File {
         if (signedStaticAppData != null) {
             signedStaticAppData.dump(pw, indent + 3);
         }
+        if (signedDynamicAppData != null) {
+            signedDynamicAppData.dump(pw, indent + 3);
+        }
         if (cvmList != null) {
             cvmList.dump(pw, indent + 3);
         }
@@ -615,7 +659,7 @@ public class Application implements File {
             pw.println(indentStr + "UNHANDLED APPLICATION RECORDS (" + unhandledRecords.size() + " found):");
         }
         for (BERTLV tlv : unhandledRecords) {
-            pw.println(Util.getEmptyString(indent + 6) + tlv.getTag() + " " + tlv);
+            pw.println(Util.getSpaces(indent + 6) + tlv.getTag() + " " + tlv);
         }
         pw.println("");
     }

@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import sasc.util.Util;
@@ -78,9 +79,9 @@ public class DDF implements File{ // implements DF {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Directory Definition File");
+        pw.println(Util.getSpaces(indent) + "Directory Definition File");
 
-        String indentStr = Util.getEmptyString(indent + 3);
+        String indentStr = Util.getSpaces(indent + 3);
 
         pw.println(indentStr + "Name: " + Util.byteArrayToHexString(name) + " (=" + Util.getSafePrintChars(name) + ")");
         if(issuerCodeTableIndex != -1){

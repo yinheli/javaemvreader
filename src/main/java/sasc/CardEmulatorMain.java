@@ -17,13 +17,13 @@ package sasc;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import sasc.emv.AID;
-import sasc.emv.Application;
+import sasc.iso7816.AID;
+import sasc.emv.EMVApplication;
 import sasc.emv.CA;
 import sasc.emv.EMVCard;
-import sasc.emv.EMVException;
+import sasc.iso7816.SmartCardException;
 import sasc.emv.EMVSession;
-import sasc.emv.Log;
+import sasc.util.Log;
 import sasc.emv.SessionProcessingEnv;
 import sasc.terminal.CardConnection;
 import sasc.terminal.TerminalException;
@@ -34,20 +34,24 @@ import sasc.terminal.TerminalException;
  */
 public class CardEmulatorMain {
 
-    public static void main(String[] args) throws TerminalException{
+    public static void main(String[] args) throws TerminalException {
         EMVCard emvCard = null;
         try {
             CA.initFromFile("/CertificationAuthorities_Test.xml");
             CardConnection conn = new CardEmulator("/SDACardTransaction.xml");
-            EMVSession session = conn.startSession(new SessionProcessingEnv());
+            EMVSession session = EMVSession.startSession(new SessionProcessingEnv(), conn);
 
             AID targetAID = new AID("a1 23 45 67 89 10 10"); //Our TEST AID
 
             emvCard = session.initCard();
-            for (Application app : emvCard.getApplications()) {
+            for (EMVApplication app : emvCard.getApplications()) {
                 session.selectApplication(app);
-                session.initiateApplicationProcessing();
-                session.readApplicationData();
+                session.initiateApplicationProcessing(); //Also reads application data
+
+                if (!app.isInitializedOnICC()) {
+                    //Skip if GPO failed
+                    continue;
+                }
                 session.readAdditionalData();
                 if (targetAID.equals(app.getAID())) {
                     session.verifyPIN(1234, true);
@@ -59,7 +63,7 @@ public class CardEmulatorMain {
             Log.info("\n");
         } catch (TerminalException ex) {
             throw ex;
-        } catch (EMVException ex) {
+        } catch (SmartCardException ex) {
             throw ex;
         } finally {
             if (emvCard != null) {

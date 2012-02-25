@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.SmartCardException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -31,7 +32,7 @@ public class LanguagePreference {
 
     public LanguagePreference(byte[] data) {
         if(data.length < 2 || data.length > 8 || data.length % 2 != 0){
-            throw new EMVException("Array length must be an even number between 2 (inclusive) and 8 (inclusive). Length="+data.length);
+            throw new SmartCardException("Array length must be an even number between 2 (inclusive) and 8 (inclusive). Length="+data.length);
         }
         prefs = new ArrayList<Locale>();
 
@@ -52,9 +53,9 @@ public class LanguagePreference {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getEmptyString(indent) + "Language Preference (in order of preference):");
+        pw.println(Util.getSpaces(indent) + "Language Preference (in order of preference):");
 
-        String indentStr = Util.getEmptyString(indent + 3);
+        String indentStr = Util.getSpaces(indent + 3);
 
         for(Locale lang : prefs){
             String postfix = "";
