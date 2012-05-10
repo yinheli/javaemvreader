@@ -58,7 +58,8 @@ public class EMVApplication implements File {
     private int applicationTransactionCounter = -1;
     private int lastOnlineATCRegister = -1;
     private int pinTryCounter = -1;
-    private LogFormat logFormat = null;
+    private LogEntry logEntry = null;
+    private TransactionLog transactionLog = null;
     private DOL pdol = null;
     private DOL ddol = null;
     private Date applicationExpirationDate = null;
@@ -201,7 +202,28 @@ public class EMVApplication implements File {
     }
 
     public void setLogFormat(LogFormat logFormat) {
-        this.logFormat = logFormat;
+        this.transactionLog = new TransactionLog(logFormat);
+    }
+    
+    public void addTransactionLogRecord(byte[] logRecordBytes){
+        if(transactionLog != null){
+            transactionLog.addRecord(logRecordBytes);
+        }
+    }
+    
+    public LogFormat getLogFormat() {
+        if(transactionLog != null){
+            return transactionLog.getLogFormat();
+        }
+        return null;
+    }
+    
+    public void setLogEntry(LogEntry logEntry){
+        this.logEntry = logEntry;
+    }
+    
+    public LogEntry getLogEntry() {
+        return logEntry;
     }
 
     public DOL getPDOL() {
@@ -380,7 +402,7 @@ public class EMVApplication implements File {
 
     void setLanguagePreference(LanguagePreference languagePreference) {
         if (this.languagePreference != null) {
-            throw new RuntimeException("Must create method 'ADD LanguagePreference', not SET");
+            throw new RuntimeException("JavaEMVReader currently does not support multiple LanguagePreference. Must create method 'ADD LanguagePreference', not SET");
         }
         this.languagePreference = languagePreference;
     }
@@ -584,8 +606,8 @@ public class EMVApplication implements File {
         if (auc != null) {
             auc.dump(pw, indent + 3);
         }
-        if (logFormat != null) {
-            logFormat.dump(pw, indent + 3);
+        if (transactionLog != null) {
+            transactionLog.dump(pw, indent + 3);
         }
         if (pdol != null) {
             pdol.dump(pw, indent + 3);

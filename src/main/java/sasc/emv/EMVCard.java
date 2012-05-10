@@ -42,6 +42,7 @@ public class EMVCard {
     private DDF pse = null;
     private MasterFile mf = null;
     private List<BERTLV> unhandledRecords = new ArrayList<BERTLV>();
+    private Type type = Type.CONTACTED;
     
     public enum Type{
         CONTACTED, CONTACTLESS;
@@ -49,6 +50,10 @@ public class EMVCard {
 
     public EMVCard(ATR atr) {
         this.atr = atr;
+    }
+    
+    public void setType(Type type){
+        this.type = type;
     }
 
     public void setMasterFile(MasterFile mf) {
@@ -114,8 +119,11 @@ public class EMVCard {
         pw.println(Util.getSpaces(indent) + "               [EMVCard]              ");
         pw.println(Util.getSpaces(indent) + "======================================");
         atr.dump(pw, indent);
-
+        
         pw.println("");
+        
+        pw.println(Util.getSpaces(indent+3) + "Interface Type: "+type);
+
         if (mf != null) {
             mf.dump(pw, indent + 3);
         }

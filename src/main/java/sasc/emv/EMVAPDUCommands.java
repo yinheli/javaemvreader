@@ -52,6 +52,10 @@ public class EMVAPDUCommands {
     public static String selectPSE() {
         return selectByDFName(Util.fromHexString("31 50 41 59 2E 53 59 53 2E 44 44 46 30 31")); //1PAY.SYS.DDF01
     }
+    
+    public static String selectPPSE() {
+        return selectByDFName(Util.fromHexString("32 50 41 59 2E 53 59 53 2E 44 44 46 30 31")); //2PAY.SYS.DDF01
+    }
 
     public static String selectByDFName(byte[] fileBytes) {
         return Iso7816Commands.selectByDFName(fileBytes);

@@ -161,7 +161,7 @@ public class TransactionStatusInformation {
     }
 
     public static void main(String[] args){
-        TransactionStatusInformation tsi = new TransactionStatusInformation((byte)0xFF, (byte)0x00);
+        TransactionStatusInformation tsi = new TransactionStatusInformation((byte)0x68, (byte)0x00);
         System.out.println(tsi.toString());
     }
 

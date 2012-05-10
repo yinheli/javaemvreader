@@ -124,7 +124,7 @@ public class SignedDynamicApplicationData {
 
         byte[] expBytesICC = iccPublicKey.getExponent();
         byte[] modBytesICC = iccPublicKey.getModulus();
-
+        
         if (data.length != modBytesICC.length) {
             throw new SignedDataException("Data length does not equal key length. Data length=" + data.length + " Key length="+modBytesICC.length);
         }

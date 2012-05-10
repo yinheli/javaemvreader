@@ -15,6 +15,7 @@
  */
 package sasc.iso7816;
 
+import java.util.Arrays;
 import sasc.iso7816.Tag;
 
 /**
@@ -36,6 +37,13 @@ public class TagAndLength {
 
     public int getLength(){
         return length;
+    }
+    
+    public byte[] getBytes(){
+        byte[] tagBytes = tag.getTagBytes();
+        byte[] tagAndLengthBytes = Arrays.copyOf(tagBytes, tagBytes.length + 1);
+        tagAndLengthBytes[tagAndLengthBytes.length-1] = (byte)length;
+        return tagAndLengthBytes;
     }
 
     @Override

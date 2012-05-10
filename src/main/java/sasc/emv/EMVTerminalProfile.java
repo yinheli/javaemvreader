@@ -16,9 +16,10 @@
 package sasc.emv;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Arrays;
-import sasc.emv.DOL;
-import sasc.emv.EMVTags;
+import java.util.Properties;
 import sasc.iso7816.TagAndLength;
 import sasc.util.Log;
 import sasc.util.Util;
@@ -29,8 +30,23 @@ import sasc.util.Util;
  */
 public class EMVTerminalProfile {
 
-    private final static byte[] TERMINAL_COUNTRY_CODE = new byte[]{(byte) 0x08, (byte) 0x26};
-    private final static byte[] TRANSACTION_CURRENCY_CODE = new byte[]{(byte) 0x08, (byte) 0x26};
+    private final static byte[] DEFAULT_TERMINAL_COUNTRY_CODE = new byte[]{(byte) 0x08, (byte) 0x26};
+    private final static byte[] DEFAULT_TRANSACTION_CURRENCY_CODE = new byte[]{(byte) 0x08, (byte) 0x26};
+    private final static byte[] DEFAULT_AMOUNT_AUTHORISED_NUMERIC = new byte[]{(byte) 0x00, (byte) 0x00,(byte) 0x00, (byte) 0x00,(byte) 0x10, (byte) 0x00};
+    private final static byte[] DEFAULT_AMOUNT_OTHER_NUMERIC = new byte[]{(byte) 0x00, (byte) 0x00,(byte) 0x00, (byte) 0x00,(byte) 0x10, (byte) 0x00};
+    private final static Properties terminalProperties = new Properties();
+    private final static TerminalVerificationResults tvr = new TerminalVerificationResults();
+
+    static {
+        String terminalPropertiesFile = System.getProperty("terminal.properties");
+        if (terminalPropertiesFile != null) {
+            try {
+                terminalProperties.load(new FileInputStream(terminalPropertiesFile));
+            } catch (IOException ioe) {
+                throw new RuntimeException(ioe);
+            }
+        }
+    }
 
     //TODO
     //Default Dynamic Data Authentication Data Object List (DDOL)
@@ -38,18 +54,46 @@ public class EMVTerminalProfile {
     //Default Transaction Certificate Data Object List (TDOL)
     //TDOL to be used for generating the TC Hash Value if the TDOL in the card is not present
     public static byte[] getTerminalResidentData(TagAndLength tal) {
-        if (tal.getTag().equals(EMVTags.TERMINAL_COUNTRY_CODE)) { //TODO && tal.getLength() == TERMINAL_COUNTRY_CODE.length ??
-            return TERMINAL_COUNTRY_CODE;
-        } else if (tal.getTag().equals(EMVTags.TRANSACTION_CURRENCY_CODE)) {
-            return TRANSACTION_CURRENCY_CODE;
+        //Is the value specified in an optional properties file?
+        String propertyValue = terminalProperties.getProperty(Util.byteArrayToHexString(tal.getTag().getTagBytes()).toLowerCase());
+        if (propertyValue != null && propertyValue.length() == tal.getLength()) {
+            return Util.fromHexString(propertyValue);
+        }
+        if (tal.getTag().equals(EMVTags.TERMINAL_COUNTRY_CODE) && tal.getLength() == 2) {
+            return DEFAULT_TERMINAL_COUNTRY_CODE;
+        } else if (tal.getTag().equals(EMVTags.TRANSACTION_CURRENCY_CODE) && tal.getLength() == 2) {
+            return DEFAULT_TRANSACTION_CURRENCY_CODE;
         } else if (tal.getTag().equals(EMVTags.UNPREDICTABLE_NUMBER)) {
             return Util.generateRandomBytes(tal.getLength());
+        } else if (tal.getTag().equals(EMVTags.TERMINAL_TRANSACTION_QUALIFIERS) && tal.getLength() == 4) {
+            TerminalTransactionQualifiers ttq = new TerminalTransactionQualifiers();
+            ttq.setContactlessEMVmodeSupported(true);
+            ttq.setReaderIsOfflineOnly(true);
+            return ttq.getBytes();
+        } else if (tal.getTag().equals(EMVTags.AMOUNT_AUTHORISED_NUMERIC) && tal.getLength() == 6) {
+            return DEFAULT_AMOUNT_AUTHORISED_NUMERIC;
+        } else if (tal.getTag().equals(EMVTags.AMOUNT_OTHER_NUMERIC) && tal.getLength() == 6) {
+            return DEFAULT_AMOUNT_OTHER_NUMERIC;
+        } else if (tal.getTag().equals(EMVTags.TERMINAL_VERIFICATION_RESULTS) && tal.getLength() == 5) {
+            //All bits set to '0'
+            return tvr.toByteArray();
+        } else if (tal.getTag().equals(EMVTags.TRANSACTION_DATE) && tal.getLength() == 3) {
+            return Util.getCurrentDateAsNumericEncodedByteArray();
+        } else if (tal.getTag().equals(EMVTags.TRANSACTION_TYPE) && tal.getLength() == 1) {
+            //transactionTypes = {     0:  "Payment",     1:  "Withdrawal", } 
+            //TODO not supported at the moment
+            //http://www.codeproject.com/Articles/100084/Introduction-to-ISO-8583
+            return new byte[tal.getLength()];
         } else {
-            Log.debug("Terminal Resident Data not found for "+tal);
+            Log.debug("Terminal Resident Data not found for " + tal);
         }
         byte[] defaultResponse = new byte[tal.getLength()];
         Arrays.fill(defaultResponse, (byte) 0x00);
         return defaultResponse;
+    }
+
+    public static TerminalVerificationResults getTerminalVerificationResults() {
+        return tvr;
     }
 
     //TODO move somewhere else
@@ -69,5 +113,11 @@ public class EMVTerminalProfile {
         byte[] unpredictableNumber = Util.generateRandomBytes(4);
         //TODO add other DDOL data?
         return unpredictableNumber;
+    }
+
+    public static void main(String[] args) {
+        TagAndLength tagAndLength = new TagAndLength(EMVTags.TERMINAL_COUNTRY_CODE, 2);
+        DOL dol = new DOL(DOL.Type.PDOL, tagAndLength.getBytes());
+        System.out.println(Util.prettyPrintHexNoWrap(constructDOLResponse(dol)));
     }
 }

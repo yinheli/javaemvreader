@@ -38,17 +38,32 @@ import sasc.util.Util;
  */
 public class Explorer {
 
-    public void start(){
-        //Declare emvCard here, so in case some exception is thrown, we can still try to dump all the information we found
-        EMVCard emvCard = null;
+    EMVCard emvCard = null;
+    
+    public EMVCard getEMVCard(){
+        return emvCard;
+    }
+    
+    public void start() {
         CardConnection cardConnection = null;
         try {
             TerminalProvider terminalProvider = TerminalAPIManager.getProvider(TerminalAPIManager.SelectionPolicy.ANY_PROVIDER);
-            Log.info(BuildProperties.getProperty("APP_NAME", "JER") + " built on "+BuildProperties.getProperty("BUILD_TIMESTAMP", "N/A"));
+            Log.info(BuildProperties.getProperty("APP_NAME", "JER") + " built on " + BuildProperties.getProperty("BUILD_TIMESTAMP", "N/A"));
+            if (terminalProvider.listTerminals().isEmpty()) {
+                Log.info("No smart card readers found. Please attach readers(s)");
+
+            }
+            while (terminalProvider.listTerminals().isEmpty()) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                    Log.debug(ex.toString());
+                }
+            }
             Log.info("Please insert an EMV card into any attached reader.");
             cardConnection = terminalProvider.connectAnyTerminal(); //Waits for card present
             Log.info("OK, card found");
-            
+
             //TODO check prefs to see if we should
             // - initCard normally
             // - what app to select (by name or all) (or use list of known AIDs), or brute force AIDs
@@ -60,7 +75,7 @@ public class Explorer {
 
             SessionProcessingEnv env = new SessionProcessingEnv();
             env.setReadMasterFile(true);
-            
+
 
             EMVSession session = EMVSession.startSession(env, cardConnection);
 
@@ -72,8 +87,8 @@ public class Explorer {
                 session.selectApplication(app);
                 session.initiateApplicationProcessing(); //GET PROCESSING OPTIONS + READ RECORD(s)
                 //The Read EMVApplication Data function is performed immediately following the Initiate EMVApplication Processing function
-                
-                if(!app.isInitializedOnICC()){
+
+                if (!app.isInitializedOnICC()) {
                     //Skip if GPO failed
                     continue;
                 }
@@ -87,19 +102,28 @@ public class Explorer {
 //                        }
 
                 session.getChallenge();
-                
+
                 //session.verifySSAD();
-                
-                session.internalAuthenticate();
-                
+
+                if (app.getApplicationInterchangeProfile() != null) {
+                    if (app.getApplicationInterchangeProfile().isCDASupported()) {
+                        //TODO
+//                        session.xxxx()
+                    }
+                    //else //TODO 
+                    if (app.getApplicationInterchangeProfile().isDDASupported()) {
+                        session.internalAuthenticate();
+                    }
+                }
+
                 //session.generateAC();
 
-                //next steps: ?
+                //next steps: Book 3 page 113
                 //-terminal shall perform offline data authentication
                 //-terminal action analysis
             }
 
-            cardConnection.disconnect(true);
+            
 
             Log.info("\n");
             Log.info("Finished Processing card.");
@@ -120,14 +144,21 @@ public class Explorer {
             ex.printStackTrace(System.err);
             Log.info(ex.toString());
         } finally {
-            if (emvCard != null) {
+            if (cardConnection != null){
                 try{
+                    cardConnection.disconnect(true);
+                }catch(TerminalException ex){
+                    ex.printStackTrace(System.err);
+                }
+            }
+            if (emvCard != null) {
+                try {
                     emvCard.dump(Log.getPrintWriter(), 0);
-                }catch(RuntimeException ex){
+                } catch (RuntimeException ex) {
                     ex.printStackTrace(System.err);
                 }
                 Log.info("");
-            }else if(cardConnection != null){
+            } else if (cardConnection != null) {
                 Log.info(new sasc.iso7816.ATR(cardConnection.getATR()).toString());
             }
         }

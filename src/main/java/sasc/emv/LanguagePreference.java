@@ -28,18 +28,19 @@ import sasc.util.Util;
  * @author sasc
  */
 public class LanguagePreference {
+
     private List<Locale> prefs;
 
     public LanguagePreference(byte[] data) {
-        if(data.length < 2 || data.length > 8 || data.length % 2 != 0){
-            throw new SmartCardException("Array length must be an even number between 2 (inclusive) and 8 (inclusive). Length="+data.length);
+        if (data.length < 2 || data.length > 8 || data.length % 2 != 0) {
+            throw new SmartCardException("Array length must be an even number between 2 (inclusive) and 8 (inclusive). Length=" + data.length);
         }
         prefs = new ArrayList<Locale>();
 
         int numLang = data.length / 2;
 
-        for(int i=0; i<numLang; i++){
-            String s = String.valueOf((char)data[i*2])+String.valueOf((char)data[i*2+1]);
+        for (int i = 0; i < numLang; i++) {
+            String s = String.valueOf((char) data[i * 2]) + String.valueOf((char) data[i * 2 + 1]);
             prefs.add(new Locale(s));
         }
 
@@ -51,18 +52,27 @@ public class LanguagePreference {
         dump(new PrintWriter(sw), 0);
         return sw.toString();
     }
+    
+    public List<Locale> getLocales(){
+        return prefs;
+    }
+    
+    public Locale getPreferredLocale(){
+        return prefs.get(0);
+    }
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Language Preference (in order of preference):");
 
         String indentStr = Util.getSpaces(indent + 3);
 
-        for(Locale lang : prefs){
+        for (Locale lang : prefs) {
             String postfix = "";
             String displayLanguage = lang.getDisplayLanguage(Locale.ENGLISH);
-            if(!"".equals(displayLanguage)){
-                postfix = " ("+displayLanguage+")";
+            if (!"".equals(displayLanguage)) {
+                postfix = " (" + displayLanguage + ")";
             }
             pw.println(indentStr + "Language: " + lang + postfix);
         }
-    }}
+    }
+}

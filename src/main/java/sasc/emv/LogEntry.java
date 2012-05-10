@@ -15,34 +15,30 @@
  */
 package sasc.emv;
 
-import sasc.iso7816.TagAndLength;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.List;
 import sasc.util.Util;
 
 /**
- * List (in tag and length format) of data objects representing the logged data elements that are passed to the terminal when a transaction log record is read
- * 
+ *
  * @author sasc
  */
-public class LogFormat {
-    private List<TagAndLength> formatList;
-    private int recordLength = 0;
-
-    public LogFormat(byte[] formatBytes){
-        this.formatList = EMVUtil.parseTagAndLength(formatBytes);
-        for(TagAndLength tal : formatList){
-            recordLength+=tal.getLength();
-        }
-    }
-
-    public List<TagAndLength> getTagAndLengthList(){
-        return formatList;
+public class LogEntry {
+    
+    private ShortFileIdentifier sfi;
+    private int numRecords;
+    
+    public LogEntry(byte sfiByte, byte numRecordsByte){
+        sfi = new ShortFileIdentifier(sfiByte);
+        numRecords = Util.byteToInt(numRecordsByte);
     }
     
-    public int getRecordLength(){
-        return recordLength;
+    public ShortFileIdentifier getSFI(){
+        return sfi;
+    }
+    
+    public int getNumberOfRecords(){
+        return numRecords;
     }
     
     @Override
@@ -53,12 +49,12 @@ public class LogFormat {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getSpaces(indent)+"Log Format:");
+        pw.println(Util.getSpaces(indent)+"Log Entry:");
         String indentStr = Util.getSpaces(indent+3);
 
-        for(TagAndLength tagAndLength : formatList){
-            int length = tagAndLength.getLength();
-            pw.println(indentStr+tagAndLength.getTag().getName() + " ("+length+ " "+(length==1?"byte":"bytes")+")");
-        }
+        sfi.dump(pw, indent+3);
+        
+        pw.println(indentStr+numRecords+" record(s)");
+
     }
 }

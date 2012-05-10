@@ -359,6 +359,8 @@ public class TerminalVerificationResults {
         tvr.setPinEntryRequired_PINPadPresent_ButPINWasNotEntered(false);
         tvr.setNewCard(true);
         System.out.println(tvr.toString());
+        
+        System.out.println(new TerminalVerificationResults(Util.fromHexString("8000048000")));
 
     }
 }

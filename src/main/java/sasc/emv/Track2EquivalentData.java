@@ -28,6 +28,8 @@ import sasc.util.Util;
  * Contains the data elements of track 2 according to ISO/IEC 7813,
  * excluding start sentinel, end sentinel, and Longitudinal Redundancy Check (LRC)
  * 
+ * http://en.wikipedia.org/wiki/Magnetic_stripe_card
+ * 
  * @author sasc
  */
 public class Track2EquivalentData {

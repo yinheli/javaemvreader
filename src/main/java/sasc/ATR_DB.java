@@ -15,16 +15,8 @@
  */
 package sasc;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.SequenceInputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 import sasc.util.Log;
 import sasc.util.Util;
 
@@ -51,7 +43,7 @@ public class ATR_DB {
         try{
             is1 = ATR_DB.class.getResourceAsStream("/smartcard_list.txt");
             is2 = ATR_DB.class.getResourceAsStream("/smartcard_list_additional_ATRs.txt");
-            br = new BufferedReader(new InputStreamReader(new SequenceInputStream(is1, is2)));
+            br = new BufferedReader(new InputStreamReader(new SequenceInputStream(is1, is2), "UTF-8"));
 
             String line;
             String currentATR = null;
@@ -141,6 +133,7 @@ public class ATR_DB {
         System.out.println(ATR_DB.searchATR(new byte[]{(byte)0x3B, (byte)0x04, (byte)0xA2, (byte)0x13, (byte)0x10, (byte)0x91}));
         System.out.println(ATR_DB.searchATR(new byte[]{(byte)0x3B, (byte)0x67, (byte)0x00, (byte)0x00, (byte)0xa6, (byte)0x40, (byte)0x40, (byte)0x00, (byte)0x09, (byte)0x90, (byte)0x00}));
         System.out.println(ATR_DB.searchATR(new byte[]{(byte)0x3B, (byte)0x24, (byte)0x00, (byte)0x01, (byte)0x02, (byte)0x03, (byte)0x45}));
+        System.out.println(ATR_DB.searchATR(Util.fromHexString("3F 6A 00 00 00 64 01 50 01 0C 82 01 01 A9")));
 //        3b 67 00 00 a6 40 40 00 09 90 00 
     }
 }

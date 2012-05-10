@@ -15,9 +15,9 @@
  */
 package sasc.iso7816;
 
+import sasc.iso7816.IsoATR;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Arrays;
 import java.util.List;
 import sasc.ATR_DB;
 import sasc.util.Log;
@@ -72,7 +72,7 @@ public class ATR {
         pw.println(indentStr+Util.prettyPrintHexNoWrap(atrBytes));
         if(descriptiveText != null){
             //Just use List/ArrayList.toString(), which prints [value1, value2] according to Javadoc API
-            pw.println(indentStr+"Description From Public Database - "+Arrays.toString(descriptiveText.toArray()));
+            pw.println(indentStr+"Description From Public Database - "+descriptiveText);
         }
 
         if(isIsoCompliant()){

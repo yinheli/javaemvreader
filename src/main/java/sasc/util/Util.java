@@ -25,7 +25,9 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.util.BitSet;
+import java.util.Date;
 import java.util.StringTokenizer;
 
 /**
@@ -175,6 +177,11 @@ public class Util {
         buf.append(nano % 1000000);
         buf.append("ns");
         return buf.toString();
+    }
+    
+    public static byte[] getCurrentDateAsNumericEncodedByteArray(){
+        SimpleDateFormat format = new SimpleDateFormat("yyMMdd");        
+        return fromHexString(format.format(new Date()));
     }
 
     //This prints all non-control characters common to all parts of ISO/IEC 8859
@@ -333,6 +340,19 @@ public class Util {
         out.write(string);
         out.close();
     }
+    
+    /**
+     * Binary Coded Decimal (BCD)
+     * @param val
+     * @return 
+     */
+    public static byte[] intToNumericEncodedByteArray(int val){
+        String str = String.valueOf(val);
+        if(str.length() % 2 != 0){
+            str = "0"+str;
+        }
+        return Util.fromHexString(str);
+    }
 
     /**
      * This method converts the literal hex representation of a byte to an int.
@@ -466,7 +486,7 @@ public class Util {
     }
 
     public static byte[] generateRandomBytes(int numBytes){
-        //TODO get bytes from an hardware RNG, or set seed
+        //TODO get bytes from a hardware RNG, or set seed
         byte[] rndBytes = new byte[numBytes];
         SecureRandom random = new SecureRandom();
         random.nextBytes(rndBytes);

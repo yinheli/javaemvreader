@@ -79,6 +79,8 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
             }
         } catch (CardException ex) {
             throw new TerminalException(ex);
+        } catch (IllegalStateException ex){
+            throw new TerminalException(ex);
         }
     }
 

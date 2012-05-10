@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------
-[Step 1] SELECT FILE NONEXISTINGFILE to warm up the card
+[Step 1] SELECT FILE NONEXISTINGFILE to warm up the card/terminal/connection
 ---------------------------------------------------------------------
 00 A4 04 00 0f 4e 4f 4e 45 58 49 53 54 49 4e 47 46 49 4c 45
 response hex    :
@@ -525,6 +525,7 @@ Answer To Reset (ATR)
       Protocol - T=0
       Historical bytes - a6 40 40 00 09 90 00
 
+   Interface Type: CONTACTED
 
    Directory Definition File
       Name: 315041592e5359532e4444463031 (=1PAY.SYS.DDF01)

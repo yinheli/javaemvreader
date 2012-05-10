@@ -15,6 +15,7 @@
  */
 package sasc;
 
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.io.IOException;
@@ -22,11 +23,17 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URI;
+import java.net.URLEncoder;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import org.jdesktop.application.SingleFrameApplication;
+import sasc.emv.EMVApplication;
+import sasc.emv.EMVCard;
+import sasc.emv.EMVSession;
 import sasc.util.Log;
 
 /**
@@ -40,12 +47,12 @@ public class GUI extends SingleFrameApplication {
     @Override
     protected void startup() {
         JFrame mainFrame = this.getMainFrame();
-                mainFrame.setName("mainFrame");
+        mainFrame.setName("mainFrame");
 
         console = new JTextArea("");
-        
+
         redirectSystemStreams();
-        
+
         JScrollPane scrollPane = new JScrollPane(console);
         console.setName("console");
         show(scrollPane);
@@ -57,12 +64,12 @@ public class GUI extends SingleFrameApplication {
         // Determine the new location of the JFrame
         int w = mainFrame.getSize().width;
         int h = mainFrame.getSize().height;
-        int x = (dim.width-w)/2;
-        int y = (dim.height-h)/2;
+        int x = (dim.width - w) / 2;
+        int y = (dim.height - h) / 2;
 
         // Move the JFrame
         mainFrame.setLocation(x, y);
-        
+
         new Thread(new ExplorerRunner()).start();
     }
 
@@ -109,17 +116,73 @@ public class GUI extends SingleFrameApplication {
 
         @Override
         public void run() {
+            Explorer explorer = new Explorer();
             try {
-                new Explorer().start();
+                explorer.start();
             } catch (Exception ex) {
                 StringWriter st = new StringWriter();
                 ex.printStackTrace(new PrintWriter(st));
                 console.append(st.toString());
+            } finally {
+                //Show submit feedback dialogue
+                boolean foundUnhandledRecords = false;
+                EMVCard card = explorer.getEMVCard();
+                if(card != null){
+                    if(card.getUnhandledRecords().size() > 0){
+                        foundUnhandledRecords = true;
+                    }
+                    for(EMVApplication app : card.getApplications()){
+                        if(app != null && app.getUnhandledRecords().size() > 0){
+                            foundUnhandledRecords = true;
+                        }
+                    }
+                }
+
+                if (!console.getText().contains("Finished Processing card.") || foundUnhandledRecords) {
+                    //Assume something failed. Show Popup with option to send email
+                    sendErrorReport();
+                }
             }
         }
     }
 
-//    public static void main(String[] args) {
-//        org.jdesktop.application.Application.launch(GUI.class, args);
-//    }
+    private void sendErrorReport() {
+        
+        if (Desktop.isDesktopSupported()) {
+            Desktop desktop = Desktop.getDesktop();
+            if (desktop.isSupported(Desktop.Action.MAIL)) {
+                int choice = JOptionPane.showConfirmDialog(console.getRootPane(), "Something failed. Would you like to send an email report?", "Error", JOptionPane.OK_CANCEL_OPTION);
+                if (choice == JOptionPane.OK_OPTION) {
+                    try {
+                        desktop.mail(new URI("mailto", getEAddr() + "?SUBJECT=[JavaEMVReader-BUGREPORT]&BODY=(Please also include the complete output from JavaEMVReader, so I can understand what caused the problem)", null));
+                    } catch (Exception ex) {
+                        StringWriter st = new StringWriter();
+                        ex.printStackTrace(new PrintWriter(st));
+                        console.append(st.toString());
+                    }
+                }
+
+            }
+        }
+    }
+
+    private static String getEAddr() {
+        //Damn bots...
+        StringBuilder sb = new StringBuilder();
+        String _a = "9";
+        String _b = "g";
+        String _c = "a";
+        String _d = ".";
+        String _e = "c";
+        String _f = "@";
+        String _g = "m";
+        String _h = "s";
+        String _i = "l";
+        String _j = "i";
+        String _k = "o";
+        sb.append(_h).append(_c).append(_h).append(_e).append(_a).append(_a);
+        sb.append(_a).append(_f).append(_b).append(_g).append(_c).append(_j);
+        sb.append(_i).append(_d).append(_e).append(_k).append(_g);
+        return sb.toString();
+    }
 }

@@ -22,15 +22,12 @@ import java.util.HashMap;
 import java.util.StringTokenizer;
 
 /**
- * ISO 4217
- * ISO 3-digit Currency Code
+ * ISO 4217 ISO 3-digit Currency Code
  *
  * http://www.iso.org/iso/support/faqs/faqs_widely_used_standards/widely_used_standards_other/currency_codes/currency_codes_list-1.htm
  *
- * java.util.Currency is pretty useless in java 1.6. Must wait for java 1.7 to get the methods:
- * getDisplayName()
- * getNumericCode()
- * getAvailableCurrencies()
+ * java.util.Currency is pretty useless in java 1.6. Must wait for java 1.7 to
+ * get the methods: getDisplayName() getNumericCode() getAvailableCurrencies()
  *
  * @author sasc
  */
@@ -38,17 +35,17 @@ public class ISO4217_Numeric {
 
     private static final HashMap<String, Currency> map;
 
-    static{
+    static {
         map = new HashMap<String, Currency>();
 
         BufferedReader br = null;
 
-        try{
+        try {
             br = new BufferedReader(new InputStreamReader(ISO3166_1.class.getResourceAsStream("/iso4217_numeric.txt")));
 
             String line;
-            while((line = br.readLine()) != null){
-                if(line.trim().length() <= 0 || line.startsWith("#")){
+            while ((line = br.readLine()) != null) {
+                if (line.trim().length() <= 0 || line.startsWith("#")) {
                     continue;
                 }
                 StringTokenizer st = new StringTokenizer(line, ",");
@@ -56,10 +53,10 @@ public class ISO4217_Numeric {
                 int numericCode = Integer.parseInt(numericCodeStr);
                 map.put(numericCodeStr, new Currency(numericCode, st.nextToken(), st.nextToken()));
             }
-        }catch(IOException e){
+        } catch (IOException e) {
             throw new RuntimeException(e);
-        }finally{
-            if(br != null){
+        } finally {
+            if (br != null) {
                 try {
                     br.close();
                 } catch (IOException ex) {
@@ -70,47 +67,49 @@ public class ISO4217_Numeric {
 
     }
 
-    public static String getCurrencyNameForCode(int code){
+    public static String getCurrencyNameForCode(int code) {
 
         return getCurrencyNameForCode(String.valueOf(code));
     }
 
-    public static String getCurrencyNameForCode(String code){
+    public static String getCurrencyNameForCode(String code) {
         Currency c = map.get(code);
-        if(c == null){
+        if (c == null) {
             return null;
         }
         return c.getDisplayName();
     }
 
-    public static Currency getCurrencyForCode(int code){
+    public static Currency getCurrencyForCode(int code) {
         return map.get(String.valueOf(code));
     }
 
-    public static class Currency{
+    public static class Currency {
+
         int numericCode;
         String code;
         String displayName;
-        Currency(int numericCode, String code, String displayName){
+
+        Currency(int numericCode, String code, String displayName) {
             this.numericCode = numericCode;
             this.code = code;
             this.displayName = displayName;
         }
 
-        public String getCode(){
+        public String getCode() {
             return code;
         }
-        public String getDisplayName(){
+
+        public String getDisplayName() {
             return displayName;
         }
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
         System.out.println(ISO4217_Numeric.getCurrencyNameForCode(578));
         System.out.println(ISO4217_Numeric.getCurrencyNameForCode(955));
         System.out.println(ISO4217_Numeric.getCurrencyNameForCode(999));
         System.out.println(ISO4217_Numeric.getCurrencyNameForCode(998));
         System.out.println(ISO4217_Numeric.getCurrencyNameForCode(1000));
     }
-
 }
