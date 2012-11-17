@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- A list of proprietary tags (reserved for the payment systems) -->
+<ProprietaryTags>
+    <PaymentSystem>
+        <RID>A0 00 00 00 03</RID>
+        <Tags>
+            <Tag id="9f52" valueType="BINARY" name="Application Default Action (ADA)" description="Visa proprietary data element indicating the action a card should take when exception conditions occur"/>
+            <Tag id="9f53" valueType="BINARY" name="Consecutive Transaction Limit (International)" description=""/>
+            <Tag id="9f54" valueType="BINARY" name="Cumulative Total Transaction Amount Limit" description=""/>
+            <Tag id="9f55" valueType="BINARY" name="Geographic Indicator" description=""/>
+            <Tag id="9f58" valueType="BINARY" name="Lower Consecutive Offline Limit" description=""/>
+            <Tag id="9f59" valueType="BINARY" name="Upper Consecutive Offline Limit" description=""/>
+            <Tag id="9f5c" valueType="BINARY" name="Cumulative Total Transaction Amount Upper Limit" description=""/>
+            <Tag id="9f65" valueType="BINARY" name="" description=""/>
+            <Tag id="9f72" valueType="BINARY" name="Consecutive Transaction Limit (International--Country)" description=""/>
+            <Tag id="9f75" valueType="BINARY" name="Cumulative Transaction Amount Limit--Dual Currency" description=""/>
+            <Tag id="9f77" valueType="BINARY" name="VLP Funds Limit" description=""/>
+            <Tag id="9f78" valueType="BINARY" name="VLP Single Transaction Limit" description=""/>
+            <Tag id="9f79" valueType="BINARY" name="VLP Available Funds (Decremented during Card Action Analysis for offline approved VLP transactions)" description=""/>
+            <Tag id="9f7f" valueType="BINARY" name="Card Production Life Cycle (CPLC) History File Identifiers" description=""/>
+        </Tags>
+    </PaymentSystem>
+    <PaymentSystem>
+        <RID>A0 00 00 00 04</RID>
+        <Tags>
+        </Tags>
+    </PaymentSystem>
+</ProprietaryTags>
