@@ -19,29 +19,35 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.StringTokenizer;
 
 /**
- * ISO 4217 ISO 3-digit Currency Code
+ * ISO 4217
+ * ISO 3-digit Currency Code
  *
  * http://www.iso.org/iso/support/faqs/faqs_widely_used_standards/widely_used_standards_other/currency_codes/currency_codes_list-1.htm
  *
- * java.util.Currency is pretty useless in java 1.6. Must wait for java 1.7 to
- * get the methods: getDisplayName() getNumericCode() getAvailableCurrencies()
+ * java.util.Currency is pretty useless in java 1.6. Must wait for java 1.7 to get the methods:
+ * getDisplayName()
+ * getNumericCode()
+ * getAvailableCurrencies()
  *
  * @author sasc
  */
 public class ISO4217_Numeric {
 
-    private static final HashMap<String, Currency> map;
+    private static final HashMap<String, Currency> code2CurrencyMap;
+    private static final HashMap<String, Integer> currencyCode2NumericMap;
 
     static {
-        map = new HashMap<String, Currency>();
+        code2CurrencyMap = new HashMap<String, Currency>();
+        currencyCode2NumericMap = new HashMap<String, Integer>();
 
         BufferedReader br = null;
 
         try {
-            br = new BufferedReader(new InputStreamReader(ISO3166_1.class.getResourceAsStream("/iso4217_numeric.txt")));
+            br = new BufferedReader(new InputStreamReader(Util.loadResource(ISO3166_1.class, "/iso4217_numeric.txt"), "UTF-8"));
 
             String line;
             while ((line = br.readLine()) != null) {
@@ -50,8 +56,12 @@ public class ISO4217_Numeric {
                 }
                 StringTokenizer st = new StringTokenizer(line, ",");
                 String numericCodeStr = st.nextToken();
+                String currencyCodeStr = st.nextToken();
+                String displayName = st.nextToken();
                 int numericCode = Integer.parseInt(numericCodeStr);
-                map.put(numericCodeStr, new Currency(numericCode, st.nextToken(), st.nextToken()));
+                code2CurrencyMap.put(numericCodeStr, new Currency(numericCode, currencyCodeStr, displayName));
+                currencyCode2NumericMap.put(currencyCodeStr, numericCode);
+
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -73,7 +83,7 @@ public class ISO4217_Numeric {
     }
 
     public static String getCurrencyNameForCode(String code) {
-        Currency c = map.get(code);
+        Currency c = code2CurrencyMap.get(code);
         if (c == null) {
             return null;
         }
@@ -81,7 +91,27 @@ public class ISO4217_Numeric {
     }
 
     public static Currency getCurrencyForCode(int code) {
-        return map.get(String.valueOf(code));
+        return code2CurrencyMap.get(String.valueOf(code));
+    }
+
+    public static Integer getNumericCodeForCurrencyCode(String currencyCode) {
+        return currencyCode2NumericMap.get(currencyCode);
+    }
+
+    public static Integer getNumericCodeForLocale(Locale locale) {
+        if (locale.getCountry() == null || locale.getCountry().length() != 2) {
+            for (Locale l : Locale.getAvailableLocales()) {
+                if (l.getLanguage().equals(locale.getLanguage()) && l.getCountry() != null && l.getCountry().length() == 2) {
+                    locale = l;
+                    break;
+                }
+            }
+        }
+        if (locale.getCountry() != null && locale.getCountry().length() == 2) {
+            String currencyCode = java.util.Currency.getInstance(locale).getCurrencyCode();
+            return ISO4217_Numeric.getNumericCodeForCurrencyCode(currencyCode);
+        }
+        return null;
     }
 
     public static class Currency {
@@ -111,5 +141,6 @@ public class ISO4217_Numeric {
         System.out.println(ISO4217_Numeric.getCurrencyNameForCode(999));
         System.out.println(ISO4217_Numeric.getCurrencyNameForCode(998));
         System.out.println(ISO4217_Numeric.getCurrencyNameForCode(1000));
+        System.out.println(ISO4217_Numeric.getNumericCodeForCurrencyCode("USD"));
     }
 }

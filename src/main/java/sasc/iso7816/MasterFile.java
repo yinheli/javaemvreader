@@ -20,6 +20,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -52,15 +53,15 @@ public class MasterFile implements File {
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Master File");
 
-        pw.println(Util.getSpaces(indent+3) + Util.prettyPrintHex(Util.byteArrayToHexString(data), indent+3));
+        pw.println(Util.getSpaces(indent+Log.INDENT_SIZE) + Util.prettyPrintHex(Util.byteArrayToHexString(data), indent+Log.INDENT_SIZE));
         
         pw.println("");
         
         if (!unhandledRecords.isEmpty()) {
-            pw.println(Util.getSpaces(indent + 3) + "UNHANDLED RECORDS (" + unhandledRecords.size() + " found):");
+            pw.println(Util.getSpaces(indent + Log.INDENT_SIZE) + "UNHANDLED RECORDS (" + unhandledRecords.size() + " found):");
 
             for (BERTLV tlv : unhandledRecords) {
-                pw.println(Util.getSpaces(indent + 6) + tlv.getTag() + " " + tlv);
+                pw.println(Util.getSpaces(indent + Log.INDENT_SIZE*2) + tlv.getTag() + " " + tlv);
             }
         }
 

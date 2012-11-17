@@ -14,17 +14,20 @@
  *  limitations under the License.
  *  under the License.
  */
-package sasc;
+package sasc.common;
 
+import sasc.lookup.ATR_DB;
 import sasc.util.BuildProperties;
 import sasc.emv.EMVApplication;
 import sasc.iso7816.AID;
-import sasc.emv.EMVCard;
+import sasc.common.SmartCard;
 import sasc.iso7816.SmartCardException;
 import sasc.emv.EMVSession;
 import sasc.util.Log;
 import sasc.emv.SessionProcessingEnv;
 import sasc.common.UnsupportedCardException;
+import sasc.lookup.IIN_DB;
+import sasc.lookup.RID_DB;
 import sasc.terminal.CardConnection;
 import sasc.terminal.TerminalAPIManager;
 import sasc.terminal.TerminalException;
@@ -36,17 +39,19 @@ import sasc.util.Util;
  * 
  * @author sasc
  */
-public class Explorer {
+public class CardExplorer {
 
-    EMVCard emvCard = null;
+    SmartCard emvCard = null;
     
-    public EMVCard getEMVCard(){
+    public SmartCard getEMVCard(){
         return emvCard;
     }
     
     public void start() {
+        //Declare emvCard here, so in case some exception is thrown, we can still try to dump all the information we found
         CardConnection cardConnection = null;
         try {
+            Context.init();
             TerminalProvider terminalProvider = TerminalAPIManager.getProvider(TerminalAPIManager.SelectionPolicy.ANY_PROVIDER);
             Log.info(BuildProperties.getProperty("APP_NAME", "JER") + " built on " + BuildProperties.getProperty("BUILD_TIMESTAMP", "N/A"));
             if (terminalProvider.listTerminals().isEmpty()) {
@@ -63,18 +68,10 @@ public class Explorer {
             Log.info("Please insert an EMV card into any attached reader.");
             cardConnection = terminalProvider.connectAnyTerminal(); //Waits for card present
             Log.info("OK, card found");
-
-            //TODO check prefs to see if we should
-            // - initCard normally
-            // - what app to select (by name or all) (or use list of known AIDs), or brute force AIDs
-            // - brute force SFIs and Records
-            // - check if cardmanager A0000000000300000 (or other CM AID?) is present?
-            //----> add to SessionProcessingEnv
-
-            //Ideally the top level functions should be 'explore' (read as much data as possible, see above), or 'perform transaction' (production level function)
-
+            
             SessionProcessingEnv env = new SessionProcessingEnv();
             env.setReadMasterFile(true);
+            env.setWarmUpCard(true);
 
 
             EMVSession session = EMVSession.startSession(env, cardConnection);
@@ -84,43 +81,56 @@ public class Explorer {
 
             emvCard = session.initCard();
             for (EMVApplication app : emvCard.getApplications()) {
-                session.selectApplication(app);
-                session.initiateApplicationProcessing(); //GET PROCESSING OPTIONS + READ RECORD(s)
-                //The Read EMVApplication Data function is performed immediately following the Initiate EMVApplication Processing function
+                try{ //If processing an app fails, just skip it
+                    session.selectApplication(app);
+                    session.initiateApplicationProcessing(); //GET PROCESSING OPTIONS + READ RECORD(s)
+                    //The Read EMVApplication Data function is performed immediately following the Initiate EMVApplication Processing function
 
-                if (!app.isInitializedOnICC()) {
-                    //Skip if GPO failed
+                    if (!app.isInitializedOnICC()) {
+                        //Skip if GPO failed (might not be a EMV card)
+                        continue;
+                    }
+
+                    if (app.getApplicationInterchangeProfile() != null) {
+                        if (app.getApplicationInterchangeProfile().isCDASupported()) {
+                            //TODO
+    //                        session.xxxx()
+                        }
+                        //else //TODO 
+                        if (app.getApplicationInterchangeProfile().isDDASupported()) {
+                            session.internalAuthenticate();
+                        }
+                    }
+                    
+                    session.readPINTryCounter();
+                    
+                    //Only plaintext PIN verification has been implemented
+                    //check CVM if app supports plaintext PIN verified by ICC
+                    //Be VERY CAREFUL when running this, as it WILL block the application if the PIN Try Counter reaches 0
+                    if(app.getPINTryCounter() > 0){
+                    //  if (myAID.equals(app.getAID())) {
+                    //      session.verifyPIN(1234, true);
+                    //  }
+                    }
+                    
+                    session.readAdditionalData(); //ATC, Last Online ATC, Log Format
+
+                    //getChallenge -> only if DDA/CDA?
+                    session.getChallenge();
+
+                    //session.verifySSAD();
+
+                    //session.generateAC();
+
+                    //next steps: Book 3 page 113
+                    //-terminal shall perform offline data authentication
+                    //-terminal action analysis
+                
+                } catch(Exception e) { 
+                    e.printStackTrace(System.err);
+                    Log.info(String.format("Error processing app: %s. Skipping app: %s", e.getMessage(), app.toString()));
                     continue;
-                }
-//                session.readApplicationData(); //
-                session.readAdditionalData(); //ATC, Last Online ATC, PIN Try Counter, Log Format
-
-                //verifyPIN works with plaintext PIN for VISA Classic
-                //Be VERY CAREFUL when running this, as it WILL block the application if the PIN Try Counter reaches 0
-//                        if (visaClassicAID.equals(app.getAID())) {
-//                            session.verifyPIN(1234, true);
-//                        }
-
-                session.getChallenge();
-
-                //session.verifySSAD();
-
-                if (app.getApplicationInterchangeProfile() != null) {
-                    if (app.getApplicationInterchangeProfile().isCDASupported()) {
-                        //TODO
-//                        session.xxxx()
-                    }
-                    //else //TODO 
-                    if (app.getApplicationInterchangeProfile().isDDASupported()) {
-                        session.internalAuthenticate();
-                    }
-                }
-
-                //session.generateAC();
-
-                //next steps: Book 3 page 113
-                //-terminal shall perform offline data authentication
-                //-terminal action analysis
+                } 
             }
 
             
@@ -153,7 +163,15 @@ public class Explorer {
             }
             if (emvCard != null) {
                 try {
-                    emvCard.dump(Log.getPrintWriter(), 0);
+                    int indent = 0;
+                    Log.getPrintWriter().println("======================================");
+                    Log.getPrintWriter().println("             [EMVContext]             ");
+                    Log.getPrintWriter().println("======================================");
+                    emvCard.dump(Log.getPrintWriter(), indent);
+                    Log.getPrintWriter().println("---------------------------------------");
+                    Log.getPrintWriter().println("                FINISHED               ");
+                    Log.getPrintWriter().println("---------------------------------------");
+                    Log.getPrintWriter().flush();
                 } catch (RuntimeException ex) {
                     ex.printStackTrace(System.err);
                 }

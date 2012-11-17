@@ -17,6 +17,7 @@ package sasc.emv;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -111,9 +112,9 @@ public class CVRule {
                 return "Enciphered PIN verification performed by ICC and signature (paper)";
             //0x06-0x1D: reserved for future use
             case 0x1E:
-                return "If transaction is in the application currency and is under "+amountFieldXStr+" value";
+                return "Signature (paper)";
             case 0x1F:
-                return "If transaction is in the application currency and is over "+amountFieldXStr+" value";
+                return "No CVM required";
             //Values in the range 100000 (0x20) - 101111 (0x2F) reserved for use by the individual payment systems
             //Values in the range 110000 (0x30) - 111110 (0x3E) reserved for use by the issuer
             //111111 (0x3F): This value is not available for use
@@ -175,7 +176,7 @@ public class CVRule {
             case 0x05:
                 return "If purchase with cashback";
             case 0x06:
-                return "If transaction is in the application currency 22 and is under "+amountFieldXStr+" value";
+                return "If transaction is in the application currency and is under "+amountFieldXStr+" value";
             case 0x07:
                 return "If transaction is in the application currency and is over "+amountFieldXStr+" value";
             case 0x08:
@@ -201,7 +202,7 @@ public class CVRule {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Cardholder Verification Rule");
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         pw.println(indentStr + "Rule: "+getRuleString());
         pw.println(indentStr + "Condition Code: "+getConditionCodeDescription());

@@ -26,13 +26,8 @@ import sasc.util.ByteArrayWrapper;
 /**
  * http://www.emvlab.org/emvtags/all/
  *
- * TODO
  *
- * 1. EMVTag -> enum, encapsulates Tag?
- * or
- * 2. Tag enum: EMVTags iterates over all Tag enums, and adds to Map?
- *
- * The coding of primitive context-specific class data objects in the ranges '80' to '9E' and '9F00' to '9F4F' is reserved for this specification.
+ * The coding of primitive context-specific class data objects in the ranges '80' to '9E' and '9F00' to '9F4F' is reserved for EMV specification.
  * The coding of primitive context-specific class data objects in the range '9F50' to '9F7F' is reserved for the payment systems.
  *
  * TODO: Create tag lists (XML?) for individual payment systems (group by RID? or AID?)
@@ -173,44 +168,19 @@ public class EMVTags {
     public static final Tag VISA_LOG_ENTRY                          = new TagImpl("df60", TagValueType.BINARY, "VISA Log Entry ??", "");
 
     //TODO these tags are MASTERCARD specific
-//    public static final Tag MASTERCARD_UPPER_OFFLINE_AMOUNT         = new TagImpl("9f52", TagValueType.BINARY, "Upper Cumulative Domestic Offline Transaction Amount", "Issuer specified data element indicating the required maximum cumulative offline amount allowed for the application before the transaction goes online.");
+    public static final Tag MASTERCARD_UPPER_OFFLINE_AMOUNT         = new TagImpl("9f52", TagValueType.BINARY, "Upper Cumulative Domestic Offline Transaction Amount", "Issuer specified data element indicating the required maximum cumulative offline amount allowed for the application before the transaction goes online.");
 
-    
-    //TODO these tags are VISA specific
-    //Create a class that maps AID+Tag -> ProprietaryTag
-//    public static final Tag APPLICATION_DEFAULT_ACTION              = new TagImpl("9f52", TagValueType.BINARY, "Application Default Action (ADA)", "Visa proprietary data element indicating the action a card should take when exception conditions occur");
-//    public static final Tag VISA_SOMETHING                          = new TagImpl("9f65", TagValueType.BINARY, "", ""); //Maximum length of data field in command message?
-    //9f53 Consecutive Transaction Limit (International)
-    //9f54 Cumulative Total Transaction Amount Limit
-    //9f55 Geographic Indicator
-    //9f58 Lower Consecutive Offline Limit
-    //9f59 Upper Consecutive Offline Limit
-    //9f5c Cumulative Total Transaction Amount Upper Limit
-    //9f72 Consecutive Transaction Limit (International--Country)
-    //9f75 Cumulative Transaction Amount Limit--Dual Currency
-    //9f77 VLP Funds Limit
-    //9f78 VLP Single Transaction Limit
-    //9f79 VLP Available Funds (Decremented during Card Action Analysis for offline approved VLP transactions)
-    //9f7f Card Production Life Cycle (CPLC) History File Identifiers
-    //TODO
+    //TODO Global Platform
+    //"73" Security Domain Management Data
+    public static final Tag MAXIMUM_COMMAND_LENGTH                  = new TagImpl("9f65", TagValueType.BINARY, "Maximum length of data field in command message", "Global Platform");
+    public static final Tag APP_LIFE_CYCLE_DATA                     = new TagImpl("9f6e", TagValueType.BINARY, "Application production life cycle data", "Global Platform");
 
-    /* ISO7816 interindustry data tags */
-//ISO7816_II_CATEGORY_TLV         0x80
-//ISO7816_II_CATEGORY_NOT_TLV     0x00
     public static final Tag ISO7816_TAG_II_CARD_SERVICE             = new TagImpl("43", TagValueType.BINARY, "ISO 7816 Card Service", "");
     public static final Tag ISO7816_TAG_II_INITIAL_ACCESS_DATA      = new TagImpl("44", TagValueType.BINARY, "ISO 7816 Initial Access Data", "");
     public static final Tag ISO7816_TAG_II_CARD_ISSUER_DATA         = new TagImpl("45", TagValueType.BINARY, "ISO 7816 Card Issuer Data", "");
     public static final Tag ISO7816_TAG_II_PRE_ISSUING              = new TagImpl("46", TagValueType.BINARY, "ISO 7816 Pre Issuing", "");
     public static final Tag ISO7816_TAG_II_CARD_CAPABILITIES        = new TagImpl("47", TagValueType.BINARY, "ISO 7816 Card Capabilities", "");
-//public static final Tag ISO7816_TAG_II_AID                      = new TagImpl("4f", TagValueType.BINARY, "Card Capabilities", "");
-//ISO7816_TAG_II_ALLOCATION_SCHEME        0x78
-//ISO7816_TAG_II_STATUS_LCS               0x81
-//ISO7816_TAG_II_STATUS_SW                0x82
-//ISO7816_TAG_II_STATUS_LCS_SW            0x83
-//
-///* Other interindustry data tags */
-//
-//IASECC_TAG_II_IO_BUFFER_SIZES           0xE0
+
 
     /**
      * If the tag is not found, this method returns the "[UNHANDLED TAG]" containing 'tagBytes'

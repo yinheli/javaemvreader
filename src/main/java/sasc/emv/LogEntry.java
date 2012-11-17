@@ -17,6 +17,7 @@ package sasc.emv;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -50,9 +51,9 @@ public class LogEntry {
 
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent)+"Log Entry:");
-        String indentStr = Util.getSpaces(indent+3);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
 
-        sfi.dump(pw, indent+3);
+        sfi.dump(pw, indent+Log.INDENT_SIZE);
         
         pw.println(indentStr+numRecords+" record(s)");
 

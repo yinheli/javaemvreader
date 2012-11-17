@@ -22,6 +22,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import org.jdesktop.application.Application;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -72,6 +74,15 @@ public class ICCPublicKeyCertificate {
             return isValid();
         }
         validationPerformed = true;
+        
+        if (issuerPublicKeyCert == null) {
+			issuerPublicKeyCert = application.getIssuerPublicKeyCertificate();
+		}
+        
+        if (issuerPublicKeyCert == null){
+            //No isser public key cert found
+            return isValid();
+        }
 
         if(!issuerPublicKeyCert.validate()){ //Init the cert
             isValid = false;
@@ -141,7 +152,25 @@ public class ICCPublicKeyCertificate {
         hashStream.write((byte)iccPublicKeyModLengthTotal);
         hashStream.write((byte)iccPublicKeyExpLengthTotal);
         byte[] ipkModulus = iccPublicKey.getModulus();
-        hashStream.write(ipkModulus, 0, ipkModulus.length);
+        int numPadBytes = issuerPublicKey.getModulus().length-42-ipkModulus.length;
+        Log.debug("issuerMod: "+issuerPublicKey.getModulus().length + " iccMod: "+ipkModulus.length + " padBytes: "+numPadBytes);
+        if(numPadBytes > 0){
+            //If NIC <= NI – 42, consists of the full
+            //ICC Public Key padded to the right
+            //with NI – 42 – NIC bytes of value
+            //'BB'
+            hashStream.write(ipkModulus, 0, ipkModulus.length);
+            for(int i=0; i<numPadBytes; i++){
+                hashStream.write((byte)0xBB);
+            }
+        }else{
+            //If NIC > NI – 42, consists of the NI –
+            //42 most significant bytes of the
+            //ICC Public Key
+            //and the NIC – NI + 42 least significant bytes of the ICC Public Key
+            hashStream.write(ipkModulus, 0, ipkModulus.length);
+        }
+
         byte[] ipkExponent = iccPublicKey.getExponent();
         hashStream.write(ipkExponent, 0, ipkExponent.length);
 
@@ -149,6 +178,8 @@ public class ICCPublicKeyCertificate {
         hashStream.write(offlineAuthenticationRecords, 0, offlineAuthenticationRecords.length);
         //Trailer not included in hash
 
+        Log.debug("HashStream:\n"+Util.prettyPrintHex(hashStream.toByteArray()));
+        
         byte[] sha1Result = null;
         try {
             sha1Result = Util.calculateSHA1(hashStream.toByteArray());
@@ -187,7 +218,7 @@ public class ICCPublicKeyCertificate {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "ICC Public Key Certificate");
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         if(!validationPerformed){
             validate();
@@ -203,9 +234,13 @@ public class ICCPublicKeyCertificate {
             pw.println(indentStr + "ICC Public Key Algorithm Indicator: " + iccPublicKeyAlgorithmIndicator +" (=RSA)");
             pw.println(indentStr + "Hash: " + Util.byteArrayToHexString(hash));
 
-            iccPublicKey.dump(pw, indent + 3);
+            iccPublicKey.dump(pw, indent + Log.INDENT_SIZE);
         } else {
-            pw.println(indentStr + "CERTIFICATE NOT VALID");
+            if (this.issuerPublicKeyCert == null) {
+                pw.println(indentStr + "NO ISSUER CERTIFICATE FOUND. UNABLE TO VALIDATE CERTIFICATE");
+			} else {
+				pw.println(indentStr + "CERTIFICATE NOT VALID");
+			}
         }
     }
 }

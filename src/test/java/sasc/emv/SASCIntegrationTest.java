@@ -30,6 +30,7 @@ import sasc.terminal.CardConnection;
 import sasc.util.Util;
 
 import static org.junit.Assert.*;
+import sasc.common.SmartCard;
 
 /**
  * This Test is only used to track changes in output from revision to revision.
@@ -63,10 +64,11 @@ public class SASCIntegrationTest {
      */
     @Test
     public void testStringOutput() throws Exception {
-        EMVCard emvCard = null;
+        SmartCard emvCard = null;
         StringWriter dumpWriter = new StringWriter();
         Log.setPrintWriter(new PrintWriter(dumpWriter));
 
+        sasc.common.Context.init();
         CA.initFromFile("/CertificationAuthorities_Test.xml");
         CardConnection term = new CardEmulator("/SDACardTransaction.xml");
         EMVSession session = EMVSession.startSession(new SessionProcessingEnv(), term);

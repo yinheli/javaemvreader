@@ -20,6 +20,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Calendar;
 import java.util.Date;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -59,7 +60,7 @@ public class Track2EquivalentData {
 
         public void dump(PrintWriter pw, int indent) {
             pw.println(Util.getSpaces(indent) + "Service Code - "+new String(serviceCode)+":");
-            String indentStr = Util.getSpaces(indent + 3);
+            String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
             pw.println(indentStr + serviceCode[0] + " : Interchange Rule - " + getInterchangeRulesDescription());
             pw.println(indentStr + serviceCode[1] + " : Authorisation Processing - " + getAuthorisationProcessingDescription());
             pw.println(indentStr + serviceCode[2] + " : Range of Services - " + getRangeOfServicesDescription());
@@ -139,8 +140,8 @@ public class Track2EquivalentData {
         int fieldSepIndex = str.indexOf('D');
         pan = new PAN(str.substring(0, fieldSepIndex));
         //Skip Field Separator
-        int YY = Util.numericHexToInt(str.substring(fieldSepIndex + 1, fieldSepIndex + 3));
-        int MM = Util.numericHexToInt(str.substring(fieldSepIndex + 3, fieldSepIndex + 5));
+        int YY = Util.binaryHexCodedDecimalToInt(str.substring(fieldSepIndex + 1, fieldSepIndex + 3));
+        int MM = Util.binaryHexCodedDecimalToInt(str.substring(fieldSepIndex + 3, fieldSepIndex + 5));
         Calendar cal = Calendar.getInstance();
         cal.set(2000 + YY, MM - 1, 0, 0, 0, 0);
         cal.set(Calendar.MILLISECOND, 0);
@@ -176,10 +177,10 @@ public class Track2EquivalentData {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Track 2 Equivalent Data:");
-        String indentStr = Util.getSpaces(indent + 3);
-        pan.dump(pw, indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
+        pan.dump(pw, indent + Log.INDENT_SIZE);
         pw.println(indentStr + "Expiration Date: " + expirationDate);
-        serviceCode.dump(pw, indent+3);
+        serviceCode.dump(pw, indent+Log.INDENT_SIZE);
         pw.println(indentStr + "Discretionary Data: " + discretionaryData +" (may include Pin Verification Key Indicator (PVKI, 1 character), PIN Verification Value (PVV, 4 characters), Card Verification Value or Card Verification Code (CVV or CVC, 3 characters))");
     }
 

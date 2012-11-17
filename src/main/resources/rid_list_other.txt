@@ -1,0 +1,4 @@
+# RID; Applicant; Country
+A000000456; European Commission; EU
+A000000476; Google (Google Wallet)?; US
+# END

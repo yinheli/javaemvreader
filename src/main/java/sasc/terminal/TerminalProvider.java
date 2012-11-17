@@ -24,6 +24,7 @@ import java.util.List;
 public interface TerminalProvider {
     List<Terminal> listTerminals() throws TerminalException;
     CardConnection connectAnyTerminal() throws TerminalException;
+    CardConnection connectAnyTerminal(String protocol) throws TerminalException;
     CardConnection connectTerminal(String name) throws TerminalException;
     CardConnection connectTerminal(int index) throws TerminalException;
     String getProviderInfo();

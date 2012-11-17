@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -72,15 +73,15 @@ public class CAPublicKey {
     }
 
     public byte[] getExponent(){
-        return Arrays.copyOf(exponent, exponent.length);
+        return Util.copyByteArray(exponent);
     }
 
     public byte[] getModulus(){
-        return Arrays.copyOf(modulus, modulus.length);
+        return Util.copyByteArray(modulus);
     }
 
     public byte[] getCertificationAuthorityPublicKeyCheckSum(){
-        return Arrays.copyOf(sha1CheckSum, sha1CheckSum.length);
+        return Util.copyByteArray(sha1CheckSum);
     }
 
     public Date getExpirationDate(){
@@ -108,15 +109,15 @@ public class CAPublicKey {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "CA Public Key");
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         pw.println(indentStr + "Size: "+getKeyLengthInBytes()*8+"-bit");
         pw.println(indentStr + "Exponent:");
-        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(exponent), indent+6));
+        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(exponent), indent+Log.INDENT_SIZE*2));
         pw.println(indentStr + "Modulus:");
-        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(modulus), indent+6));
+        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(modulus), indent+Log.INDENT_SIZE*2));
         pw.println(indentStr + "Checksum:");
-        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(sha1CheckSum), indent+6));
+        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(sha1CheckSum), indent+Log.INDENT_SIZE*2));
     }
 
 }

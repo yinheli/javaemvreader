@@ -15,12 +15,7 @@
  */
 package sasc.util;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -70,9 +65,17 @@ public class Util {
     public static String prettyPrintHex(byte[] data) {
         return Util.prettyPrintHex(Util.byteArrayToHexString(data), 0, true);
     }
+    
+    public static String prettyPrintHex(byte[] data, int startPos, int length) {
+        return Util.prettyPrintHex(Util.byteArrayToHexString(data, startPos, length), 0, true);
+    }
 
     public static String prettyPrintHexNoWrap(byte[] data) {
         return Util.prettyPrintHex(Util.byteArrayToHexString(data), 0, false);
+    }
+    
+    public static String prettyPrintHexNoWrap(byte[] data, int startPos, int length) {
+        return Util.prettyPrintHex(Util.byteArrayToHexString(data, startPos, length), 0, false);
     }
     
     public static String prettyPrintHexNoWrap(String in) {
@@ -186,11 +189,26 @@ public class Util {
 
     //This prints all non-control characters common to all parts of ISO/IEC 8859
     //See EMV book 4 Annex B: Table 36: Common Character Set
-    public static String getSafePrintChars(byte[] in) {
+    public static String getSafePrintChars(byte[] byteArray) {
+        if (byteArray == null) {
+            //return "" instead?
+            throw new IllegalArgumentException("Argument 'byteArray' cannot be null");
+        }
+        return getSafePrintChars(byteArray, 0, byteArray.length);
+    }
+    
+    public static String getSafePrintChars(byte[] byteArray, int startPos, int length) {
+        if (byteArray == null) {
+            //return "" instead?
+            throw new IllegalArgumentException("Argument 'byteArray' cannot be null");
+        }
+        if(byteArray.length < startPos+length){
+            throw new IllegalArgumentException("startPos("+startPos+")+length("+length+") > byteArray.length("+byteArray.length+")");
+        }
         StringBuilder buf = new StringBuilder();
-        for (int i = 0; i < in.length; i++) {
-            if (in[i] >= (byte) 0x20 && in[i] < (byte) 0x7F) {
-                buf.append((char) in[i]);
+        for (int i = startPos; i < length; i++) {
+            if (byteArray[i] >= (byte) 0x20 && byteArray[i] < (byte) 0x7F) {
+                buf.append((char) byteArray[i]);
             } else {
                 buf.append(".");
             }
@@ -205,14 +223,23 @@ public class Util {
      */
     public static String byteArrayToHexString(final byte[] byteArray) {
         if (byteArray == null) {
-            //return "" instead?
-            throw new IllegalArgumentException("Argument 'byteArray' cannot be null");
+            return "";
         }
-        int readBytes = byteArray.length;
+        return byteArrayToHexString(byteArray, 0, byteArray.length);
+    }
+    
+    public static String byteArrayToHexString(final byte[] byteArray, int startPos, int length) {
+        if (byteArray == null) {
+            return "";
+        }
+        if(byteArray.length < startPos+length){
+            throw new IllegalArgumentException("startPos("+startPos+")+length("+length+") > byteArray.length("+byteArray.length+")");
+        }
+//        int readBytes = byteArray.length;
         StringBuilder hexData = new StringBuilder();
         int onebyte;
-        for (int i = 0; i < readBytes; i++) {
-            onebyte = ((0x000000ff & byteArray[i]) | 0xffffff00);
+        for (int i = 0; i < length; i++) {
+            onebyte = ((0x000000ff & byteArray[startPos+i]) | 0xffffff00);
             hexData.append(Integer.toHexString(onebyte).substring(6));
         }
         return hexData.toString();
@@ -226,6 +253,13 @@ public class Util {
         return hex;
     }
 
+    public static String int2HexZeroPad(int i) {
+        String hex = int2Hex(i);
+        if (hex.length() % 2 != 0) {
+            hex = "0" + hex;
+        }
+        return hex;
+    }
     /**
      * The length of the returned array depends on the size of the int
      * @param value
@@ -273,24 +307,31 @@ public class Util {
                     (byte) value};
     }
 
-    public static int byteArrayToInt(byte[] b) {
-        if (b == null) {
-            throw new IllegalArgumentException("Parameter cannot be null");
+    public static int byteArrayToInt(byte[] byteArray) {
+        return byteArrayToInt(byteArray, 0, byteArray.length);
+    }
+    
+    public static int byteArrayToInt(byte[] byteArray, int startPos, int length) {
+        if (byteArray == null) {
+            throw new IllegalArgumentException("Parameter 'byteArray' cannot be null");
         }
-        if (b.length == 0 || b.length > 4) {
-            throw new IllegalArgumentException("Array length must be between 1 and 4. Length = " + b.length);
+        if (length <= 0 || length > 4) {
+            throw new IllegalArgumentException("Length must be between 1 and 4. Length = " + length);
         }
         int value = 0;
-        for (int i = 0; i < b.length; i++) {
-            value += ((b[i] & 0xFF) << 8 * (b.length - i - 1));
+        for (int i = startPos; i < length; i++) {
+            value += ((byteArray[i] & 0xFF) << 8 * (byteArray.length - i - 1));
         }
         return value;
     }
 
     public static byte[] fromHexString(String encoded) {
         encoded = removeSpaces(encoded);
+        if (encoded.length() == 0){
+            return new byte[0];
+        }
         if ((encoded.length() % 2) != 0) {
-            throw new IllegalArgumentException("Input string must contain an even number of characters");
+            throw new IllegalArgumentException("Input string must contain an even number of characters: "+encoded);
         }
         final byte result[] = new byte[encoded.length() / 2];
         final char enc[] = encoded.toCharArray();
@@ -346,7 +387,7 @@ public class Util {
      * @param val
      * @return 
      */
-    public static byte[] intToNumericEncodedByteArray(int val){
+    public static byte[] intToBinaryEncodedDecimalByteArray(int val){
         String str = String.valueOf(val);
         if(str.length() % 2 != 0){
             str = "0"+str;
@@ -359,7 +400,7 @@ public class Util {
      * eg 0x70 = 70 (int)
      * @param b
      */
-    public static int numericByteToInt(byte b) {
+    public static int binaryCodedDecimalToInt(byte b) {
         String hex = Util.byte2Hex(b);
         try {
             return Integer.parseInt(hex);
@@ -373,7 +414,7 @@ public class Util {
      * eg 0x70 = 70 (int)
      * @param hex
      */
-    public static int numericHexToInt(String hex) {
+    public static int binaryHexCodedDecimalToInt(String hex) {
         hex = Util.removeSpaces(hex);
         if (hex.length() > 8) {
             throw new IllegalArgumentException("There must be a maximum of 4 hex octets. hex=" + hex);
@@ -491,6 +532,40 @@ public class Util {
         SecureRandom random = new SecureRandom();
         random.nextBytes(rndBytes);
         return rndBytes;
+    }
+    
+    public static InputStream loadResource(Class cls, String path){
+        return cls.getResourceAsStream(path);
+    }
+    
+    public static byte[] copyByteArray(byte[] array2Copy){
+//        byte[] copy = new byte[array2Copy.length];
+//        System.arraycopy(array2Copy, 0, copy, 0, array2Copy.length);
+//        return copy;
+        if (array2Copy == null) {
+            //return new byte[0] instead?
+            throw new IllegalArgumentException("Argument 'array2Copy' cannot be null");
+        }
+        return copyByteArray(array2Copy, 0, array2Copy.length);
+    }
+    
+    public static byte[] copyByteArray(byte[] array2Copy, int startPos, int length){
+        if (array2Copy == null) {
+            //return new byte[0] instead?
+            throw new IllegalArgumentException("Argument 'array2Copy' cannot be null");
+        }
+        if(array2Copy.length < startPos+length){
+            throw new IllegalArgumentException("startPos("+startPos+")+length("+length+") > byteArray.length("+array2Copy.length+")");
+        }
+        byte[] copy = new byte[array2Copy.length];
+        System.arraycopy(array2Copy, startPos, copy, 0, length);
+        return copy;
+    }
+    
+    public static String getStackTrace(Throwable t){
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        return sw.toString();
     }
 
     public static void main(String[] args) {

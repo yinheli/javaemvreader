@@ -109,7 +109,7 @@ public class IssuerPublicKeyCertificate {
         if(padStartIndex != -1){
             iiStr = iiStr.substring(0, padStartIndex);
         }
-        issuerIdentifier = Util.numericHexToInt(iiStr);
+        issuerIdentifier = Util.binaryHexCodedDecimalToInt(iiStr);
 
         bis.read(certExpirationDate, 0, certExpirationDate.length);
 
@@ -197,7 +197,7 @@ public class IssuerPublicKeyCertificate {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Issuer Public Key Certificate");
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         if (!validationPerformed) {
             validate();
@@ -215,7 +215,7 @@ public class IssuerPublicKeyCertificate {
             pw.println(indentStr + "Issuer Public Key Algorithm Indicator: " + issuerPublicKeyAlgorithmIndicator + " (=RSA)");
             pw.println(indentStr + "Hash: " + Util.byteArrayToHexString(hash));
 
-            issuerPublicKey.dump(pw, indent + 3);
+            issuerPublicKey.dump(pw, indent + Log.INDENT_SIZE);
         } else {
             if(this.ca == null){
                 pw.println(indentStr + "NO CA CONFIGURED FOR THIS RID. UNABLE TO VALIDATE CERTIFICATE");

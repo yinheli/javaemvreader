@@ -17,6 +17,7 @@ package sasc.emv;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -128,7 +129,7 @@ public class ApplicationInterchangeProfile {
 
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent)+"Application Interchange Profile");
-        String indentStr = Util.getSpaces(indent+3);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
 
         pw.println(indentStr+getSDASupportedString());
         pw.println(indentStr+getDDASupportedString());

@@ -21,6 +21,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -64,7 +65,7 @@ public class LanguagePreference {
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Language Preference (in order of preference):");
 
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         for (Locale lang : prefs) {
             String postfix = "";

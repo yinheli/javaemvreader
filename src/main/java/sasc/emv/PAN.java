@@ -18,8 +18,9 @@ package sasc.emv;
 import sasc.iso7816.SmartCardException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import sasc.IIN_DB;
+import sasc.lookup.IIN_DB;
 import sasc.util.ISO3166_1;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -122,7 +123,7 @@ public class PAN {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Primary Account Number (PAN) - " + panStr);
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
         switch (getMajorIndustryIdentifier()) {
             case 0:
                 pw.println(indentStr + "Major Industry Identifier = 0 (ISO/TC 68 and other industry assignments)");

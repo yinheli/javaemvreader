@@ -57,6 +57,7 @@ public class KnownAIDList {
         private boolean supported;
         private String name;
         private String description;
+//        private String candidateType;
 
         KnownAID(String name, AID aid, boolean supported, ApplicationSelectionIndicator asi, String description) {
             this.name = name;
@@ -76,6 +77,14 @@ public class KnownAIDList {
 
         public boolean isSupported(){
             return this.supported;
+        }
+        
+        public String getName(){
+            return name;
+        }
+        
+        public String getDescription(){
+            return description;
         }
 
         @Override
@@ -106,15 +115,19 @@ public class KnownAIDList {
     public static Collection<KnownAID> getAIDs(){
         return Collections.unmodifiableCollection(knownAIDsMap.values());
     }
+    
+    public static KnownAID searchAID(byte[] aidBytes){
+        return knownAIDsMap.get(new AID(aidBytes));
+    }
 
     static {
-        _initFromFile("/AIDList.xml");
+        _initFromFile("/aidlist.xml");
     }
 
     private static void _initFromFile(String filename) {
         try {
             XMLElement aidListElement = new XMLElement();
-            aidListElement.parseFromReader(new InputStreamReader(KnownAIDList.class.getResourceAsStream(filename)));
+            aidListElement.parseFromReader(new InputStreamReader(Util.loadResource(KnownAIDList.class, filename)));
 
             if (!"AIDList".equalsIgnoreCase(aidListElement.getName())) {
                 throw new RuntimeException("Unexpected Root Element: <" + aidListElement.getName() + "> . Expected <AIDList>");

@@ -27,6 +27,7 @@ import sasc.terminal.CardConnection;
 import sasc.terminal.Terminal;
 import sasc.terminal.TerminalException;
 import sasc.terminal.TerminalProvider;
+import sasc.util.Log;
 
 /**
  *
@@ -45,6 +46,15 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         providerInfo = "SmartcardIO[" + factory.getProvider() + "]";
         terminals = factory.terminals();
     }
+    
+    SmartcardioTerminalProviderImpl(CardTerminals cardTerminals, String providerInfo){
+        this.providerInfo = providerInfo;
+        this.terminals = cardTerminals;
+    }
+    
+    public static TerminalProvider createFromCardTerminals(Object cardTerminals, String providerInfo){
+        return new SmartcardioTerminalProviderImpl((CardTerminals)cardTerminals, providerInfo);
+    }
 
     @Override
     public List<Terminal> listTerminals() throws TerminalException {
@@ -61,6 +71,11 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
 
     @Override
     public CardConnection connectAnyTerminal() throws TerminalException {
+        return connectAnyTerminal("*");
+    }
+    
+    @Override
+    public CardConnection connectAnyTerminal(String protocol) throws TerminalException {
         try {
 //            //First check if a card is present in any terminal
 //            for (CardTerminal terminal : terminals.list(javax.smartcardio.CardTerminals.State.CARD_PRESENT)) {
@@ -71,9 +86,17 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
             //(for example a 3G mobile card with SIM slot that is listed as a PC/SC reader on the host system)
             //wait for a card to be inserted
             while (true) {
-                terminals.waitForChange();
+                boolean changeOccurred = terminals.waitForChange(200);
+                if(!changeOccurred){ //Timeout
+                    if(Thread.currentThread().isInterrupted()){
+                        return null;
+                    }
+                    continue; //waitForChange again
+                }
                 for (CardTerminal smartCardIOTerminal : terminals.list(javax.smartcardio.CardTerminals.State.CARD_INSERTION)) {
-                    Card _card = smartCardIOTerminal.connect("*");
+                    Card _card = smartCardIOTerminal.connect(protocol); //if proto, eg T=1, is specified and not supported by card: throws PCSCException SCARD_E_PROTO_MISMATCH
+                    Log.debug("Connected to card using protocol: "+_card.getProtocol());
+                    Log.debug("Terminal: "+smartCardIOTerminal.getName());
                     return new SmartcardioCardConnection(_card, smartCardIOTerminal);
                 }
             }
@@ -128,6 +151,17 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
                 card = smartCardIOTerminal.connect("*");
                 return new SmartcardioCardConnection(card, smartCardIOTerminal);
             } catch (CardException ex) {
+                throw new TerminalException(ex);
+            }
+        }
+        
+        @Override
+        public boolean isCardPresent() throws TerminalException {
+            try{
+                return smartCardIOTerminal.isCardPresent();
+            }catch(CardException ex){
+                throw new TerminalException(ex);
+            }catch (IllegalStateException ex){
                 throw new TerminalException(ex);
             }
         }

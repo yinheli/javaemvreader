@@ -17,6 +17,7 @@ package sasc.emv;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -61,7 +62,7 @@ public class ApplicationPriorityIndicator {
 
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent)+"Application Priority Indicator");
-        String indentStr = Util.getSpaces(indent+3);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
         pw.println(indentStr+getMayBeselectedWithoutCardholderConfirmationString());
         if(isPriorityAssigned()){
             pw.println(indentStr+"Selection Priority: "+getSelectionPriority() + " (1 is highest)");

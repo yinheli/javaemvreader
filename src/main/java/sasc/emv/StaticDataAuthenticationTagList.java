@@ -23,6 +23,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -60,7 +61,7 @@ public class StaticDataAuthenticationTagList {
 
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent) + "Static Data Authentication Tag List");
-        String indentStr = Util.getSpaces(indent+3);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
 
         for(Tag tag : tagList){
             pw.println(indentStr+tag.getName());

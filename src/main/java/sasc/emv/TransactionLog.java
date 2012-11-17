@@ -61,19 +61,19 @@ public class TransactionLog {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Transaction Log:");
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
-        logFormat.dump(pw, indent + 3);
+        logFormat.dump(pw, indent + Log.INDENT_SIZE);
 
         pw.println(indentStr + "Log Record(s):");
         if (!logRecords.isEmpty()) {
 
 
             for (Record record : logRecords) {
-                record.dump(pw, indent + 6);
+                record.dump(pw, indent + Log.INDENT_SIZE*2);
             }
         } else {
-            pw.println(Util.getSpaces(indent+6) + "No Log Records found");
+            pw.println(Util.getSpaces(indent+Log.INDENT_SIZE*2) + "No Log Records found");
         }
 
     }

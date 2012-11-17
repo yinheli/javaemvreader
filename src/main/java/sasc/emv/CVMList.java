@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.LinkedList;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -59,7 +60,7 @@ public class CVMList {
         pw.println(Util.getSpaces(indent) + "Cardholder Verification Method (CVM) List:");
 
         for(CVRule cvRule : cvRules){
-            cvRule.dump(pw, indent+3);
+            cvRule.dump(pw, indent+Log.INDENT_SIZE);
         }
     }
 

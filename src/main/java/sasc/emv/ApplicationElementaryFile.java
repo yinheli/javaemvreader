@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -96,9 +97,9 @@ public class ApplicationElementaryFile implements File{
 
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent)+"Application Elementary File");
-        String indentStr = Util.getSpaces(indent+3);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
         if(sfi != null){
-            sfi.dump(pw, indent+3);
+            sfi.dump(pw, indent+Log.INDENT_SIZE);
         }
         pw.println(indentStr+"Start Record: "+getStartRecordNumber());
         pw.println(indentStr+"End Record: "+getEndRecordNumber());
@@ -106,7 +107,7 @@ public class ApplicationElementaryFile implements File{
                 getNumRecordsInvolvedInOfflineDataAuthentication());
 
         for(Record record : records.values()){
-            record.dump(pw, indent+3);
+            record.dump(pw, indent+Log.INDENT_SIZE);
         }
     }
 

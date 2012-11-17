@@ -29,7 +29,7 @@ public class BuildProperties {
     static {
 
         try {
-            buildProps.load(BuildProperties.class.getResourceAsStream("/build.properties"));
+            buildProps.load(Util.loadResource(BuildProperties.class, "/build.properties"));
         } catch (java.io.IOException ex) {
             throw new RuntimeException(ex);
         }

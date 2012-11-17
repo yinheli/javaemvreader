@@ -39,7 +39,7 @@ public class ISO3166_1 {
         BufferedReader br = null;
 
         try{
-            br = new BufferedReader(new InputStreamReader(ISO3166_1.class.getResourceAsStream("/iso3166-1_numeric.txt")));
+            br = new BufferedReader(new InputStreamReader(Util.loadResource(ISO3166_1.class, "/iso3166_1_numeric.txt"), "UTF-8"));
 
             String line;
             while((line = br.readLine()) != null){

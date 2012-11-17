@@ -24,7 +24,6 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
-import java.net.URLEncoder;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
@@ -32,8 +31,8 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import org.jdesktop.application.SingleFrameApplication;
 import sasc.emv.EMVApplication;
-import sasc.emv.EMVCard;
-import sasc.emv.EMVSession;
+import sasc.common.CardExplorer;
+import sasc.common.SmartCard;
 import sasc.util.Log;
 
 /**
@@ -116,7 +115,7 @@ public class GUI extends SingleFrameApplication {
 
         @Override
         public void run() {
-            Explorer explorer = new Explorer();
+            CardExplorer explorer = new CardExplorer();
             try {
                 explorer.start();
             } catch (Exception ex) {
@@ -126,7 +125,7 @@ public class GUI extends SingleFrameApplication {
             } finally {
                 //Show submit feedback dialogue
                 boolean foundUnhandledRecords = false;
-                EMVCard card = explorer.getEMVCard();
+                SmartCard card = explorer.getEMVCard();
                 if(card != null){
                     if(card.getUnhandledRecords().size() > 0){
                         foundUnhandledRecords = true;
@@ -138,20 +137,27 @@ public class GUI extends SingleFrameApplication {
                     }
                 }
 
-                if (!console.getText().contains("Finished Processing card.") || foundUnhandledRecords) {
+                //TODO also add environment info (OS/Java version etc) to end of console
+                if (!console.getText().contains("Finished Processing card.") 
+                        || console.getText().contains("Error processing app")) {
                     //Assume something failed. Show Popup with option to send email
-                    sendErrorReport();
+                    submitFeedback("Error", "Something failed. Would you like to send an email report?");
+                }else if(foundUnhandledRecords){
+                    submitFeedback("Unhandled Record(s)", "Found unhandled records. Would you like to send an email report to help improve the application?");
                 }
             }
         }
     }
+//    public static void main(String[] args) {
+//        org.jdesktop.application.Application.launch(GUI.class, args);
+//    }
 
-    private void sendErrorReport() {
+    private void submitFeedback(String title, String text) {
         
         if (Desktop.isDesktopSupported()) {
             Desktop desktop = Desktop.getDesktop();
             if (desktop.isSupported(Desktop.Action.MAIL)) {
-                int choice = JOptionPane.showConfirmDialog(console.getRootPane(), "Something failed. Would you like to send an email report?", "Error", JOptionPane.OK_CANCEL_OPTION);
+                int choice = JOptionPane.showConfirmDialog(console.getRootPane(), text, title, JOptionPane.OK_CANCEL_OPTION);
                 if (choice == JOptionPane.OK_OPTION) {
                     try {
                         desktop.mail(new URI("mailto", getEAddr() + "?SUBJECT=[JavaEMVReader-BUGREPORT]&BODY=(Please also include the complete output from JavaEMVReader, so I can understand what caused the problem)", null));

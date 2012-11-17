@@ -21,6 +21,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -99,7 +100,7 @@ public class DOL {
 
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent)+type.getDescription());
-        String indentStr = Util.getSpaces(indent+3);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
 
         for(TagAndLength tagAndLength : tagAndLengthList){
             int length = tagAndLength.getLength();

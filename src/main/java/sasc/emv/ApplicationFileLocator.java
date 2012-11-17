@@ -22,6 +22,7 @@ import java.io.StringWriter;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -58,7 +59,7 @@ public class ApplicationFileLocator {
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent)+"Application File Locator");
         for(ApplicationElementaryFile aef : aefList){
-            aef.dump(pw, indent+3);
+            aef.dump(pw, indent+Log.INDENT_SIZE);
         }
     }
 

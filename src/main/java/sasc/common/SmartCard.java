@@ -13,49 +13,78 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.common;
 
 import sasc.iso7816.MasterFile;
 import sasc.iso7816.BERTLV;
 import sasc.iso7816.AID;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
+import java.util.*;
 import sasc.iso7816.ATR;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import sasc.emv.DDF;
+import sasc.emv.EMVApplication;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
- * A representation of an EMV smart card
+ * A representation of the all the (EMV) applications (if any) on a smart card
  * 
  * @author sasc
+ * 
  */
-public class EMVCard {
+public class SmartCard {
 
+    //TODO separate EMV and non-emv apps
+    //private Map<AID, Application> otherApplicationsMap = new LinkedHashMap<AID, Application>();
     private Map<AID, EMVApplication> applicationsMap = new LinkedHashMap<AID, EMVApplication>();
+    private Set<AID> otherAIDs = new LinkedHashSet<AID>();
     private EMVApplication selectedApp = null;
-    private ATR atr = null;
     private DDF pse = null;
-    private MasterFile mf = null;
     private List<BERTLV> unhandledRecords = new ArrayList<BERTLV>();
-    private Type type = Type.CONTACTED;
+
+    private Set<ATR> atrSet = new LinkedHashSet<ATR>();
+    private MasterFile mf = null;
+    private Type type = Type.CONTACTED; //default
     
+    //Use info from ATR, PSE/PPSE presence etc to determine interface type
     public enum Type{
         CONTACTED, CONTACTLESS;
     }
-
-    public EMVCard(ATR atr) {
-        this.atr = atr;
+    
+    public SmartCard(ATR atr) {
+        if(atr == null){
+            throw new IllegalArgumentException("Argument atr cannot be null");
+        }
+        atrSet.add(atr);
     }
     
     public void setType(Type type){
         this.type = type;
     }
-
+    
+    public Type getType(){
+        return type;
+    }
+    
+    /**
+     * 
+     * @return the final ATR (cold or warm)
+     */
+    public ATR getATR(){
+        return atrSet.iterator().next();
+    }
+    
+    /**
+     * TODO
+     * The first item is the cold ATR
+     * Any subsequent ATRs (if present) are warm ATRs
+     * @return Set of ATRs (cold and warm (if present))
+     */
+    public Set<ATR> getATRs(){
+        return Collections.unmodifiableSet(atrSet);
+    }
+    
     public void setMasterFile(MasterFile mf) {
         this.mf = mf;
     }
@@ -71,6 +100,7 @@ public class EMVCard {
         if(app.getAID() == null){
             throw new IllegalArgumentException("Invalid Application object: AID == null");
         }
+        Log.debug("ADDING aid: "+Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()));
         applicationsMap.put(app.getAID(), app);
     }
 
@@ -115,43 +145,41 @@ public class EMVCard {
 
     //Dump all information read from card
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getSpaces(indent) + "======================================");
-        pw.println(Util.getSpaces(indent) + "               [EMVCard]              ");
-        pw.println(Util.getSpaces(indent) + "======================================");
-        atr.dump(pw, indent);
+
+        for(ATR atr : atrSet){
+            atr.dump(pw, indent);
+        }
         
         pw.println("");
         
-        pw.println(Util.getSpaces(indent+3) + "Interface Type: "+type);
-
+        pw.println(Util.getSpaces(indent+Log.INDENT_SIZE) + "Interface Type: "+type);
+        
         if (mf != null) {
-            mf.dump(pw, indent + 3);
+            mf.dump(pw, indent + Log.INDENT_SIZE);
         }
 
         pw.println("");
+
         if (pse != null) {
-            pse.dump(pw, indent + 3);
+            pse.dump(pw, indent + Log.INDENT_SIZE);
         }
 
         if (!unhandledRecords.isEmpty()) {
-            pw.println(Util.getSpaces(indent + 3) + "UNHANDLED GLOBAL RECORDS (" + unhandledRecords.size() + " found):");
+            pw.println(Util.getSpaces(indent + Log.INDENT_SIZE) + "UNHANDLED GLOBAL RECORDS (" + unhandledRecords.size() + " found):");
 
             for (BERTLV tlv : unhandledRecords) {
-                pw.println(Util.getSpaces(indent + 6) + tlv.getTag() + " " + tlv);
+                pw.println(Util.getSpaces(indent + Log.INDENT_SIZE*2) + tlv.getTag() + " " + tlv);
             }
         }
         pw.println("");
 
         pw.println("");
-        pw.println(Util.getSpaces(indent + 6) + "Applications (" + getApplications().size() + " found):");
+        pw.println(Util.getSpaces(indent + Log.INDENT_SIZE*2) + "Applications (" + getApplications().size() + " found):");
         pw.println("");
         for (EMVApplication app : getApplications()) {
-            app.dump(pw, indent + 9);
+            app.dump(pw, indent + Log.INDENT_SIZE*3);
         }
 
-        pw.println("---------------------------------------");
-        pw.println("                FINISHED               ");
-        pw.println("---------------------------------------");
         pw.flush();
     }
 }

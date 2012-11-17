@@ -23,7 +23,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author sasc
  */
 public class Log {
+    
+    public static final String COMMAND_HEADER_FRAMING = "------------------------------------------------";//---------------------";
 
+    public static final int INDENT_SIZE = 2;
+    
     private static AtomicInteger stepNo = new AtomicInteger(1);
     private static PrintWriter printWriter = null;
     private static Level level = Level.INFO;
@@ -52,6 +56,10 @@ public class Log {
     public static Level getLevel() {
         return level;
     }
+    
+    public void resetStepNo(){
+        stepNo.set(1);
+    }
 
     public static void debug(String msg) {
         logInternal("DEBUG: " + msg, Level.DEBUG);
@@ -70,9 +78,9 @@ public class Log {
     }
 
     public static void commandHeader(String msg) {
-        logInternal("\n---------------------------------------------------------------------"
+        logInternal("\n"+COMMAND_HEADER_FRAMING
                 + "\n[Step " + stepNo.getAndIncrement() + "] " + msg
-                + "\n---------------------------------------------------------------------", Level.COMMAND);
+                + "\n"+COMMAND_HEADER_FRAMING, Level.COMMAND);
     }
 
     private static void logInternal(String msg, Level level) {

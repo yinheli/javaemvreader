@@ -38,7 +38,7 @@ public final class ByteArrayWrapper {
         if (data == null) {
             throw new NullPointerException();
         }
-        return new ByteArrayWrapper(Arrays.copyOf(data, data.length));
+        return new ByteArrayWrapper(Util.copyByteArray(data));
     }
 
     @Override

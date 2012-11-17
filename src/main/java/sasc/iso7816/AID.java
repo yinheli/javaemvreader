@@ -18,7 +18,9 @@ package sasc.iso7816;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
-import sasc.RID_DB;
+import sasc.lookup.RID_DB;
+import sasc.terminal.KnownAIDList;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -77,11 +79,11 @@ public class AID {
     }
 
     public byte[] getRIDBytes() {
-        return Arrays.copyOf(rid, rid.length);
+        return Util.copyByteArray(rid);
     }
 
     public byte[] getPIXBytes() {
-        return Arrays.copyOf(pix, pix.length);
+        return Util.copyByteArray(pix);
     }
 
     public boolean belongsToRID(byte[] rid) {
@@ -96,8 +98,13 @@ public class AID {
     }
 
     public void dump(PrintWriter pw, int indent){
-        pw.println(Util.getSpaces(indent)+"AID: "+Util.prettyPrintHexNoWrap(getAIDBytes()));
-        String indentStr = Util.getSpaces(indent+3);
+        KnownAIDList.KnownAID knownAID = KnownAIDList.searchAID(getAIDBytes());
+        String aidName = "";
+        if(knownAID != null){
+            aidName = " ("+knownAID.getName()+")";
+        }
+        pw.println(Util.getSpaces(indent)+"AID: "+Util.prettyPrintHexNoWrap(getAIDBytes()) + aidName);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
 
         RID ridFromDB = RID_DB.searchRID(rid);
         String description = "";

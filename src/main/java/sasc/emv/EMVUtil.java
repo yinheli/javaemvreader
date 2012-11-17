@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.common.SmartCard;
 import sasc.iso7816.TagValueType;
 import sasc.iso7816.TagAndLength;
 import sasc.iso7816.Tag;
@@ -26,6 +27,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import sasc.iso7816.ATR;
 import sasc.terminal.CardResponse;
 import sasc.terminal.TerminalException;
 import sasc.terminal.CardConnection;
@@ -56,8 +58,8 @@ public class EMVUtil {
 
     //TODO move this to generic ISO7816 routine?
     private static CardResponse sendCmdInternal(CardConnection terminal, String command, boolean doParseTLVData) throws TerminalException {
-        Log.command(command);
         byte[] cmdBytes = Util.fromHexString(command);
+        Log.command(Util.prettyPrintHex(cmdBytes));
         long startTime = System.nanoTime();
         CardResponse response = terminal.transmit(cmdBytes);
 
@@ -70,9 +72,9 @@ public class EMVUtil {
         Log.debug("Received data+SW1+SW2: " + Util.byteArrayToHexString(data) + " " + Util.byte2Hex(sw1) + " " + Util.byte2Hex((byte) sw2));
 
         if (sw1 == (byte) 0x6c) { //"Wrong length" (resend last command with correct length)
-            Log.procedureByte("Received procedure byte SW1=0x6c. Re-issuing command with correct length: " + Util.byte2Hex(sw2));
             //Re-issue command with correct length
             cmdBytes[4] = sw2;
+            Log.procedureByte("Received procedure byte SW1=0x6c. Re-issuing command with correct length (" + Util.byte2Hex(sw2)+"): "+ Util.byteArrayToHexString(cmdBytes));
             response = terminal.transmit(cmdBytes);
             sw1 = (byte) response.getSW1();
             sw2 = (byte) response.getSW2();
@@ -104,9 +106,9 @@ public class EMVUtil {
     }
 
     public static void printResponse(CardResponse response, boolean doParseTLVData) {
-        Log.info("response hex    :\n" + Util.prettyPrintHex(Util.byteArrayToHexString(response.getData())));
+        Log.info("response hex    :\n" + Util.prettyPrintHex(response.getData()));
         String swDescription = "";
-        String tmp = EMVUtil.getSWDescription(Util.short2Hex(response.getSW()));
+        String tmp = SW.getSWDescription(Util.short2Hex(response.getSW()));
         if (tmp != null && tmp.trim().length() > 0) {
             swDescription = " (" + tmp + ")";
         }
@@ -118,7 +120,7 @@ public class EMVUtil {
     }
 
     //parseFCI_PSE ?? TODO split PSE/PPSE
-    public static DDF parseFCIDDF(byte[] data, EMVCard card) {
+    public static DDF parseFCIDDF(byte[] data, SmartCard card) {
 
         DDF ddf = new DDF();
 
@@ -159,7 +161,7 @@ public class EMVUtil {
                                     int appTemplateTotalLen = appTemplateStream.available();
                                     int template4Len = tlv.getLength();
                                     EMVApplication app = new EMVApplication();
-                                    while (discrStream.available() > (appTemplateTotalLen - template4Len)) {
+                                    while (appTemplateStream.available() > (appTemplateTotalLen - template4Len)) {
                                         tlv = EMVUtil.getNextTLV(appTemplateStream);
 
                                         if (tlv.getTag().equals(EMVTags.AID_CARD)) {
@@ -174,6 +176,12 @@ public class EMVUtil {
                                             //TODO call ddf instead of card?
                                             card.addUnhandledRecord(tlv);
                                         }
+                                    }
+                                    //Check if app template is valid
+                                    if(app.getAID() != null){
+                                        card.addApplication(app);
+                                    }else{
+                                        Log.debug("Found invalid application template: "+app.toString());
                                     }
                                 } else {
                                     //TODO call ddf instead of card?
@@ -198,7 +206,7 @@ public class EMVUtil {
         return ddf;
     }
 
-    public static List<EMVApplication> parsePSERecord(byte[] data, EMVCard card) {
+    public static List<EMVApplication> parsePSERecord(byte[] data, SmartCard card) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
 
         List<EMVApplication> apps = new ArrayList<EMVApplication>();
@@ -235,7 +243,7 @@ public class EMVUtil {
                                 app.addUnhandledRecord(tlv);
                             }
                         }
-                        Log.debug("Adding application: " + app.getAID());
+                        Log.debug("Adding application: " + Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()));
                         apps.add(app);
                         card.addApplication(app);
                     } else {
@@ -253,6 +261,10 @@ public class EMVUtil {
     public static ApplicationDefinitionFile parseFCIADF(byte[] data, EMVApplication app) {
         ApplicationDefinitionFile adf = new ApplicationDefinitionFile(); //TODO: actually _use_ ADF (add to app?)
 
+        if(data == null || data.length < 2){
+            return adf;
+        }
+        
         BERTLV tlv = EMVUtil.getNextTLV(new ByteArrayInputStream(data));
 
         if (tlv.getTag().equals(EMVTags.FCI_TEMPLATE)) {
@@ -264,6 +276,7 @@ public class EMVUtil {
                 if (tlv.getTag().equals(EMVTags.DEDICATED_FILE_NAME)) {
                     adf.setName(tlv.getValueBytes()); //AID
                     app.setAID(new AID(tlv.getValueBytes()));
+                    Log.debug("ADDED AID to app: "+Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()) + " - " + Util.prettyPrintHexNoWrap(tlv.getValueBytes()));
                 } else if (tlv.getTag().equals(EMVTags.FCI_PROPRIETARY_TEMPLATE)) { //Proprietary Information Template
                     ByteArrayInputStream bis2 = tlv.getValueStream();
                     int totalLen = bis2.available();
@@ -368,8 +381,6 @@ public class EMVUtil {
 
     }
 
-    //TODO convert this into "parseAppData", and make it generic for reading all application data (records + GPO + additional data)?
-    //
     public static void parseAppRecord(byte[] data, EMVApplication app) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
 
@@ -420,13 +431,13 @@ public class EMVUtil {
             } else if (tlv.getTag().equals(EMVTags.ISSUER_ACTION_CODE_ONLINE)) {
                 app.setIssuerActionCodeOnline(tlv.getValueBytes());
             } else if (tlv.getTag().equals(EMVTags.ISSUER_COUNTRY_CODE)) {
-                int issuerCountryCode = Util.numericHexToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
+                int issuerCountryCode = Util.binaryHexCodedDecimalToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
                 app.setIssuerCountryCode(issuerCountryCode);
             } else if (tlv.getTag().equals(EMVTags.APPLICATION_CURRENCY_CODE)) {
-                int currencyCode = Util.numericHexToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
+                int currencyCode = Util.binaryHexCodedDecimalToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
                 app.setApplicationCurrencyCode(currencyCode);
             } else if (tlv.getTag().equals(EMVTags.APP_CURRENCY_EXPONENT)) {
-                int applicationCurrencyExponent = Util.numericHexToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
+                int applicationCurrencyExponent = Util.binaryHexCodedDecimalToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
                 app.setApplicationCurrencyExponent(applicationCurrencyExponent);
             } else if (tlv.getTag().equals(EMVTags.APP_VERSION_NUMBER_CARD)) {
                 app.setApplicationVersionNumber(Util.byteArrayToInt(tlv.getValueBytes()));
@@ -435,9 +446,13 @@ public class EMVUtil {
                 app.setCDOL1(cdol1);
             } else if (tlv.getTag().equals(EMVTags.CDOL2)) {
                 DOL cdol2 = new DOL(DOL.Type.CDOL2, tlv.getValueBytes());
-                app.setCDOL2(cdol2);
+                app.setCDOL2(cdol2);   
+            } else if (tlv.getTag().equals(EMVTags.LOWER_CONSEC_OFFLINE_LIMIT)) {
+                app.setLowerConsecutiveOfflineLimit(Util.byteArrayToInt(tlv.getValueBytes()));
+            } else if (tlv.getTag().equals(EMVTags.UPPER_CONSEC_OFFLINE_LIMIT)) {
+                app.setUpperConsecutiveOfflineLimit(Util.byteArrayToInt(tlv.getValueBytes()));
             } else if (tlv.getTag().equals(EMVTags.SERVICE_CODE)) {
-                int serviceCode = Util.numericHexToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
+                int serviceCode = Util.binaryHexCodedDecimalToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
                 app.setServiceCode(serviceCode);
             } else if (tlv.getTag().equals(EMVTags.SDA_TAG_LIST)) {
                 StaticDataAuthenticationTagList staticDataAuthTagList = new StaticDataAuthenticationTagList(tlv.getValueBytes());
@@ -644,7 +659,11 @@ public class EMVUtil {
         if ((tagFirstOctet & MASK) == MASK) { // EMV book 3, Page 178 or Annex B1 (EMV4.3)
             //Tag field is longer than 1 byte
             do {
-                byte tlvIdNextOctet = (byte) stream.read();
+                int nextOctet = stream.read();
+                if(nextOctet < 0){
+                    break;
+                }
+                byte tlvIdNextOctet = (byte) nextOctet;
 
                 tagBAOS.write(tlvIdNextOctet);
 
@@ -822,27 +841,20 @@ public class EMVUtil {
         return tagAndLengthList;
     }
 
-    public static String getSWDescription(String swStr) {
-        for (SW sw : SW.values()) {
-            if (sw.getSWCodeAsString().equalsIgnoreCase(swStr)) {
-                return sw.getDescription();
-            }
-        }
-
-        return "";
-    }
-
     public static void main(String[] args) {
 
         EMVApplication app = new EMVApplication();
+        parseFCIADF(Util.fromHexString("6f198407a0000000038002a50e5009564953412041757468870101"), app);
+//
+//        String gpoResponse = "77 0e 82 02 38 00 94 08 08 01 03 01 10 01 01 00";
+//
+//        parseProcessingOpts(Util.fromHexString(gpoResponse), app);
+//
+//        System.out.println(app.getApplicationFileLocator().toString());
+//        System.out.println(app.getApplicationInterchangeProfile().toString());
+        
+//        System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("6f 20 81 02 00 00 82 01 38 83 02 3f 00 84 06 00 00 00 00 00 00 85 01 00 8c 08 1f a1 a1 a1 a1 a1 88 a1")));
 
-        String gpoResponse = "77 0e 82 02 38 00 94 08 08 01 03 01 10 01 01 00";
-
-        parseProcessingOpts(Util.fromHexString(gpoResponse), app);
-
-        System.out.println(app.getApplicationFileLocator().toString());
-        System.out.println(app.getApplicationInterchangeProfile().toString());
-
-        System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("6F388407 A0000000 031010A5 2D500B56 69736144 616E6B6F 72748701 015F2D08 6461656E 6E6F7376 9F110101 9F120B56 69736144 616E6B6F 7274")));
+//        System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("6F388407 A0000000 031010A5 2D500B56 69736144 616E6B6F 72748701 015F2D08 6461656E 6E6F7376 9F110101 9F120B56 69736144 616E6B6F 7274")));
     }
 }

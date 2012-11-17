@@ -15,23 +15,22 @@
  */
 package sasc.terminal.smartcardio;
 
-import javax.smartcardio.Card;
-import javax.smartcardio.CardChannel;
-import javax.smartcardio.CardException;
-import javax.smartcardio.CardTerminal;
-import javax.smartcardio.CommandAPDU;
-import javax.smartcardio.ResponseAPDU;
+import javax.smartcardio.*;
+import sasc.terminal.CardConnection;
 import sasc.terminal.CardResponse;
 import sasc.terminal.Terminal;
 import sasc.terminal.TerminalException;
-import sasc.terminal.CardConnection;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
- * Any handling of procedure bytes and GET REPONSE/GET DATA in javax.smartcardio should be disabled, because of improper handling of the CLS byte in some cases.
- * 
- * Thus, the "procedure byte handling" of the the TAL (Terminal Abstraction Layer), is moved to a higher layer.
- * 
+ * Any handling of procedure bytes and GET REPONSE/GET DATA in javax.smartcardio
+ * should be disabled, because of improper handling of the CLS byte in some
+ * cases.
+ *
+ * Thus, the "procedure byte handling" of the the TAL (Terminal Abstraction
+ * Layer), is moved to a higher layer.
+ *
  * @author sasc
  */
 public class SmartcardioCardConnection implements CardConnection {
@@ -48,9 +47,82 @@ public class SmartcardioCardConnection implements CardConnection {
 
     @Override
     public CardResponse transmit(byte[] cmd) throws TerminalException {
+        if (cmd == null) {
+            throw new IllegalArgumentException("Argument 'cmd' cannot be null");
+        }
+
+        if (cmd.length < 4) {
+            throw new IllegalArgumentException("APDU must be at least 4 bytes long: " + cmd.length);
+        }
+
+        Log.debug("cmd bytes: " + Util.prettyPrintHexNoWrap(cmd));
+
+        /*
+         * case 1 : |CLA|INS|P1 |P2 |                    len = 4 
+         * case 2s: |CLA|INS|P1 |P2 |LE |                len = 5 
+         * case 3s: |CLA|INS|P1 |P2 |LC |...BODY...|     len = 6..260 
+         * case 4s: |CLA|INS|P1 |P2 |LC |...BODY...|LE | len = 7..261
+         *
+         * (Extended length is not currently supported) 
+         * case 2e: |CLA|INS|P1 |P2|00 |LE1|LE2|                    len = 7 
+         * case 3e: |CLA|INS|P1 |P2 |00|LC1|LC2|...BODY...|         len = 8..65542 
+         * case 4e: |CLA|INS|P1 |P2 |00|LC1|LC2|...BODY...|LE1|LE2| len =10..65544
+         *
+         * EMV uses case 2, case 3 or case 4 
+         * Procedure byte 61 is case 2
+         * Procedure byte 6c is case 2
+         *
+         * EMV: When required in a command message, Le shall always be set to
+         * '00' Note that for SmartcardIO: CommandAPDU(byte[]) transforms Le=0
+         * into 256 CommandAPDU(int, int.. etc) uses Ne instead of Le. So to
+         * send Le=0x00 to ICC, then send Ne=256
+         *
+         * Use CommandAPDU(byte[]) for case 1 & 3 (those without Le) Use
+         * CommandAPDU(int, int, int, int, int) for case 2 (but transform
+         * Le=0x00 into Ne=256. SmartcardIO changes this back into Le=0x00) Use
+         * CommandAPDU(int, int, int, int, byte, int, int, int) for case 4 (but
+         * transform Le=0x00 into Ne=256. SmartcardIO changes this back into
+         * Le=0x00)
+         */
         CardResponseImpl response = null;
+        CommandAPDU commandAPDU = null;
+
+        //Find the 'case' and print to Log 
+        if (cmd.length == 4) { //Case 1 (EMV doesn't use this)
+            commandAPDU = new CommandAPDU(cmd);
+            Log.debug("APDU case 1");
+        } else if (cmd.length == 5) { //Case 2s
+            commandAPDU = new CommandAPDU(
+                    Util.byteToInt(cmd[0]),
+                    Util.byteToInt(cmd[1]),
+                    Util.byteToInt(cmd[2]),
+                    Util.byteToInt(cmd[3]),
+                    (cmd[4] == 0x00 ? 256 : Util.byteToInt(cmd[4])));
+            Log.debug("APDU case 2");
+        } else if (cmd.length == (5 + Util.byteToInt(cmd[4]))) { //Case 3s
+            commandAPDU = new CommandAPDU(cmd);
+            Log.debug("APDU case 3");
+        } else if (cmd.length == (5 + Util.byteToInt(cmd[4]) + 1)) { //Case 4s
+            byte[] data = new byte[Util.byteToInt(cmd[4])];
+            System.arraycopy(cmd, 5, data, 0, data.length);
+            int le = Util.byteToInt(cmd[cmd.length - 1]);
+            commandAPDU = new CommandAPDU(
+                    Util.byteToInt(cmd[0]),
+                    Util.byteToInt(cmd[1]),
+                    Util.byteToInt(cmd[2]),
+                    Util.byteToInt(cmd[3]),
+                    data,
+                    0, //dataOffset
+                    data.length,
+                    (le == 0 ? 256 : le));
+            Log.debug("APDU case 4");
+        } else {
+            //Might be extended length
+            throw new IllegalArgumentException("Unsupported APDU format: " + Util.prettyPrintHexNoWrap(cmd));
+        }
+        Log.debug(commandAPDU + " (" + Util.prettyPrintHexNoWrap(commandAPDU.getBytes()) + ")");
         try {
-            ResponseAPDU apdu = channel.transmit(new CommandAPDU(cmd));
+            ResponseAPDU apdu = channel.transmit(commandAPDU);
             byte sw1 = (byte) apdu.getSW1();
             byte sw2 = (byte) apdu.getSW2();
             byte[] data = apdu.getData(); //Copy
@@ -68,7 +140,7 @@ public class SmartcardioCardConnection implements CardConnection {
 
     @Override
     public String toString() {
-        return getConnectionInfo();
+        return smartCardIOTerminal.getName() + " " + getConnectionInfo();
     }
 
     @Override
@@ -81,16 +153,16 @@ public class SmartcardioCardConnection implements CardConnection {
     public String getConnectionInfo() {
         return channel.toString();
     }
-    
+
     @Override
-    public String getProtocol(){
+    public String getProtocol() {
         return this.card.getProtocol();
     }
 
     @Override
     public boolean disconnect(boolean attemptReset) throws TerminalException {
         try {
-            card.disconnect(attemptReset);
+            card.disconnect(!attemptReset);
             return true;
         } catch (CardException ex) {
             throw new TerminalException(ex);
@@ -99,7 +171,7 @@ public class SmartcardioCardConnection implements CardConnection {
 
     /**
      * Perform warm reset
-     * 
+     *
      */
     @Override
     public void resetCard() throws TerminalException {
@@ -123,6 +195,20 @@ public class SmartcardioCardConnection implements CardConnection {
             channel = card.getBasicChannel();
         } catch (CardException ex) {
             throw new TerminalException(ex);
+        }
+    }
+
+    @Override
+    public byte[] transmitControlCommand(int code, byte[] data) throws TerminalException {
+        try {
+            byte[] response = card.transmitControlCommand(code, data);
+            return response;
+        } catch (CardException ex) {
+            Throwable cause = ex.getCause();
+            while (cause.getCause() != null) {
+                cause = cause.getCause();
+            }
+            throw new TerminalException(cause.getMessage());
         }
     }
 

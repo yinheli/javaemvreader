@@ -15,7 +15,6 @@
  */
 package sasc.emv;
 
-import sasc.iso7816.File;
 import sasc.iso7816.TagAndLength;
 import sasc.iso7816.Tag;
 import sasc.iso7816.SmartCardException;
@@ -31,15 +30,17 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import sasc.iso7816.Application;
 import sasc.util.ISO3166_1;
 import sasc.util.ISO4217_Numeric;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
  *
  * @author sasc
  */
-public class EMVApplication implements File {
+public class EMVApplication implements Application {
 
     private boolean isInitializedOnICC = false;
     private boolean allAppRecordsRead = false;
@@ -80,6 +81,8 @@ public class EMVApplication implements File {
     private int serviceCode = -1;
     private LanguagePreference languagePreference = null;
     private int issuerCodeTableIndex = -1;
+    private int lowerConsecutiveOfflineLimit = -1;
+    private int upperConsecutiveOfflineLimit = -1;
     private byte[] issuerActionCodeDefault = null;
     private byte[] issuerActionCodeDenial = null;
     private byte[] issuerActionCodeOnline = null;
@@ -129,6 +132,7 @@ public class EMVApplication implements File {
         return afl;
     }
 
+    @Override
     public AID getAID() {
         return aid;
     }
@@ -199,6 +203,10 @@ public class EMVApplication implements File {
 
     public void setPINTryCounter(int counter) {
         this.pinTryCounter = counter;
+    }
+    
+    public int getPINTryCounter(){
+        return pinTryCounter;
     }
 
     public void setLogFormat(LogFormat logFormat) {
@@ -306,9 +314,9 @@ public class EMVApplication implements File {
         if (dateBytes.length != 3) {
             throw new SmartCardException("Byte array length must be 3. Length=" + dateBytes.length);
         }
-        int YY = Util.numericByteToInt(dateBytes[0]);
-        int MM = Util.numericByteToInt(dateBytes[1]);
-        int DD = Util.numericByteToInt(dateBytes[2]);
+        int YY = Util.binaryCodedDecimalToInt(dateBytes[0]);
+        int MM = Util.binaryCodedDecimalToInt(dateBytes[1]);
+        int DD = Util.binaryCodedDecimalToInt(dateBytes[2]);
         Calendar cal = Calendar.getInstance();
         cal.set(2000 + YY, MM - 1, DD, 0, 0, 0);
         cal.set(Calendar.MILLISECOND, 0);
@@ -323,9 +331,9 @@ public class EMVApplication implements File {
         if (dateBytes.length != 3) {
             throw new SmartCardException("Byte array length must be 3. Length=" + dateBytes.length);
         }
-        int YY = Util.numericByteToInt(dateBytes[0]);
-        int MM = Util.numericByteToInt(dateBytes[1]);
-        int DD = Util.numericByteToInt(dateBytes[2]);
+        int YY = Util.binaryCodedDecimalToInt(dateBytes[0]);
+        int MM = Util.binaryCodedDecimalToInt(dateBytes[1]);
+        int DD = Util.binaryCodedDecimalToInt(dateBytes[2]);
         Calendar cal = Calendar.getInstance();
         cal.set(2000 + YY, MM - 1, DD, 0, 0, 0);
         cal.set(Calendar.MILLISECOND, 0);
@@ -349,7 +357,7 @@ public class EMVApplication implements File {
     }
 
     public byte[] getTrack1DiscretionaryData() {
-        return Arrays.copyOf(track1DiscretionaryData, track1DiscretionaryData.length);
+        return Util.copyByteArray(track1DiscretionaryData);
     }
 
     void setTrack2DiscretionaryData(byte[] valueBytes) {
@@ -357,7 +365,7 @@ public class EMVApplication implements File {
     }
 
     public byte[] getTrack2DiscretionaryData() {
-        return Arrays.copyOf(track2DiscretionaryData, track2DiscretionaryData.length);
+        return Util.copyByteArray(track2DiscretionaryData);
     }
 
     void setTrack2EquivalentData(Track2EquivalentData track2EquivalentData) {
@@ -393,7 +401,7 @@ public class EMVApplication implements File {
     }
 
     void setPANSequenceNumber(byte value) {
-        this.panSequenceNumber = Util.numericByteToInt(value);
+        this.panSequenceNumber = Util.binaryCodedDecimalToInt(value);
     }
 
     public int getPANSequenceNumber() {
@@ -421,6 +429,22 @@ public class EMVApplication implements File {
 
     public String getIssuerCodeTable() {
         return "ISO-8859-" + issuerCodeTableIndex;
+    }
+    
+    public void setLowerConsecutiveOfflineLimit(int limit){
+        this.lowerConsecutiveOfflineLimit = limit;
+    }
+    
+    public int getLowerConsecutiveOfflineLimit(){
+        return lowerConsecutiveOfflineLimit;
+    }
+    
+    public void setUpperConsecutiveOfflineLimit(int limit){
+        this.upperConsecutiveOfflineLimit = limit;
+    }
+    
+    public int getUpperConsecutiveOfflineLimit(){
+        return upperConsecutiveOfflineLimit;
     }
 
     public void setIssuerActionCodeDefault(byte[] data) {
@@ -541,10 +565,10 @@ public class EMVApplication implements File {
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Application");
 
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         if (aid != null) {
-            aid.dump(pw, indent + 3);
+            aid.dump(pw, indent + Log.INDENT_SIZE);
         }
         pw.println(indentStr + "Label: " + getLabel());
         pw.println(indentStr + "Preferred Name: " + getPreferredName());
@@ -576,6 +600,12 @@ public class EMVApplication implements File {
             }
             pw.println(indentStr + "Issuer Country Code (ISO 3166-1): " + issuerCountryCode + description);
         }
+        if (lowerConsecutiveOfflineLimit != -1) {
+            pw.println(indentStr + "Lower Consecutive Offline Limit: " + lowerConsecutiveOfflineLimit);
+        }
+        if (upperConsecutiveOfflineLimit != -1) {
+            pw.println(indentStr + "Upper Consecutive Offline Limit: " + upperConsecutiveOfflineLimit);
+        }
         if (applicationTransactionCounter != -1) {
             pw.println(indentStr + "Application Transaction Counter (ATC): " + applicationTransactionCounter);
         }
@@ -589,55 +619,55 @@ public class EMVApplication implements File {
             pw.println(indentStr + "Cardholder Name: " + cardholderName);
         }
         if (pan != null) {
-            pan.dump(pw, indent + 3);
+            pan.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (panSequenceNumber != -1) {
             pw.println(indentStr + "PAN Sequence Number: " + panSequenceNumber);
         }
         if (api != null) {
-            api.dump(pw, indent + 3);
+            api.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (aip != null) {
-            aip.dump(pw, indent + 3);
+            aip.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (afl != null) {
-            afl.dump(pw, indent + 3);
+            afl.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (auc != null) {
-            auc.dump(pw, indent + 3);
+            auc.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (transactionLog != null) {
-            transactionLog.dump(pw, indent + 3);
+            transactionLog.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (pdol != null) {
-            pdol.dump(pw, indent + 3);
+            pdol.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (ddol != null) {
-            ddol.dump(pw, indent + 3);
+            ddol.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (issuerCert != null) {
-            issuerCert.dump(pw, indent + 3);
+            issuerCert.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (iccCert != null) {
-            iccCert.dump(pw, indent + 3);
+            iccCert.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (cdol1 != null) {
-            cdol1.dump(pw, indent + 3);
+            cdol1.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (cdol2 != null) {
-            cdol2.dump(pw, indent + 3);
+            cdol2.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (signedStaticAppData != null) {
-            signedStaticAppData.dump(pw, indent + 3);
+            signedStaticAppData.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (signedDynamicAppData != null) {
-            signedDynamicAppData.dump(pw, indent + 3);
+            signedDynamicAppData.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (cvmList != null) {
-            cvmList.dump(pw, indent + 3);
+            cvmList.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (staticDataAuthTagList != null) {
-            staticDataAuthTagList.dump(pw, indent + 3);
+            staticDataAuthTagList.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (track1DiscretionaryData != null) {
             pw.println(indentStr + "Track 1 Discretionary Data:");
@@ -648,13 +678,13 @@ public class EMVApplication implements File {
             pw.println(indentStr + "   " + Util.byteArrayToHexString(track2DiscretionaryData) + " (ASCII: " + Util.getSafePrintChars(track2DiscretionaryData) + ")");
         }
         if (track2EquivalentData != null) {
-            track2EquivalentData.dump(pw, indent + 3);
+            track2EquivalentData.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (serviceCode != -1) {
             pw.println(indentStr + "Service Code: " + serviceCode);
         }
         if (languagePreference != null) {
-            languagePreference.dump(pw, indent + 3);
+            languagePreference.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (issuerCodeTableIndex != -1) {
             pw.println(indentStr + "Issuer Code Table Index: " + issuerCodeTableIndex + " (ISO-8859-" + issuerCodeTableIndex + ")");
@@ -681,7 +711,7 @@ public class EMVApplication implements File {
             pw.println(indentStr + "UNHANDLED APPLICATION RECORDS (" + unhandledRecords.size() + " found):");
         }
         for (BERTLV tlv : unhandledRecords) {
-            pw.println(Util.getSpaces(indent + 6) + tlv.getTag() + " " + tlv);
+            pw.println(Util.getSpaces(indent + Log.INDENT_SIZE*2) + tlv.getTag() + " " + tlv);
         }
         pw.println("");
     }

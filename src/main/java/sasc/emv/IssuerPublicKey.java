@@ -17,6 +17,7 @@ package sasc.emv;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -69,13 +70,13 @@ public class IssuerPublicKey {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Issuer Public Key");
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         pw.println(indentStr + "Length: "+getKeyLengthInBytes()*8+"bit");
         pw.println(indentStr + "Exponent:");
-        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(getExponent()), indent+6));
+        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(getExponent()), indent+Log.INDENT_SIZE*2));
         pw.println(indentStr + "Modulus:");
-        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(getModulus()), indent+6));
+        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(getModulus()), indent+Log.INDENT_SIZE*2));
 
     }
 }

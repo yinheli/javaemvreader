@@ -15,18 +15,22 @@
  */
 package sasc;
 
+import sasc.common.Context;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import sasc.iso7816.AID;
 import sasc.emv.EMVApplication;
 import sasc.emv.CA;
-import sasc.emv.EMVCard;
+import sasc.common.SmartCard;
+import sasc.emv.*;
 import sasc.iso7816.SmartCardException;
-import sasc.emv.EMVSession;
 import sasc.util.Log;
-import sasc.emv.SessionProcessingEnv;
+import sasc.lookup.ATR_DB;
+import sasc.lookup.IIN_DB;
+import sasc.lookup.RID_DB;
 import sasc.terminal.CardConnection;
 import sasc.terminal.TerminalException;
+import sasc.util.Util;
 
 /**
  *
@@ -35,16 +39,17 @@ import sasc.terminal.TerminalException;
 public class CardEmulatorMain {
 
     public static void main(String[] args) throws TerminalException {
-        EMVCard emvCard = null;
+        SmartCard smartCard = null;
         try {
-            CA.initFromFile("/CertificationAuthorities_Test.xml");
-            CardConnection conn = new CardEmulator("/SDACardTransaction.xml");
+            Context.init();
+            CA.initFromFile("/certificationauthorities_test.xml");
+            CardConnection conn = new CardEmulator("/sdacardtransaction.xml");
             EMVSession session = EMVSession.startSession(new SessionProcessingEnv(), conn);
 
             AID targetAID = new AID("a1 23 45 67 89 10 10"); //Our TEST AID
 
-            emvCard = session.initCard();
-            for (EMVApplication app : emvCard.getApplications()) {
+            smartCard = session.initCard();
+            for (EMVApplication app : smartCard.getApplications()) {
                 session.selectApplication(app);
                 session.initiateApplicationProcessing(); //Also reads application data
 
@@ -52,6 +57,9 @@ public class CardEmulatorMain {
                     //Skip if GPO failed
                     continue;
                 }
+                
+                //Internal auth here
+                
                 session.readAdditionalData();
                 if (targetAID.equals(app.getAID())) {
                     session.verifyPIN(1234, true);
@@ -66,9 +74,17 @@ public class CardEmulatorMain {
         } catch (SmartCardException ex) {
             throw ex;
         } finally {
-            if (emvCard != null) {
+            if (smartCard != null) {
                 StringWriter dumpWriter = new StringWriter();
-                emvCard.dump(new PrintWriter(dumpWriter), 0);
+                PrintWriter pw = new PrintWriter(dumpWriter);
+                pw.println("======================================");
+                pw.println("             [EMVContext]             ");
+                pw.println("======================================");
+                smartCard.dump(new PrintWriter(dumpWriter), 0);
+                pw.println("---------------------------------------");
+                pw.println("                FINISHED               ");
+                pw.println("---------------------------------------");
+                pw.flush();
                 System.out.println(dumpWriter.toString());
             }
         }

@@ -21,6 +21,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -143,7 +144,7 @@ public class SignedDynamicApplicationData {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Signed Dynamic Application Data");
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         if(!validationPerformed){
             validate();

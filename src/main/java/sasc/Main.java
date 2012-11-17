@@ -15,6 +15,7 @@
  */
 package sasc;
 
+import sasc.common.CardExplorer;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -124,7 +125,7 @@ public class Main {
 
         if (noGUI) {
             //No Swing/GUI
-            new Explorer().start();
+            new CardExplorer().start();
         } else {
             //Create swing app using appframework
             // http://java.dzone.com/news/jsr-296-end-jframe

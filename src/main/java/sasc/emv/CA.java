@@ -47,14 +47,14 @@ public class CA {
     private Map<Integer, CAPublicKey> publicKeys = publicKeys = new LinkedHashMap<Integer, CAPublicKey>();
 
     static {
-        _initFromFile("/CertificationAuthorities.xml");
+        _initFromFile("/certificationauthorities.xml");
     }
 
     private static void _initFromFile(String filename) {
         certificationAuthorities.clear();
         try {
             XMLElement certificationAuthoritiesElement = new XMLElement();
-            certificationAuthoritiesElement.parseFromReader(new InputStreamReader(CA.class.getResourceAsStream(filename)));
+            certificationAuthoritiesElement.parseFromReader(new InputStreamReader(Util.loadResource(CA.class, filename)));
 
             if (!"CertificationAuthorities".equalsIgnoreCase(certificationAuthoritiesElement.getName())) {
                 throw new RuntimeException("Unexpected Root Element: <" + certificationAuthoritiesElement.getName() + "> . Expected <CertificationAuthorities>");
@@ -157,7 +157,7 @@ public class CA {
     }
 
     public byte[] getRID() {
-        return Arrays.copyOf(rid, rid.length);
+        return Util.copyByteArray(rid);
     }
 
     //Terminals that support Static Data Authentication and/or Dynamic Data Authentication
@@ -174,7 +174,7 @@ public class CA {
     }
 
     private void setRID(byte[] rid) {
-        this.rid = Arrays.copyOf(rid, rid.length);
+        this.rid = Util.copyByteArray(rid);
     }
 
     private void setName(String name) {

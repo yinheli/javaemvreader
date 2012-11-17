@@ -44,6 +44,7 @@ import sasc.util.Util;
  * '9x' 'xx' RFU for manufacturers for proprietary INS coding
  * 'Ex' 'xx' RFU for issuers for proprietary INS coding
  *
+ * EMV Book 3 : When required in a command message, Le shall always be set to '00'
  *
  * @author sasc
  */
@@ -58,17 +59,21 @@ public class EMVAPDUCommands {
     }
 
     public static String selectByDFName(byte[] fileBytes) {
-        return Iso7816Commands.selectByDFName(fileBytes);
+        return Iso7816Commands.selectByDFName(fileBytes, true, (byte)0x00);
     }
     
     public static String selectByDFNameNextOccurrence(byte[] fileBytes) {
-        return Iso7816Commands.selectByDFNameNextOccurrence(fileBytes);
+        return Iso7816Commands.selectByDFNameNextOccurrence(fileBytes, true, (byte)0x00);
     }
 
     public static String readRecord(int recordNum, int sfi) {
         return Iso7816Commands.readRecord(recordNum, sfi);
     }
 
+    /*
+     * 
+     * Case 4s C-APDU
+     */
     public static String getProcessingOpts(DOL pdol) {
         String command;
         if (pdol != null && pdol.getTagAndLengthList().size() > 0) {
@@ -76,8 +81,9 @@ public class EMVAPDUCommands {
             command = "80 A8 00 00";
             command += " " + Util.int2Hex(pdolResponseData.length + 2) + " 83 " + Util.int2Hex(pdolResponseData.length);
             command += " " + Util.prettyPrintHexNoWrap(pdolResponseData);
+            command += " 00"; // Le
         } else {
-            command = "80 A8 00 00 02 83 00";
+            command = "80 A8 00 00 02 83 00 00"; //Last 00 is Le
         }
         return command;
     }
@@ -94,6 +100,9 @@ public class EMVAPDUCommands {
         return "80 CA 9F 17 00";
     }
 
+    /*
+     * Case 2 C-APDU
+     */
     public static String getLogFormat() {
         return "80 CA 9F 4F 00";
     }
@@ -106,9 +115,17 @@ public class EMVAPDUCommands {
         return Iso7816Commands.externalAuthenticate(cryptogram, proprietaryBytes);
     }
     
+    /**
+     * 
+     * Case 4s C-APDU
+     * 
+     * @param referenceControlParameterP1
+     * @param transactionRelatedData
+     * @return 
+     */
     public static String generateAC(byte referenceControlParameterP1, byte[] transactionRelatedData) {
         return "80 AE "+referenceControlParameterP1+"00 "+Util.int2Hex(transactionRelatedData.length)+
-                Util.prettyPrintHexNoWrap(transactionRelatedData)+" 00";
+                Util.prettyPrintHexNoWrap(transactionRelatedData)+" 00"; // Last 00 is Le
     }
 
     /**
@@ -134,6 +151,8 @@ public class EMVAPDUCommands {
      *
      * TODO:
      * Plaintext PIN has been tested and verified OK. Enciphered PIN not implemented
+     * 
+     * Case 3 C-APDU
      *
      * @param pin the PIN to verify
      * @param transmitInPlaintext 

@@ -19,12 +19,31 @@ import sasc.iso7816.IsoATR;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
-import sasc.ATR_DB;
+import sasc.lookup.ATR_DB;
 import sasc.util.Log;
 import sasc.util.Util;
 
 /**
  * Answer To Reset (ATR)
+ * 
+ * contactless cards don't have ATRs. The ATR value is faked by the reader
+ * ISO 14443-B cards have a PUPI (4 bytes)
+ * ISO 14443-A cards have an UID (4,7 or 10 bytes)
+ * this value is exchanged before the reader reports a fake-ATR.
+ * 
+ * Mostly the warm and cold reset will have the same value.
+ * As per ISO7816 there are 2 supported modes of communication:
+ * 1. Negotiable mode: Here the ATR indicates the maximum communication speed. 
+ *    Hence the host can communicate with the card using speed not exceeding the mentioned limit
+ * 2. Specific Mode: Here the ATR indicates the only communication speed to be used. 
+ *    Hence the host should use this speed to communicate with the card.
+ * This mode of communication might be a requirement for few domain like Banking.
+
+ * There are smart cards available that support these 2 modes and on COLD reset the 
+ * specific mode gets activated and this is indicated in the ATR bytes. (TA2)
+ * Warm reset will always be available and the byte TA2 will not be present in it.
+
+ * 
  * @author sasc
  */
 public class ATR {
@@ -57,6 +76,10 @@ public class ATR {
     public IsoATR getIsoCompliantATR(){
         return isoATR;
     }
+    
+    public byte[] getBytes(){
+        return atrBytes;
+    }
 
     @Override
     public String toString(){
@@ -67,7 +90,7 @@ public class ATR {
 
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent)+"Answer To Reset (ATR)");
-        String indentStr = Util.getSpaces(indent+3);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
         List<String> descriptiveText = ATR_DB.searchATR(atrBytes);
         pw.println(indentStr+Util.prettyPrintHexNoWrap(atrBytes));
         if(descriptiveText != null){
@@ -76,9 +99,9 @@ public class ATR {
         }
 
         if(isIsoCompliant()){
-            isoATR.dump(pw, indent+3);
+            isoATR.dump(pw, indent+Log.INDENT_SIZE);
         }else{
-            pw.println(indentStr+"ATR is not ISO compliant ("+errorMsg+")");
+            //pw.println(indentStr+"ATR is not ISO compliant ("+errorMsg+")");
         }
 
     }

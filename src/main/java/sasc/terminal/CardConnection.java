@@ -22,6 +22,8 @@ package sasc.terminal;
 public interface CardConnection {
 
     CardResponse transmit(byte[] cmd) throws TerminalException;
+    
+    byte[] transmitControlCommand(int controlCode, byte[] data) throws TerminalException;
 
     byte[] getATR();
 

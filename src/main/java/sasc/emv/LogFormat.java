@@ -19,6 +19,7 @@ import sasc.iso7816.TagAndLength;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
@@ -54,7 +55,7 @@ public class LogFormat {
 
     public void dump(PrintWriter pw, int indent){
         pw.println(Util.getSpaces(indent)+"Log Format:");
-        String indentStr = Util.getSpaces(indent+3);
+        String indentStr = Util.getSpaces(indent+Log.INDENT_SIZE);
 
         for(TagAndLength tagAndLength : formatList){
             int length = tagAndLength.getLength();

@@ -43,7 +43,7 @@ import sasc.util.Util;
  */
 public class CardEmulator implements CardConnection {
 
-    private final static byte[] SELECT_DDF_PSE = Util.fromHexString("00 A4 04 00 0E 31 50 41 59 2E 53 59 53 2E 44 44 46 30 31");
+    private final static byte[] SELECT_DDF_PSE = Util.fromHexString("00 A4 04 00 0E 31 50 41 59 2E 53 59 53 2E 44 44 46 30 31 00");
     private final static byte[] SELECT_MASTER_FILE = Util.fromHexString("00 A4 00 00 00");
     Card card = new Card();
 
@@ -58,6 +58,11 @@ public class CardEmulator implements CardConnection {
 
     @Override
     public String getProtocol() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public byte[] transmitControlCommand(int controlCode, byte[] data) throws TerminalException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -99,7 +104,7 @@ public class CardEmulator implements CardConnection {
     private void _initFromFile(String filename) {
         try {
             XMLElement emvCardElement = new XMLElement();
-            emvCardElement.parseFromReader(new InputStreamReader(CardEmulator.class.getResourceAsStream(filename)));
+            emvCardElement.parseFromReader(new InputStreamReader(Util.loadResource(CardEmulator.class, filename)));
 
             if (!"EMVCard".equalsIgnoreCase(emvCardElement.getName())) {
                 throw new RuntimeException("Unexpected Root Element: <" + emvCardElement.getName() + "> . Expected <EMVCard>");
@@ -300,10 +305,10 @@ public class CardEmulator implements CardConnection {
                 if (file.recordsMap.containsKey(recordNumber)) {
                     return createResponse(file.recordsMap.get(recordNumber).data, SW.SUCCESS);
                 } else {
-                    return createResponse(null, SW.WRONG_P1_P2_RECORD_NOT_FOUND);
+                    return createResponse(null, SW.RECORD_NOT_FOUND);
                 }
             } else {
-                createResponse(null, SW.WRONG_P1_P2_FILE_NOT_FOUND);
+                createResponse(null, SW.FILE_OR_APPLICATION_NOT_FOUND);
             }
         } else {
             if (card.filesMap.containsKey(sfi)) {
@@ -311,10 +316,10 @@ public class CardEmulator implements CardConnection {
                 if (file.recordsMap.containsKey(recordNumber)) {
                     return createResponse(file.recordsMap.get(recordNumber).data, SW.SUCCESS);
                 } else {
-                    return createResponse(null, SW.WRONG_P1_P2_RECORD_NOT_FOUND);
+                    return createResponse(null, SW.RECORD_NOT_FOUND);
                 }
             } else {
-                createResponse(null, SW.WRONG_P1_P2_FILE_NOT_FOUND);
+                createResponse(null, SW.FILE_OR_APPLICATION_NOT_FOUND);
             }
         }
 
@@ -338,7 +343,7 @@ public class CardEmulator implements CardConnection {
 
                     return createResponse(responseBytes, SW.SUCCESS);
                 } else {
-                    return createResponse(null, SW.WRONG_P1_P2_FUNCTION_NOT_SUPPORTED);
+                    return createResponse(null, SW.FUNCTION_NOT_SUPPORTED);
                 }
             case (byte) 0x13: //Last Online ATC
                 if (card.selectedApp.lastOnlineATC != -1) {
@@ -352,7 +357,7 @@ public class CardEmulator implements CardConnection {
 
                     return createResponse(responseBytes, SW.SUCCESS);
                 } else {
-                    return createResponse(null, SW.WRONG_P1_P2_FUNCTION_NOT_SUPPORTED);
+                    return createResponse(null, SW.FUNCTION_NOT_SUPPORTED);
                 }
 
             case (byte) 0x17: //PIN Try Counter
@@ -364,18 +369,18 @@ public class CardEmulator implements CardConnection {
                     responseBytes[3] = (byte) Util.intToByteArray(card.selectedApp.pinTryCounter)[0];
                     return createResponse(responseBytes, SW.SUCCESS);
                 } else {
-                    return createResponse(null, SW.WRONG_P1_P2_FUNCTION_NOT_SUPPORTED);
+                    return createResponse(null, SW.FUNCTION_NOT_SUPPORTED);
                 }
 
             case (byte) 0x4F: //Log Format
                 if (card.selectedApp.logFormat != null) {
                     return createResponse(card.selectedApp.logFormat, SW.SUCCESS);
                 } else {
-                    return createResponse(null, SW.WRONG_P1_P2_FUNCTION_NOT_SUPPORTED);
+                    return createResponse(null, SW.FUNCTION_NOT_SUPPORTED);
                 }
 
             default:
-                return createResponse(null, SW.WRONG_P1_P2_FUNCTION_NOT_SUPPORTED);
+                return createResponse(null, SW.FUNCTION_NOT_SUPPORTED);
 
         }
     }
@@ -437,8 +442,8 @@ public class CardEmulator implements CardConnection {
     }
 
     private byte[] getDataBytes(byte[] cmd) {
-        byte[] tmp = new byte[cmd.length - 5];
-        System.arraycopy(cmd, 5, tmp, 0, cmd.length - 5);
+        byte[] tmp = new byte[cmd.length - 6];
+        System.arraycopy(cmd, 5, tmp, 0, tmp.length);
         return tmp;
     }
 
@@ -520,6 +525,6 @@ public class CardEmulator implements CardConnection {
     }
 
     public static void main(String[] args) throws Exception {
-        CardEmulator emulator = new CardEmulator("/SDACardTransaction.xml");
+        CardEmulator emulator = new CardEmulator("/sdacardtransaction.xml");
     }
 }

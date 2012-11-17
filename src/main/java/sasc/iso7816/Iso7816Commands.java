@@ -31,25 +31,25 @@ public class Iso7816Commands {
      * Standard iso7816 command
      */
     public static String selectMasterFile() {
-        return "00 A4 00 00 00";
+        return "00 A4 00 00 00 00";
     }
 
     public static String selectMasterFileByIdentifier() {
-        return "00 A4 00 00 02 3F 00";
+        return "00 A4 00 00 02 3F 00 00";
     }
 
-    public static String selectByDFName(byte[] fileBytes) {
-        if (fileBytes.length > 16) throw new IllegalArgumentException("DF name not valid (length > 16). Length = "+fileBytes.length);
+    public static String selectByDFName(byte[] fileBytes, boolean lePresent, byte le) {
+        if (fileBytes.length > 16) throw new IllegalArgumentException("Dedicated File name not valid (length > 16). Length = "+fileBytes.length);
         //INS A4 = ISO SELECT FILE
         //04 - Direct selection by DF name (data field=DF name)
-        return "00 A4 04 00 " + Util.byte2Hex((byte) fileBytes.length) + " " + Util.prettyPrintHexNoWrap(fileBytes);
+        return "00 A4 04 00 " + Util.byte2Hex((byte) fileBytes.length) + " " + Util.prettyPrintHexNoWrap(fileBytes) + (lePresent?" " + Util.byte2Hex(le):"");
     }
     
-    public static String selectByDFNameNextOccurrence(byte[] fileBytes) {
+    public static String selectByDFNameNextOccurrence(byte[] fileBytes, boolean lePresent, byte le) {
         //INS A4 = ISO SELECT FILE
         //04 - Direct selection by DF name (data field=DF name)
         //02 - Next occurrence
-        return "00 A4 04 02 " + Util.byte2Hex((byte) fileBytes.length) + " " + Util.prettyPrintHexNoWrap(fileBytes);
+        return "00 A4 04 02 " + Util.byte2Hex((byte) fileBytes.length) + " " + Util.prettyPrintHexNoWrap(fileBytes) + (lePresent?" " + Util.byte2Hex(le):"");
     }
 
     public static String readRecord(int recordNum, int sfi) {

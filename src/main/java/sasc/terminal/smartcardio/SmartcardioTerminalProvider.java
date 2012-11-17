@@ -30,7 +30,7 @@ public class SmartcardioTerminalProvider implements TerminalProvider {
 
     private static boolean isSmartcardIOAvailable = false;
     private static TerminalProvider terminalProvider = null;
-    private static String implementationClassName = SmartcardioTerminalProvider.class.getName() + "Impl";
+    private static final String implementationClassName = SmartcardioTerminalProvider.class.getName() + "Impl";
 
     //Reflection stuff:
     // http://www.jroller.com/eu/entry/dealing_with_api_compatibility
@@ -40,7 +40,6 @@ public class SmartcardioTerminalProvider implements TerminalProvider {
         //Hack:
         //since the SmartcardIO classes have not been loaded yet, we can set these
         //system properties here (and not depend on the user setting them on the Command Line):
-        //TODO: check if these are valid on OSX
         System.setProperty("sun.security.smartcardio.t0GetResponse", "false");
         System.setProperty("sun.security.smartcardio.t1GetResponse", "false");
 
@@ -60,9 +59,9 @@ public class SmartcardioTerminalProvider implements TerminalProvider {
         }
     }
     
-    static void setTerminalProvider(String newName){
-        implementationClassName = newName;
-    }
+//    static void setTerminalProvider(String newName){
+//        implementationClassName = newName;
+//    }
 
     public static boolean isSmartcardioAvailable() {
         return isSmartcardIOAvailable;
@@ -76,6 +75,11 @@ public class SmartcardioTerminalProvider implements TerminalProvider {
     @Override
     public CardConnection connectAnyTerminal() throws TerminalException {
         return terminalProvider.connectAnyTerminal();
+    }
+    
+    @Override
+    public CardConnection connectAnyTerminal(String protocol) throws TerminalException {
+        return terminalProvider.connectAnyTerminal(protocol);
     }
 
     @Override

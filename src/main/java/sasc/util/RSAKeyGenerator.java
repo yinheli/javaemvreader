@@ -16,12 +16,7 @@
 package sasc.util;
 
 import java.math.BigInteger;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyPairGenerator;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
@@ -52,7 +47,7 @@ public class RSAKeyGenerator {
 
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
         AlgorithmParameterSpec spec = new RSAKeyGenParameterSpec(numBits, BigInteger.valueOf(exponent));
-        keyGen.initialize(spec); //For production code: also specify SecureRandom
+        keyGen.initialize(spec, new SecureRandom()); //For production code: also specify a hardware SecureRandom
         KeyPair keyPair = keyGen.genKeyPair();
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
@@ -85,6 +80,9 @@ public class RSAKeyGenerator {
         //The value of the Issuer Public Key Exponent and the ICC Public Key Exponent is determined by the issuer.
         //The Certification Authority, Issuer, and ICC Public Key Exponents shall be equal to 3 or 216 + 1.
 
+        //NOTE: using a low public exponent in RSA, like 3, leaves the system vulnerable to certain types of attack.
+        //However, in EMV, these attacks do not apply. (TODO: Verify!)
+        
         // Generate a 1152-bit RSA key pair with exponent == 3
         dump(generateRSAKeys(1152, 3));
     }

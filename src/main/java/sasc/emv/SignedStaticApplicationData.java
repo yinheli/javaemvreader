@@ -167,7 +167,7 @@ public class SignedStaticApplicationData {
 
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "Signed Static Application Data");
-        String indentStr = Util.getSpaces(indent + 3);
+        String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         if (!validationPerformed) {
             validate();
