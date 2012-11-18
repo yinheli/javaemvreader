@@ -15,6 +15,7 @@
  */
 package sasc.terminal.smartcardio;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +29,7 @@ import sasc.terminal.Terminal;
 import sasc.terminal.TerminalException;
 import sasc.terminal.TerminalProvider;
 import sasc.util.Log;
+import sasc.util.Util;
 
 /**
  *
@@ -61,10 +63,12 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         List<Terminal> list = new ArrayList<Terminal>();
         try {
             for (CardTerminal terminal : terminals.list()) {
-                list.add(new TerminalImpl(terminal));
+                list.add(new SmartcardioTerminalProviderImpl.TerminalImpl(terminal));
             }
         } catch (CardException ex) {
-            throw new TerminalException(ex);
+            if(!isNoCardReadersAvailable(ex)){ //No card readers available is not an exception, just return empty list
+                throw new TerminalException(ex);
+            }
         }
         return Collections.unmodifiableList(list);
     }
@@ -176,5 +180,43 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
             }
             return "Name: "+smartCardIOTerminal.getName() + " (Description: "+smartCardIOTerminal.toString()+") "+cardPresent;
         }
+    }
+    
+    private static Integer getPCSCError(CardException ce){
+        if(ce == null){
+            return null;
+        }
+        Throwable cause = ce.getCause();
+        while(cause != null){
+            try{
+                Field f = cause.getClass().getDeclaredField("code");
+                f.setAccessible(true);
+                Integer i = (Integer)f.get(cause);
+                return i;
+            }catch(NoSuchFieldException ex){
+
+            }catch(IllegalAccessException ex){
+ 
+            }catch(ClassCastException ex){
+
+            }
+            cause = cause.getCause();
+        }
+        
+        return null;
+    }
+    
+    //PCSC error code
+    final static int SCARD_E_NO_READERS_AVAILABLE = 0x8010002E;
+
+    private static boolean isNoCardReadersAvailable(CardException ex){
+        Integer i = getPCSCError(ex);
+        if(i == null){
+            return false;
+        }
+        if(i == SCARD_E_NO_READERS_AVAILABLE){
+            return true;
+        }
+        return false;
     }
 }
