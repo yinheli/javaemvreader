@@ -43,7 +43,7 @@ import sasc.util.Util;
  */
 public class CardEmulator implements CardConnection {
 
-    private final static byte[] SELECT_DDF_PSE = Util.fromHexString("00 A4 04 00 0E 31 50 41 59 2E 53 59 53 2E 44 44 46 30 31 00");
+    private final static byte[] SELECT_DDF_PSE = Util.fromHexString("00 A4 04 00 0E 31 50 41 59 2E 53 59 53 2E 44 44 46 30 31");
     private final static byte[] SELECT_MASTER_FILE = Util.fromHexString("00 A4 00 00 00");
     Card card = new Card();
 
@@ -212,9 +212,26 @@ public class CardEmulator implements CardConnection {
         }
     }
 
+    private static boolean hasLe(byte[] cmd){
+        if(cmd.length <= 5){
+            return false;
+        }
+        
+        if(Util.byteToInt(cmd[4]) == cmd.length-5-1){
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public CardResponse transmit(byte[] cmd) throws TerminalException {
         CardResponse response = null;
+        
+        if(hasLe(cmd)){ //Strip Le
+            byte[] tmp = new byte[cmd.length-1];
+            System.arraycopy(cmd, 0, tmp, 0, tmp.length);
+            cmd = tmp;
+        }
 
         String cmdStr = Util.byteArrayToHexString(cmd).trim().toUpperCase();
 
@@ -256,6 +273,11 @@ public class CardEmulator implements CardConnection {
                         throw new RuntimeException("INS " + Util.byte2Hex(ins) + " not implemented yet. cmd=" + cmdStr);
                 }
                 break;
+            case (byte) 0xF0: 
+                if(cls == (byte) 0xFF){
+                    responseBytes = new byte[]{0x67, 0x00};
+                    break;
+                }
             case (byte) 0x90: //9x
 //                break;
             case (byte) 0xE0: //Ex
@@ -442,7 +464,7 @@ public class CardEmulator implements CardConnection {
     }
 
     private byte[] getDataBytes(byte[] cmd) {
-        byte[] tmp = new byte[cmd.length - 6];
+        byte[] tmp = new byte[cmd.length - 5];
         System.arraycopy(cmd, 5, tmp, 0, tmp.length);
         return tmp;
     }
