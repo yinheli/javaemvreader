@@ -55,13 +55,15 @@ public class KnownAIDList {
         private ApplicationSelectionIndicator asi;
         private AID aid;
         private boolean supported;
+        private String type;
         private String name;
         private String description;
 //        private String candidateType;
 
-        KnownAID(String name, AID aid, boolean supported, ApplicationSelectionIndicator asi, String description) {
+        KnownAID(String name, AID aid, String type, boolean supported, ApplicationSelectionIndicator asi, String description) {
             this.name = name;
             this.aid = aid;
+            this.type = type;
             this.supported = supported;
             this.asi = asi;
             this.description = description;
@@ -83,6 +85,10 @@ public class KnownAIDList {
             return name;
         }
         
+        public String getType(){
+            return type;
+        }
+        
         public String getDescription(){
             return description;
         }
@@ -93,6 +99,8 @@ public class KnownAIDList {
             buf.append(Util.prettyPrintHexNoWrap(this.aid.getAIDBytes()));
             buf.append(" ");
             buf.append(this.name);
+            buf.append(" ");
+            buf.append(this.type);
             buf.append(" ");
             buf.append(this.supported);
             buf.append(" ");
@@ -127,7 +135,7 @@ public class KnownAIDList {
     private static void _initFromFile(String filename) {
         try {
             XMLElement aidListElement = new XMLElement();
-            aidListElement.parseFromReader(new InputStreamReader(Util.loadResource(KnownAIDList.class, filename)));
+            aidListElement.parseFromReader(new InputStreamReader(Util.loadResource(KnownAIDList.class, filename), "UTF-8"));
 
             if (!"AIDList".equalsIgnoreCase(aidListElement.getName())) {
                 throw new RuntimeException("Unexpected Root Element: <" + aidListElement.getName() + "> . Expected <AIDList>");
@@ -143,9 +151,10 @@ public class KnownAIDList {
                 AID aid = new AID(aidStr);
                 boolean supported = appElement.getBooleanAttribute("Supported", "true", "false", false);
                 String asiStr = appElement.getStringAttribute("ASI");
+                String type = appElement.getStringAttribute("Type");
                 String name = appElement.getStringAttribute("Name");
                 String description = appElement.getStringAttribute("Description");
-                knownAIDsMap.put(aid, new KnownAID(name, aid, supported, ApplicationSelectionIndicator.valueOf(asiStr), description));
+                knownAIDsMap.put(aid, new KnownAID(name, aid, type, supported, ApplicationSelectionIndicator.valueOf(asiStr), description));
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);

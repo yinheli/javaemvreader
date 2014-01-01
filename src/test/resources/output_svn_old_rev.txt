@@ -1,5 +1,16 @@
 ------------------------------------------------
-[Step 1] SELECT FILE 1PAY.SYS.DDF01 to get the PSE directory
+[Step 1] SELECT ISD using zero length AID
+------------------------------------------------
+00 a4 04 00 00
+response hex    :
+
+response SW1SW2 : 6a 82 (File or application not found)
+response ascii  : 
+response parsed :
+
+
+------------------------------------------------
+[Step 2] SELECT FILE 1PAY.SYS.DDF01 to get the PSE directory
 ------------------------------------------------
 00 a4 04 00 0e 31 50 41 59 2e 53 59 53 2e 44 44
 46 30 31 00
@@ -23,7 +34,7 @@ response parsed :
                      01 (NUMERIC)
 
 ------------------------------------------------
-[Step 2] Send READ RECORD to read all records in SFI 2
+[Step 3] Send READ RECORD to read all records in SFI 2
 ------------------------------------------------
 00 b2 01 14 00
 response hex    :
@@ -46,7 +57,7 @@ response parsed :
                   02 (BINARY)
 
 ------------------------------------------------
-[Step 3] Send READ RECORD to read all records in SFI 2
+[Step 4] Send READ RECORD to read all records in SFI 2
 ------------------------------------------------
 00 b2 02 14 00
 response hex    :
@@ -69,7 +80,7 @@ response parsed :
                   01 (BINARY)
 
 ------------------------------------------------
-[Step 4] Send READ RECORD to read all records in SFI 2
+[Step 5] Send READ RECORD to read all records in SFI 2
 ------------------------------------------------
 00 b2 03 14 00
 response hex    :
@@ -80,7 +91,7 @@ response parsed :
 
 
 ------------------------------------------------
-[Step 5] Select application by AID
+[Step 6] Select application by AID
 ------------------------------------------------
 00 a4 04 00 07 a1 23 45 67 89 10 10 00
 response hex    :
@@ -111,7 +122,7 @@ response parsed :
                      56 49 53 41 20 43 6c 61 73 73 69 63 (=VISA Classic)
 
 ------------------------------------------------
-[Step 6] Send GET PROCESSING OPTIONS command
+[Step 7] Send GET PROCESSING OPTIONS command
 ------------------------------------------------
 80 a8 00 00 06 83 04 08 26 08 26 00
 response hex    :
@@ -124,7 +135,7 @@ response parsed :
       5c 00 08 01 01 00 08 02 05 01 (BINARY)
 
 ------------------------------------------------
-[Step 7] Send READ RECORD to read SFI 1 record 1
+[Step 8] Send READ RECORD to read SFI 1 record 1
 ------------------------------------------------
 00 b2 01 0c 00
 response hex    :
@@ -149,7 +160,7 @@ response parsed :
                20 20 20 20 20 20 20 20 20 20 (=SMITH/JOHN                )
 
 ------------------------------------------------
-[Step 8] Send READ RECORD to read SFI 1 record 2
+[Step 9] Send READ RECORD to read SFI 1 record 2
 ------------------------------------------------
 00 b2 02 0c 00
 response hex    :
@@ -187,7 +198,7 @@ response parsed :
                05 78 (NUMERIC)
 
 ------------------------------------------------
-[Step 9] Send READ RECORD to read SFI 1 record 3
+[Step 10] Send READ RECORD to read SFI 1 record 3
 ------------------------------------------------
 00 b2 03 0c 00
 response hex    :
@@ -232,7 +243,7 @@ response parsed :
                82 (BINARY)
 
 ------------------------------------------------
-[Step 10] Send READ RECORD to read SFI 1 record 4
+[Step 11] Send READ RECORD to read SFI 1 record 4
 ------------------------------------------------
 00 b2 04 0c 00
 response hex    :
@@ -274,7 +285,7 @@ response parsed :
                bd f0 a4 f5 (BINARY)
 
 ------------------------------------------------
-[Step 11] Send READ RECORD to read SFI 1 record 5
+[Step 12] Send READ RECORD to read SFI 1 record 5
 ------------------------------------------------
 00 b2 05 0c 00
 response hex    :
@@ -305,7 +316,7 @@ response parsed :
                   37 da d9 f8 3c 64 96 32 ce ab 8b 3c 1c d1 eb 58 (BINARY)
 
 ------------------------------------------------
-[Step 12] Send GET DATA command to find the Application Transaction Counter (ATC)
+[Step 13] Send GET DATA command to find the Application Transaction Counter (ATC)
 ------------------------------------------------
 80 ca 9f 36 00
 response hex    :
@@ -318,7 +329,7 @@ response parsed :
          00 79 (BINARY)
 
 ------------------------------------------------
-[Step 13] Send GET DATA command to find the Last Online ATC Register
+[Step 14] Send GET DATA command to find the Last Online ATC Register
 ------------------------------------------------
 80 ca 9f 13 00
 response hex    :
@@ -331,7 +342,7 @@ response parsed :
          00 67 (BINARY)
 
 ------------------------------------------------
-[Step 14] Send GET DATA command to find the Log Format
+[Step 15] Send GET DATA command to find the Log Format
 ------------------------------------------------
 80 ca 9f 4f 00
 response hex    :
@@ -342,7 +353,7 @@ response parsed :
 
 
 ------------------------------------------------
-[Step 15] VERIFY (PIN)
+[Step 16] VERIFY (PIN)
 ------------------------------------------------
 00 20 00 80 08 24 12 34 ff ff ff ff ff
 response hex    :
@@ -353,7 +364,7 @@ response parsed :
 
 
 ------------------------------------------------
-[Step 16] Select application by AID
+[Step 17] Select application by AID
 ------------------------------------------------
 00 a4 04 00 07 d5 78 00 00 02 10 10 00
 response hex    :
@@ -380,7 +391,7 @@ response parsed :
                      62 61 6e 6b 61 78 65 70 74 (=bankaxept)
 
 ------------------------------------------------
-[Step 17] Send GET PROCESSING OPTIONS command
+[Step 18] Send GET PROCESSING OPTIONS command
 ------------------------------------------------
 80 a8 00 00 02 83 00 00
 response hex    :
@@ -393,7 +404,7 @@ response parsed :
       18 00 08 01 01 00 (BINARY)
 
 ------------------------------------------------
-[Step 18] Send READ RECORD to read SFI 1 record 1
+[Step 19] Send READ RECORD to read SFI 1 record 1
 ------------------------------------------------
 00 b2 01 0c 00
 response hex    :
@@ -443,7 +454,7 @@ response parsed :
                b0 40 04 88 00 (BINARY)
 
 ------------------------------------------------
-[Step 19] Send GET DATA command to find the Application Transaction Counter (ATC)
+[Step 20] Send GET DATA command to find the Application Transaction Counter (ATC)
 ------------------------------------------------
 80 ca 9f 36 00
 response hex    :
@@ -456,7 +467,7 @@ response parsed :
          01 73 (BINARY)
 
 ------------------------------------------------
-[Step 20] Send GET DATA command to find the Last Online ATC Register
+[Step 21] Send GET DATA command to find the Last Online ATC Register
 ------------------------------------------------
 80 ca 9f 13 00
 response hex    :
@@ -469,7 +480,7 @@ response parsed :
          01 72 (BINARY)
 
 ------------------------------------------------
-[Step 21] Send GET DATA command to find the Log Format
+[Step 22] Send GET DATA command to find the Log Format
 ------------------------------------------------
 80 ca 9f 4f 00
 response hex    :
@@ -498,9 +509,9 @@ Answer To Reset (ATR)
       Language: en (English)
 
 
-    Applications (2 found):
+    EMV applications (2 found):
 
-      Application
+      EMV Application
         AID: a1 23 45 67 89 10 10
           RID: a1 23 45 67 89
           PIX: 10 10
@@ -585,9 +596,9 @@ Answer To Reset (ATR)
           Issuer Public Key
             Length: 1152bit
             Exponent:
-               03
+              03
             Modulus:
-               ba 53 3e b8 ec c9 f9 b8 b2 a3 5e ed 3b e0 3f 7d
+              ba 53 3e b8 ec c9 f9 b8 b2 a3 5e ed 3b e0 3f 7d
               3a cf e2 46 a3 4c 8e 75 f5 c7 4a 64 e6 5c 97 cb
               4f 2f ab 97 09 cf 7e 12 89 0e af f1 8a 4f cf b4
               fa 98 18 db c3 be 5f dc 65 91 54 46 cb 86 24 ac
@@ -680,7 +691,7 @@ Answer To Reset (ATR)
            11111000
            00000000
 
-      Application
+      EMV Application
         AID: d5 78 00 00 02 10 10 (Bankaxept)
           RID: d5 78 00 00 02 (Bankaxept [Norway])
           PIX: 10 10

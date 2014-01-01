@@ -35,13 +35,17 @@ public class CVMList {
 
     public CVMList(byte[] data){
 
-        if(data.length < 8 ) throw new IllegalArgumentException("Length is less than 8. Length="+data.length);
+        if(data.length < 8 ){
+            throw new IllegalArgumentException("Length is less than 8. Length="+data.length);
+        }
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
         byte[] amountField = new byte[4];
         byte[] secondAmountField = new byte[4];
         bis.read(amountField, 0, amountField.length);
         bis.read(secondAmountField, 0, secondAmountField.length);
-        if(bis.available() % 2 != 0 ) throw new SmartCardException("CMVRules data is not a multiple of 2. Length="+data.length);
+        if(bis.available() % 2 != 0 ){
+            throw new SmartCardException("CMVRules data is not a multiple of 2. Length="+data.length);
+        }
         while(bis.available() > 0){
             byte[] tmp = new byte[2];
             bis.read(tmp, 0, tmp.length);

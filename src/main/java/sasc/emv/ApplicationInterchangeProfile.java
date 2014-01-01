@@ -140,7 +140,8 @@ public class ApplicationInterchangeProfile {
     }
 
     public static void main(String[] args){
-        ApplicationInterchangeProfile aip = new ApplicationInterchangeProfile((byte)0x5c, (byte)0x00);
+        ApplicationInterchangeProfile aip;
+        aip = new ApplicationInterchangeProfile((byte)0x5c, (byte)0x00);
         System.out.println(aip.toString());
     }
 

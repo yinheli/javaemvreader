@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.ShortFileIdentifier;
 import sasc.iso7816.File;
 import sasc.iso7816.SmartCardException;
 import java.io.PrintWriter;
@@ -43,7 +44,7 @@ public class ApplicationElementaryFile implements File{
             throw new SmartCardException("Applicaton Elementary File length must be equal to 4. Data length="+data.length);
         }
 
-        int sfiNumber = data[0] >> 3; 
+        int sfiNumber = data[0] >>> 3; 
         sfi = new ShortFileIdentifier(sfiNumber);
         startRecordNumber = data[1] & 0xFF;
         if(startRecordNumber == 0){

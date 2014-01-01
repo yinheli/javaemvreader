@@ -33,7 +33,7 @@ import sasc.util.Util;
  *
  * @author sasc
  */
-public class SmartcardioCardConnection implements CardConnection {
+public class SmartcardioCardConnection implements CardConnection, Terminal {
 
     private Card card;
     private CardTerminal smartCardIOTerminal;
@@ -64,7 +64,7 @@ public class SmartcardioCardConnection implements CardConnection {
          * case 4s: |CLA|INS|P1 |P2 |LC |...BODY...|LE | len = 7..261
          *
          * (Extended length is not currently supported) 
-         * case 2e: |CLA|INS|P1 |P2|00 |LE1|LE2|                    len = 7 
+         * case 2e: |CLA|INS|P1 |P2 |00|LE1|LE2|                    len = 7 
          * case 3e: |CLA|INS|P1 |P2 |00|LC1|LC2|...BODY...|         len = 8..65542 
          * case 4e: |CLA|INS|P1 |P2 |00|LC1|LC2|...BODY...|LE1|LE2| len =10..65544
          *
@@ -128,6 +128,8 @@ public class SmartcardioCardConnection implements CardConnection {
             byte[] data = apdu.getData(); //Copy
             response = new CardResponseImpl(data, sw1, sw2, (short) apdu.getSW());
         } catch (CardException ce) {
+            //TODO if PCSCException: reflect to get error code
+            //http://www.java2s.com/Open-Source/Java/6.0-JDK-Modules-sun/security/sun/security/smartcardio/PCSC.java.htm
             throw new TerminalException("Error occured while transmitting command: " + Util.byteArrayToHexString(cmd), ce);
         }
         return response;
@@ -145,8 +147,7 @@ public class SmartcardioCardConnection implements CardConnection {
 
     @Override
     public Terminal getTerminal() {
-        throw new UnsupportedOperationException("Not implemented yet");
-//        return new SmartCardIOTerminal(smartCardIOTerminal);
+        return this;
     }
 
     @Override
@@ -211,7 +212,7 @@ public class SmartcardioCardConnection implements CardConnection {
             throw new TerminalException(cause.getMessage());
         }
     }
-
+    
     private class CardResponseImpl implements CardResponse {
 
         private byte[] data;
@@ -246,4 +247,33 @@ public class SmartcardioCardConnection implements CardConnection {
             return sw;
         }
     }
+    
+
+    //Terminal interface    
+        
+    @Override
+    public CardConnection connect() throws TerminalException {
+        throw new IllegalStateException("Already connected.");
+    }
+
+    @Override
+    public String getName() {
+        return smartCardIOTerminal.getName();
+    }
+
+    @Override
+    public String getTerminalInfo() {
+        return smartCardIOTerminal.toString();
+    }
+
+    @Override
+    public boolean isCardPresent() throws TerminalException {
+        try{
+            return smartCardIOTerminal.isCardPresent();
+        }catch(CardException ex){
+            throw new TerminalException(ex);
+        }
+    }
+        
+    
 }

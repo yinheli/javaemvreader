@@ -25,6 +25,7 @@ import javax.smartcardio.CardTerminal;
 import javax.smartcardio.CardTerminals;
 import javax.smartcardio.TerminalFactory;
 import sasc.terminal.CardConnection;
+import sasc.terminal.NoTerminalsAvailableException;
 import sasc.terminal.Terminal;
 import sasc.terminal.TerminalException;
 import sasc.terminal.TerminalProvider;
@@ -63,7 +64,7 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         List<Terminal> list = new ArrayList<Terminal>();
         try {
             for (CardTerminal terminal : terminals.list()) {
-                list.add(new SmartcardioTerminalProviderImpl.TerminalImpl(terminal));
+                list.add(new TerminalImpl(terminal));
             }
         } catch (CardException ex) {
             if(!isNoCardReadersAvailable(ex)){ //No card readers available is not an exception, just return empty list
@@ -105,6 +106,9 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
                 }
             }
         } catch (CardException ex) {
+            if(isNoCardReadersAvailable(ex)){ //No card readers available 
+                throw new NoTerminalsAvailableException(ex);
+            }
             throw new TerminalException(ex);
         } catch (IllegalStateException ex){
             throw new TerminalException(ex);
@@ -169,6 +173,11 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
                 throw new TerminalException(ex);
             }
         }
+        
+        @Override
+        public String getName(){
+            return smartCardIOTerminal.getName();
+        }
 
         @Override
         public String getTerminalInfo() {
@@ -182,23 +191,27 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         }
     }
     
-    private static Integer getPCSCError(CardException ce){
+    //TODO refactor this to utility class, and use reflection
+    //http://pcsclite.alioth.debian.org/api/pcsclite_8h_source.html
+    public static Integer getPCSCError(CardException ce){
         if(ce == null){
             return null;
         }
         Throwable cause = ce.getCause();
         while(cause != null){
+            Log.debug("checking field in class: "+cause.getClass().getName());
+            Log.debug("cause: "+cause);
             try{
                 Field f = cause.getClass().getDeclaredField("code");
                 f.setAccessible(true);
                 Integer i = (Integer)f.get(cause);
                 return i;
             }catch(NoSuchFieldException ex){
-
+                Log.debug(Util.getStackTrace(ex));
             }catch(IllegalAccessException ex){
- 
+                Log.debug(Util.getStackTrace(ex));
             }catch(ClassCastException ex){
-
+                Log.debug(Util.getStackTrace(ex));
             }
             cause = cause.getCause();
         }
@@ -206,7 +219,21 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         return null;
     }
     
-    //PCSC error code
+    //MS winscard.h
+    
+//    http://blogs.msdn.com/b/shivaram/archive/2007/02/26/smart-card-logon-on-windows-vista.aspx
+//    #if (NTDDI_VERSION >= NTDDI_WINXP)
+//    extern WINSCARDAPI HANDLE WINAPI
+//    SCardAccessStartedEvent(void);
+//
+//    extern WINSCARDAPI void WINAPI
+//    SCardReleaseStartedEvent(void);
+//    #endif // (NTDDI_VERSION >= NTDDI_WINXP)
+//    final static int SCARD_E_SYSTEM_CANCELLED = 0x80100012;
+  
+
+    
+    //MS Undocumented
     final static int SCARD_E_NO_READERS_AVAILABLE = 0x8010002E;
 
     private static boolean isNoCardReadersAvailable(CardException ex){

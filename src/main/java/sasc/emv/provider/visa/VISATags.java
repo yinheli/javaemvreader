@@ -25,11 +25,8 @@ public class VISATags {
     //9f54 Cumulative Total Transaction Amount Limit
     //9f55 Geographic Indicator
     //9f56 Issuer Authentication Indicator
-    
-    //Visa Card Manager:
     //Tag[9f55] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f55, 01 (raw 01), 00]
     //Tag[9f56] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f56, 12 (raw 12), 00007fffffe0000000000000000000000000]
-    
     //9f58 Lower Consecutive Offline Limit
     //9f59 Upper Consecutive Offline Limit
     //9f5c Cumulative Total Transaction Amount Upper Limit
@@ -39,4 +36,6 @@ public class VISATags {
     //9f78 VLP Single Transaction Limit
     //9f79 VLP Available Funds (Decremented during Card Action Analysis for offline approved VLP transactions)
     //9f7f Card Production Life Cycle (CPLC) History File Identifiers
+    
+    //9f80 Log Format TagAndLength found in GET DATA LOG FORMAT on VISA Electron card: Ex 9f8004 with Log value 03 60 60 00
 }

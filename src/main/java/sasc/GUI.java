@@ -141,9 +141,9 @@ public class GUI extends SingleFrameApplication {
                 if (!console.getText().contains("Finished Processing card.") 
                         || console.getText().contains("Error processing app")) {
                     //Assume something failed. Show Popup with option to send email
-                    submitFeedback("Error", "Something failed. Would you like to send an email report?");
+                    submitFeedback("[JavaEMVReader-BUGREPORT]", "Error", "Something failed. Would you like to send an email report?");
                 }else if(foundUnhandledRecords){
-                    submitFeedback("Unhandled Record(s)", "Found unhandled records. Would you like to send an email report to help improve the application?");
+                    submitFeedback("[JavaEMVReader-UNHANDLED-RECORDS]", "Unhandled Record(s)", "Found unhandled records. Would you like to send an email report?");
                 }
             }
         }
@@ -152,15 +152,15 @@ public class GUI extends SingleFrameApplication {
 //        org.jdesktop.application.Application.launch(GUI.class, args);
 //    }
 
-    private void submitFeedback(String title, String text) {
+    private void submitFeedback(String subject, String dialogTitle, String dialogText) {
         
         if (Desktop.isDesktopSupported()) {
             Desktop desktop = Desktop.getDesktop();
             if (desktop.isSupported(Desktop.Action.MAIL)) {
-                int choice = JOptionPane.showConfirmDialog(console.getRootPane(), text, title, JOptionPane.OK_CANCEL_OPTION);
+                int choice = JOptionPane.showConfirmDialog(console.getRootPane(), dialogText, dialogTitle, JOptionPane.OK_CANCEL_OPTION);
                 if (choice == JOptionPane.OK_OPTION) {
                     try {
-                        desktop.mail(new URI("mailto", getEAddr() + "?SUBJECT=[JavaEMVReader-BUGREPORT]&BODY=(Please also include the complete output from JavaEMVReader, so I can understand what caused the problem)", null));
+                        desktop.mail(new URI("mailto", getEAddr() + "?SUBJECT="+subject+"&BODY=(Please also include the complete output from JavaEMVReader, so we can understand what caused the problem)", null));
                     } catch (Exception ex) {
                         StringWriter st = new StringWriter();
                         ex.printStackTrace(new PrintWriter(st));

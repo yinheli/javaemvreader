@@ -26,7 +26,7 @@ import sasc.util.Util;
  * 
  * @author sasc
  */
-public class Record{
+public class Record {
 
     private byte[] rawDataIncTag;
     private boolean isInvolvedInOfflineDataAuthentication = false;

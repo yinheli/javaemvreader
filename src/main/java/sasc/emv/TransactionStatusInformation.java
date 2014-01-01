@@ -162,8 +162,13 @@ public class TransactionStatusInformation {
     }
 
     public static void main(String[] args){
-        TransactionStatusInformation tsi = new TransactionStatusInformation((byte)0x68, (byte)0x00);
+        TransactionStatusInformation tsi;
+        tsi = new TransactionStatusInformation((byte)0x68, (byte)0x00);
         System.out.println(tsi.toString());
+        tsi = new TransactionStatusInformation((byte)0xE8, (byte)0x00);
+        System.out.println(tsi.toString()); //VISA Comfort Hotel 
+        tsi = new TransactionStatusInformation((byte)0xF8, (byte)0x00);
+        System.out.println(tsi.toString()); //VISA Inside premium hotel (DE)
     }
 
 }

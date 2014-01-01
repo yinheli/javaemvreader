@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.ShortFileIdentifier;
 import sasc.common.SmartCard;
 import sasc.iso7816.TagValueType;
 import sasc.iso7816.TagAndLength;
@@ -28,6 +29,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import sasc.iso7816.ATR;
+import sasc.iso7816.TLVException;
 import sasc.terminal.CardResponse;
 import sasc.terminal.TerminalException;
 import sasc.terminal.CardConnection;
@@ -41,11 +43,11 @@ public class EMVUtil {
 
     /**
      * No response parsing
-     * 
+     *
      * @param terminal
      * @param command
      * @return
-     * @throws TerminalException 
+     * @throws TerminalException
      */
     //TODO remove this and replace with CLS/INS bit indication (response formatted in a TLV structure)
     public static CardResponse sendCmdNoParse(CardConnection terminal, String command) throws TerminalException {
@@ -84,8 +86,13 @@ public class EMVUtil {
 
         //Note some non-EMV cards (and terminal software) seem to re-issue the last command with length=SW2 when getting SW1=61
         while (sw1 == (byte) 0x61) { //Procedure byte: send GET RESPONSE to receive more data
-            //this command is EMV specific, since EMV locks CLS to 0x00 only (Book 1, 9.3.1.3). ISO7816-4 specifies CLS in GET RESPONSE in "section 5.4.1 Class byte" to be 0x0X
-            cmdBytes = new byte[]{(byte) 0x00, (byte) 0xC0, (byte) 0x00, (byte) 0x00, (byte) sw2};
+            boolean emvMode = true;
+            if(emvMode){
+                //this command is EMV specific, since EMV locks CLA to 0x00 only (Book 1, 9.3.1.3). ISO7816-4 specifies CLS in GET RESPONSE in "section 5.4.1 Class byte" to be 0x0X
+                cmdBytes = new byte[]{(byte) 0x00, (byte) 0xC0, (byte) 0x00, (byte) 0x00, (byte) sw2};
+            }else{
+                cmdBytes = new byte[]{cmdBytes[0], (byte) 0xC0, (byte) 0x00, (byte) 0x00, (byte) sw2};
+            }
             Log.procedureByte("Received procedure byte SW1=0x61. Sending GET RESPONSE command: " + Util.byteArrayToHexString(cmdBytes));
             response = terminal.transmit(cmdBytes);
             byte[] newData = response.getData();
@@ -108,14 +115,18 @@ public class EMVUtil {
     public static void printResponse(CardResponse response, boolean doParseTLVData) {
         Log.info("response hex    :\n" + Util.prettyPrintHex(response.getData()));
         String swDescription = "";
-        String tmp = SW.getSWDescription(Util.short2Hex(response.getSW()));
+        String tmp = SW.getSWDescription(response.getSW());
         if (tmp != null && tmp.trim().length() > 0) {
             swDescription = " (" + tmp + ")";
         }
         Log.info("response SW1SW2 : " + Util.byte2Hex(response.getSW1()) + " " + Util.byte2Hex(response.getSW2()) + swDescription);
         Log.info("response ascii  : " + Util.getSafePrintChars(response.getData()));
         if (doParseTLVData) {
-            Log.info("response parsed :\n" + EMVUtil.prettyPrintAPDUResponse(response.getData()));
+            try{
+                Log.info("response parsed :\n" + EMVUtil.prettyPrintAPDUResponse(response.getData()));
+            }catch(TLVException ex){
+                Log.debug(ex.getMessage()); //Util.getStackTrace(ex)
+            }
         }
     }
 
@@ -179,7 +190,7 @@ public class EMVUtil {
                                     }
                                     //Check if app template is valid
                                     if(app.getAID() != null){
-                                        card.addApplication(app);
+                                        card.addEMVApplication(app);
                                     }else{
                                         Log.debug("Found invalid application template: "+app.toString());
                                     }
@@ -239,13 +250,16 @@ public class EMVUtil {
                             } else if (tlv.getTag().equals(EMVTags.ISSUER_CODE_TABLE_INDEX)) {
                                 int index = Util.byteArrayToInt(tlv.getValueBytes());
                                 app.setIssuerCodeTableIndex(index);
+                            } else if (tlv.getTag().equals(EMVTags.LANGUAGE_PREFERENCE)) {
+                                LanguagePreference languagePreference = new LanguagePreference(tlv.getValueBytes());
+                                app.setLanguagePreference(languagePreference);
                             } else {
                                 app.addUnhandledRecord(tlv);
                             }
                         }
                         Log.debug("Adding application: " + Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()));
                         apps.add(app);
-                        card.addApplication(app);
+                        card.addEMVApplication(app);
                     } else {
                         card.addUnhandledRecord(tlv);
                     }
@@ -264,7 +278,7 @@ public class EMVUtil {
         if(data == null || data.length < 2){
             return adf;
         }
-        
+
         BERTLV tlv = EMVUtil.getNextTLV(new ByteArrayInputStream(data));
 
         if (tlv.getTag().equals(EMVTags.FCI_TEMPLATE)) {
@@ -276,7 +290,7 @@ public class EMVUtil {
                 if (tlv.getTag().equals(EMVTags.DEDICATED_FILE_NAME)) {
                     adf.setName(tlv.getValueBytes()); //AID
                     app.setAID(new AID(tlv.getValueBytes()));
-                    Log.debug("ADDED AID to app: "+Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()) + " - " + Util.prettyPrintHexNoWrap(tlv.getValueBytes()));
+                    Log.debug("ADDED AID to app. AID after set: "+Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()) + " - AID in FCI: " + Util.prettyPrintHexNoWrap(tlv.getValueBytes()));
                 } else if (tlv.getTag().equals(EMVTags.FCI_PROPRIETARY_TEMPLATE)) { //Proprietary Information Template
                     ByteArrayInputStream bis2 = tlv.getValueStream();
                     int totalLen = bis2.available();
@@ -309,6 +323,15 @@ public class EMVUtil {
                                 tlv = EMVUtil.getNextTLV(bis3);
                                 if (tlv.getTag().equals(EMVTags.LOG_ENTRY)) {
                                     app.setLogEntry(new LogEntry(tlv.getValueBytes()[0], tlv.getValueBytes()[1]));
+							    } else if (tlv.getTag().equals(EMVTags.VISA_LOG_ENTRY)) { //TODO move this to VISAApp
+							    	//app.setVisaLogEntry(new LogEntry(tlv.getValueBytes()[0], tlv.getValueBytes()[1]));
+                                } else if (tlv.getTag().equals(EMVTags.ISSUER_URL)) {
+                                    app.setIssuerUrl(Util.getSafePrintChars(tlv.getValueBytes()));
+                                } else if (tlv.getTag().equals(EMVTags.ISSUER_IDENTIFICATION_NUMBER)) {
+                                    int iin = Util.binaryHexCodedDecimalToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
+                                    app.setIssuerIdentificationNumber(iin);
+                                } else if (tlv.getTag().equals(EMVTags.ISSUER_COUNTRY_CODE_ALPHA3)) {
+                                    app.setIssuerCountryCodeAlpha3(Util.getSafePrintChars(tlv.getValueBytes()));
                                 } else {
                                     app.addUnhandledRecord(tlv);
                                 }
@@ -381,6 +404,8 @@ public class EMVUtil {
 
     }
 
+    //TODO convert this into "parseAppData", and make it generic for reading all application data (records + GPO + additional data)?
+    //
     public static void parseAppRecord(byte[] data, EMVApplication app) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
 
@@ -406,6 +431,9 @@ public class EMVUtil {
             } else if (tlv.getTag().equals(EMVTags.TRACK_2_EQV_DATA)) {
                 Track2EquivalentData t2Data = new Track2EquivalentData(tlv.getValueBytes());
                 app.setTrack2EquivalentData(t2Data);
+//            } else if (tlv.getTag().equals(EMVTags.MC_TRACK2_DATA)) { //TODO move to MC specific tags
+//                Track2EquivalentData t2Data = new Track2EquivalentData(tlv.getValueBytes());
+//                app.setTrack2EquivalentData(t2Data);
             } else if (tlv.getTag().equals(EMVTags.APP_EXPIRATION_DATE)) {
                 app.setExpirationDate(tlv.getValueBytes());
             } else if (tlv.getTag().equals(EMVTags.APP_EFFECTIVE_DATE)) {
@@ -446,7 +474,7 @@ public class EMVUtil {
                 app.setCDOL1(cdol1);
             } else if (tlv.getTag().equals(EMVTags.CDOL2)) {
                 DOL cdol2 = new DOL(DOL.Type.CDOL2, tlv.getValueBytes());
-                app.setCDOL2(cdol2);   
+                app.setCDOL2(cdol2);
             } else if (tlv.getTag().equals(EMVTags.LOWER_CONSEC_OFFLINE_LIMIT)) {
                 app.setLowerConsecutiveOfflineLimit(Util.byteArrayToInt(tlv.getValueBytes()));
             } else if (tlv.getTag().equals(EMVTags.UPPER_CONSEC_OFFLINE_LIMIT)) {
@@ -523,6 +551,10 @@ public class EMVUtil {
             } else if (tlv.getTag().equals(EMVTags.DDOL)) {
                 DOL ddol = new DOL(DOL.Type.DDOL, tlv.getValueBytes());
                 app.setDDOL(ddol);
+            } else if (tlv.getTag().equals(EMVTags.IBAN)) {
+                app.setIBAN(new IBAN(tlv.getValueBytes()));
+            } else if (tlv.getTag().equals(EMVTags.BANK_IDENTIFIER_CODE)) {
+                app.setBIC(new BankIdentifierCode(tlv.getValueBytes()));
             } else {
                 app.addUnhandledRecord(tlv);
             }
@@ -558,11 +590,35 @@ public class EMVUtil {
                 EMVTerminalProfile.getTerminalVerificationResults().setDDAFailed(true);
             }
 
+//            //AIP & AFL concatenated without delimiters (that is, excluding tag and length)
+//            ApplicationInterchangeProfile aip = new ApplicationInterchangeProfile((byte) valueBytesBis.read(), (byte) valueBytesBis.read());
+//            app.setApplicationInterchangeProfile(aip);
+//
+//            if (valueBytesBis.available() % 4 != 0) {
+//                throw new SmartCardException("Error parsing Internal Auth Response: Invalid AFL length: " + valueBytesBis.available());
+//            }
+//
+//            byte[] aflBytes = new byte[valueBytesBis.available()];
+//            valueBytesBis.read(aflBytes, 0, aflBytes.length);
+//
+//            ApplicationFileLocator afl = new ApplicationFileLocator(aflBytes);
+//            app.setApplicationFileLocator(afl);
         } else if (tlv.getTag().equals(EMVTags.RESPONSE_MESSAGE_TEMPLATE_2)) {
             //AIP & AFL WITH delimiters (that is, including, including tag and length) and possibly other BER TLV tags (that might be proprietary)
             while (valueBytesBis.available() >= 2) {
                 tlv = EMVUtil.getNextTLV(valueBytesBis);
-                //TODO
+                //TODO the code below is just copied from GPO
+//                if (tlv.getTag().equals(EMVTags.APPLICATION_INTERCHANGE_PROFILE)) {
+//                    byte[] aipBytes = tlv.getValueBytes();
+//                    ApplicationInterchangeProfile aip = new ApplicationInterchangeProfile(aipBytes[0], aipBytes[1]);
+//                    app.setApplicationInterchangeProfile(aip);
+//                } else if (tlv.getTag().equals(EMVTags.APPLICATION_FILE_LOCATOR)) {
+//                    byte[] aflBytes = tlv.getValueBytes();
+//                    ApplicationFileLocator afl = new ApplicationFileLocator(aflBytes);
+//                    app.setApplicationFileLocator(afl);
+//                } else {
+//                    app.addUnhandledRecord(tlv);
+//                }
             }
         } else {
             app.addUnhandledRecord(tlv);
@@ -667,7 +723,7 @@ public class EMVUtil {
 
                 tagBAOS.write(tlvIdNextOctet);
 
-                if (!Util.isBitSet(tlvIdNextOctet, 8)) {
+                if (!Util.isBitSet(tlvIdNextOctet, 8) || (Util.isBitSet(tlvIdNextOctet, 8) && (tlvIdNextOctet & 0x7f) == 0) ) {
                     break;
                 }
             } while (true);
@@ -680,11 +736,16 @@ public class EMVUtil {
         int length;
         int tmpLength = stream.read();
 
+        if(tmpLength < 0) {
+            throw new TLVException("Negative length: "+tmpLength);
+        }
+
         if (tmpLength <= 127) { // 0111 1111
             // short length form
             length = tmpLength;
         } else if (tmpLength == 128) { // 1000 0000
             // length identifies indefinite form, will be set later
+            // indefinite form is not specified in ISO7816-4, but we include it here for completeness
             length = tmpLength;
         } else {
             // long length form
@@ -692,6 +753,9 @@ public class EMVUtil {
             tmpLength = 0;
             for (int i = 0; i < numberOfLengthOctets; i++) {
                 int nextLengthOctet = stream.read();
+                if(nextLengthOctet < 0){
+                    throw new TLVException("EOS when reading length bytes");
+                }
                 tmpLength <<= 8;
                 tmpLength |= nextLengthOctet;
             }
@@ -703,7 +767,7 @@ public class EMVUtil {
     //http://www.cardwerk.com/smartcards/smartcard_standard_ISO7816-4_annex-d.aspx#AnnexD_1
     public static BERTLV getNextTLV(ByteArrayInputStream stream) {
         if (stream.available() < 2) {
-            throw new SmartCardException("Error parsing data. Available bytes < 2 . Length=" + stream.available());
+            throw new TLVException("Error parsing data. Available bytes < 2 . Length=" + stream.available());
         }
 
 
@@ -724,7 +788,7 @@ public class EMVUtil {
         stream.reset(); //Reset back to the last known position without 0x00 or 0xFF
 
         if (stream.available() < 2) {
-            throw new SmartCardException("Error parsing data. Available bytes < 2 . Length=" + stream.available());
+            throw new TLVException("Error parsing data. Available bytes < 2 . Length=" + stream.available());
         }
 
         byte[] tagIdBytes = EMVUtil.readTagIdBytes(stream);
@@ -735,16 +799,21 @@ public class EMVUtil {
         int posBefore = stream.available();
         //Now parse the lengthbyte(s)
         //This method will read all length bytes. We can then find out how many bytes was read.
-        int length = EMVUtil.readTagLength(stream);
-        //Now find the raw length bytes
+        int length = EMVUtil.readTagLength(stream); //Decoded
+        //Now find the raw (encoded) length bytes
         int posAfter = stream.available();
         stream.reset();
         byte[] lengthBytes = new byte[posBefore - posAfter];
+
+        if(lengthBytes.length < 1 || lengthBytes.length > 4){
+            throw new TLVException("Number of length bytes must be from 1 to 4. Found "+lengthBytes.length);
+        }
+
         stream.read(lengthBytes, 0, lengthBytes.length);
 
         int rawLength = Util.byteArrayToInt(lengthBytes);
 
-        byte[] valueBytes = null;
+        byte[] valueBytes;
 
         Tag tag = EMVTags.getNotNull(tagIdBytes);
 
@@ -753,13 +822,13 @@ public class EMVUtil {
             // indefinite form
             stream.mark(0);
             int prevOctet = 1;
-            int curOctet = 0;
+            int curOctet;
             int len = 0;
             while (true) {
                 len++;
                 curOctet = stream.read();
                 if (curOctet < 0) {
-                    throw new SmartCardException("Error parsing data. TLV "
+                    throw new TLVException("Error parsing data. TLV "
                             + "length byte indicated indefinite length, but EOS "
                             + "was reached before 0x0000 was found" + stream.available());
                 }
@@ -774,6 +843,9 @@ public class EMVUtil {
             stream.read(valueBytes, 0, len);
             length = len;
         } else {
+            if(stream.available() < length){
+                throw new TLVException("Length byte(s) indicated "+length+" value bytes, but only "+stream.available()+ " " +(stream.available()>1?"are":"is")+" available");
+            }
             // definite form
             valueBytes = new byte[length];
             stream.read(valueBytes, 0, length);
@@ -843,8 +915,8 @@ public class EMVUtil {
 
     public static void main(String[] args) {
 
-        EMVApplication app = new EMVApplication();
-        parseFCIADF(Util.fromHexString("6f198407a0000000038002a50e5009564953412041757468870101"), app);
+//        EMVApplication app = new EMVApplication();
+//        parseFCIADF(Util.fromHexString("6f198407a0000000038002a50e5009564953412041757468870101"), app);
 //
 //        String gpoResponse = "77 0e 82 02 38 00 94 08 08 01 03 01 10 01 01 00";
 //
@@ -852,9 +924,12 @@ public class EMVUtil {
 //
 //        System.out.println(app.getApplicationFileLocator().toString());
 //        System.out.println(app.getApplicationInterchangeProfile().toString());
-        
+
 //        System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("6f 20 81 02 00 00 82 01 38 83 02 3f 00 84 06 00 00 00 00 00 00 85 01 00 8c 08 1f a1 a1 a1 a1 a1 88 a1")));
 
 //        System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("6F388407 A0000000 031010A5 2D500B56 69736144 616E6B6F 72748701 015F2D08 6461656E 6E6F7376 9F110101 9F120B56 69736144 616E6B6F 7274")));
+
+          System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("9f 4f 18 9f 36 02 9f 02 06 9f 03 06 9f 1a 02 95 05 5f 2a 02 9a 03 9c 01 9f 80 04")));
+    
     }
 }

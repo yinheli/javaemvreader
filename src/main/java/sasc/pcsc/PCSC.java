@@ -115,12 +115,12 @@ public class PCSC {
             }
 
             int winControlCode = (0x31 << 16 | (code) << 2);
-            Log.debug("CTL_CODE="+Util.int2Hex(winControlCode) + " (windows PC/SC format)");
+            Log.debug("Constructed CTL_CODE="+Util.int2Hex(winControlCode) + " (windows PC/SC format)");
             return winControlCode;
         }
         // cf. reader.h
         int controlCode = 0x42000000 + (code);
-        Log.debug("CTL_CODE="+Util.int2Hex(controlCode) + " (*nix PC/SC format)");
+        Log.debug("Constructed CTL_CODE="+Util.int2Hex(controlCode) + " (*nix PC/SC format)");
         return controlCode;
     }
         

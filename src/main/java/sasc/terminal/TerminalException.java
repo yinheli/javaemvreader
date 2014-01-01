@@ -23,7 +23,7 @@ import java.io.IOException;
  */
 public class TerminalException extends IOException{
     public TerminalException(){
-        
+        super();
     }
     public TerminalException(String message){
         super(message);

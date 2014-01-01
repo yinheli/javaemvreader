@@ -36,6 +36,29 @@ import sasc.util.Util;
  * other relevant information to its owner.
  *
  * Currently, only VISA CA is supported
+ * 
+ * EMV Book 2:
+ * Every terminal conforming to this specification shall contain the appropriate
+ * certification authority’s public key(s) for every application recognized by the
+ * terminal.
+ * To support SDA, each terminal shall be able to store six certification
+ * authority public keys per Registered Application Provider Identifier (RID)
+ * and shall associate with each such key the key-related information to be used
+ * with the key (so that terminals can in the future support multiple algorithms
+ * and allow an evolutionary transition from one to another, as discussed in
+ * section 11.2.2). The terminal shall be able to locate any such key (and the
+ * key-related information) given the RID and Certification Authority Public
+ * Key Index as provided by the ICC.
+ * SDA shall use a reversible algorithm as specified in Annex A2.1 and
+ * Annex B2. Section 5.1 contains an overview of the keys and certificates
+ * involved in the SDA process, and sections 5.2 to 5.4 specify the three main
+ * steps in the process, namely:
+ * - Retrieval of the Certification Authority Public Key by the terminal
+ * - Retrieval of the Issuer Public Key by the terminal
+ * - Verification of the Signed Static Application Data by the terminal
+ * If SDA fails then the terminal shall set the ‘SDA failed’ bit in the Terminal
+ * Verification Results (TVR) to 1.
+ *
  * @author sasc
  */
 public class CA {

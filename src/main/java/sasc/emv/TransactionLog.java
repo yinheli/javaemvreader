@@ -18,7 +18,6 @@ package sasc.emv;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import sasc.iso7816.TagAndLength;
 import sasc.util.Log;

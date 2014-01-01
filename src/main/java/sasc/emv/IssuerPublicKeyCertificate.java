@@ -80,7 +80,9 @@ public class IssuerPublicKeyCertificate {
         CAPublicKey caPublicKey = ca.getPublicKey(caPublicKeyIndex);
 
         if (caPublicKey == null) {
-            throw new SmartCardException("No suitable CA Public Key found");
+            isValid = false;
+            return isValid();
+//            throw new SmartCardException("No suitable CA Public Key found");
         }
         //Decipher data using RSA
         byte[] recoveredBytes = Util.performRSA(signedBytes, caPublicKey.getExponent(), caPublicKey.getModulus());

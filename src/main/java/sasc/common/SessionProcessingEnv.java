@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 sasc
+ * Copyright 2013 sasc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.common;
 
 /**
  *
  * @author sasc
  */
 public class SessionProcessingEnv {
-    private boolean maskPersonalInformation = false;
+    private boolean maskSensitiveInformation = false;
     private boolean bruteForceSFIRecords = false;
     private boolean readMasterFile = false;
     private boolean warmUpCard = false;
-    private int initialPauseMillis = 150;
-    //TODO
-    //-Try to SELECT known AIDs from a list (To find AIDs not listed in the PSE)
-    //-etc
+    private boolean selectAllRIDs = false;
+    private boolean probeAllKnownAIDs = false;
+    private boolean discoverTerminalFeatures = false;
+    private int initialPauseMillis = 100;
     
     public SessionProcessingEnv(){
         
@@ -48,7 +48,27 @@ public class SessionProcessingEnv {
     public void setWarmUpCard(boolean value){
         warmUpCard = value;
     }
+    
+    /**
+     * If all 5 byte RIDs should be selected (possibly for partial selection)
+     * @return true if all RID should be tested when scanning the card
+     */
+    public boolean getSelectAllRIDs(){
+        return selectAllRIDs;
+    }
 
+    public void setSelectAllRIDs(boolean value){
+        selectAllRIDs = value;
+    }
+    
+    public boolean getProbeAllKnownAIDs(){
+        return probeAllKnownAIDs;
+    }
+
+    public void setProbeAllKnownAIDs(boolean value){
+        probeAllKnownAIDs = value;
+    }
+    
     public int getInitialPauseMillis(){
         return initialPauseMillis;
     }
@@ -60,5 +80,13 @@ public class SessionProcessingEnv {
      */
     public void setInitialPauseMillis(int millis){
         this.initialPauseMillis = millis;
+    }
+    
+    public boolean getDiscoverTerminalFeatures(){
+        return discoverTerminalFeatures;
+    }
+    
+    public void setDiscoverTerminalFeatures(boolean value) {
+        this.discoverTerminalFeatures = value;
     }
 }

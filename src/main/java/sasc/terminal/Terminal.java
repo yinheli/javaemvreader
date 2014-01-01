@@ -21,6 +21,7 @@ package sasc.terminal;
  */
 public interface Terminal {
     CardConnection connect() throws TerminalException;
+    String getName();
     String getTerminalInfo();
     boolean isCardPresent() throws TerminalException;
 }

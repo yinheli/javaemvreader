@@ -39,9 +39,26 @@ public class MasterCardApplication extends EMVApplication {
     public static final Tag MC_NATC_TRACK2 = new TagImpl("9f67", TagValueType.BINARY, "NATC(Track2)", "The value of NATC(Track2) represents the number of digits of the Application Transaction Counter to be included in the discretionary data field of Track 2 Data");
 
     public static final Tag MC_PCVC3_TRACK1 = new TagImpl("9f62", TagValueType.BINARY, "PCVC3(Track1)", "PCVC3(Track1) indicates to the Kernel the positions in the discretionary data field of the Track 1 Data where the CVC3 (Track1) digits must be copied");
-    public static final Tag MC_PCVC_TRACK2 = new TagImpl("9f65", TagValueType.BINARY, "PCVC3(Track2)", "PCVC3(Track2) indicates to the Kernel the positions in the discretionary data field of the Track 2 Data where the CVC3 (Track2) digits must be copied");
+//    public static final Tag MC_PCVC_TRACK2 = new TagImpl("9f65", TagValueType.BINARY, "PCVC3(Track2)", "PCVC3(Track2) indicates to the Kernel the positions in the discretionary data field of the Track 2 Data where the CVC3 (Track2) digits must be copied");
 
     public static final Tag MC_PUNTAC_TRACK1 = new TagImpl("9f63", TagValueType.BINARY, "PUNTAC(Track1)", "PUNATC(Track1) indicates to the Kernel the positions in the discretionary data field of Track 1 Data where the Unpredictable Number (Numeric) digits and Application Transaction Counter digits have to be copied.");
-    public static final Tag PUNTAC_TRACK2 = new TagImpl("9f66", TagValueType.BINARY, "PUNTAC(Track2)", "PUNATC(Track2) indicates to the Kernel the positions in the discretionary data field of Track 2 Data where the Unpredictable Number (Numeric) digits and Application Transaction Counter digits have to be copied.");
+//    public static final Tag PUNTAC_TRACK2 = new TagImpl("9f66", TagValueType.BINARY, "PUNTAC(Track2)", "PUNATC(Track2) indicates to the Kernel the positions in the discretionary data field of Track 2 Data where the Unpredictable Number (Numeric) digits and Application Transaction Counter digits have to be copied.");
     public static final Tag UNKNOWN_MC_TAG = new TagImpl("9f6c", TagValueType.BINARY, "Unknown MC Tag", "?");
+
+    //Examples
+//               Tag[9f6c] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f6c, 02 (raw 02), 0001]
+//               Tag[9f62] Name=PCVC3(Track1), TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f62, 06 (raw 06), 00000000000e]
+//               Tag[9f63] Name=PUNTAC(Track1), TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f63, 06 (raw 06), 0000000007f0]
+//               Tag[56] Name=Track 1 Data, TagType=PRIMITIVE, ValueType=BINARY, Class=APPLICATION BER-TLV[56, 29 (raw 29), 42xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx5e202f5exxxxxxxx32303130313030303030303030303030]
+//               Tag[9f64] Name=NATC(Track1), TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f64, 01 (raw 01), 03]
+//               Tag[9f65] Name=Maximum length of data field in command message, TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f65, 02 (raw 02), 000e]
+//               Tag[9f66] Name=Terminal Transaction Qualifiers, TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f66, 02 (raw 02), 07f0]
+//               Tag[9f67] Name=NATC(Track2), TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f67, 01 (raw 01), 03]
+    
+        //EMV-CAP tags (see also VISA Tags)
+//        Tag[9f55] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f55, 01 (raw 01), c0]
+//        Tag[9f56] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f56, 0c (raw 0c), 0f00007fffffe00000000000]
+
+//        Tag[9f55] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f55, 01 (raw 01), 00]
+//        Tag[9f56] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=CONTEXT_SPECIFIC BER-TLV[9f56, 1d (raw 1d), 00007fffffe00000000000000000000000000000000000000000000000]
 }

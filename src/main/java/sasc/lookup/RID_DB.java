@@ -56,11 +56,11 @@ public class RID_DB {
                         is1 = Util.loadResource(RID_DB.class, "/rid_list_rmg.txt");
                         is2 = Util.loadResource(RID_DB.class, "/rid_list_other.txt");
                         is3 = Util.loadResource(RID_DB.class, "/rid_list_country.txt");
-                        Vector v = new Vector();
-                        v.add(is1);
-                        v.add(is2);
-                        v.add(is3);
-                        br = new BufferedReader(new InputStreamReader(new SequenceInputStream(v.elements()), "UTF-8"));
+                        ArrayList<InputStream> a = new ArrayList<InputStream>();
+                        a.add(is1);
+                        a.add(is2);
+                        a.add(is3);
+                        br = new BufferedReader(new InputStreamReader(new SequenceInputStream(Collections.enumeration(a)), "UTF-8"));
 
                         String line;
                         while ((line = br.readLine()) != null) {

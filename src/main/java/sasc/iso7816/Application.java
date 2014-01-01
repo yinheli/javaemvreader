@@ -15,9 +15,12 @@
  */
 package sasc.iso7816;
 
+import java.io.PrintWriter;
+
 /**
  *
  */
 public interface Application extends File {
     AID getAID();
+    void dump(PrintWriter pw, int indent);
 }

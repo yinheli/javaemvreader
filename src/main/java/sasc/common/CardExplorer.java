@@ -1,12 +1,12 @@
 /*
  *  Copyright 2010 sasc
- * 
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,71 +16,95 @@
  */
 package sasc.common;
 
-import sasc.lookup.ATR_DB;
-import sasc.util.BuildProperties;
 import sasc.emv.EMVApplication;
-import sasc.iso7816.AID;
-import sasc.common.SmartCard;
-import sasc.iso7816.SmartCardException;
 import sasc.emv.EMVSession;
-import sasc.util.Log;
-import sasc.emv.SessionProcessingEnv;
-import sasc.common.UnsupportedCardException;
-import sasc.lookup.IIN_DB;
-import sasc.lookup.RID_DB;
+import sasc.iso7816.SmartCardException;
+import sasc.lookup.ATR_DB;
 import sasc.terminal.CardConnection;
+import sasc.terminal.NoTerminalsAvailableException;
 import sasc.terminal.TerminalAPIManager;
 import sasc.terminal.TerminalException;
 import sasc.terminal.TerminalProvider;
+import sasc.util.BuildProperties;
+import sasc.util.Log;
 import sasc.util.Util;
 
 /**
- * TODO fix this. This is just a temporary class to make it work with both cmd line and GUI version
- * 
+ *
  * @author sasc
  */
 public class CardExplorer {
 
-    SmartCard emvCard = null;
-    
+    //Declare SmartCard here, so in case some exception is thrown, we can still try to dump all the information we found
+    SmartCard smartCard = null;
+
     public SmartCard getEMVCard(){
-        return emvCard;
+        return smartCard;
     }
-    
+
     public void start() {
-        //Declare emvCard here, so in case some exception is thrown, we can still try to dump all the information we found
+
         CardConnection cardConnection = null;
         try {
             Context.init();
             TerminalProvider terminalProvider = TerminalAPIManager.getProvider(TerminalAPIManager.SelectionPolicy.ANY_PROVIDER);
             Log.info(BuildProperties.getProperty("APP_NAME", "JER") + " built on " + BuildProperties.getProperty("BUILD_TIMESTAMP", "N/A"));
-            if (terminalProvider.listTerminals().isEmpty()) {
-                Log.info("No smart card readers found. Please attach readers(s)");
+            
+            while(true) {
+                if (terminalProvider.listTerminals().isEmpty()) {
+                    Log.info("No smart card readers found. Please attach readers(s)");
 
-            }
-            while (terminalProvider.listTerminals().isEmpty()) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ex) {
-                    Log.debug(ex.toString());
+                }
+                while (terminalProvider.listTerminals().isEmpty()) {
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException ex) {
+                        Log.debug(ex.toString());
+                    }
+                }
+                Log.info("Please insert a Smart Card into any attached reader.");
+                try{
+                    cardConnection = terminalProvider.connectAnyTerminal(); //Waits for card present
+                    break;
+                }catch(NoTerminalsAvailableException ntex){
+                    Log.debug(Util.getStackTrace(ntex));
+                    //All Terminals were removed while waiting for card
+                    //go back and try again
                 }
             }
-            Log.info("Please insert an EMV card into any attached reader.");
-            cardConnection = terminalProvider.connectAnyTerminal(); //Waits for card present
             Log.info("OK, card found");
-            
+			Log.info("Using terminal: "+cardConnection.getTerminal().getName());
+
+            //TODO
+            //If the ATR received following a cold reset as described in EMV Book 1 section 6.1.3.1 does not
+            //conform to the specification in EMV Book 1 section 8, the terminal shall initiate a warm reset
+            //and obtain an ATR from the ICC as follows (see Figure 8):
+
+            //TODO check prefs to see if we should
+            // - initCard normally
+            // - what app to select (by name or all) (or use list of known AIDs), or brute force AIDs
+            // - brute force SFIs and Records
+            // - check if cardmanager A0000000000300000 (or other CM AID?) is present?
+            //----> add to SessionProcessingEnv
+
+            //Ideally the top level functions should be 'explore' (read as much data as possible, see above), or 'perform transaction' (production level function)
+
             SessionProcessingEnv env = new SessionProcessingEnv();
             env.setReadMasterFile(true);
-            env.setWarmUpCard(true);
+//            env.setSelectAllRIDs(true);
+            env.setProbeAllKnownAIDs(false);
+
+            CardSession cardSession = CardSession.createSession(cardConnection, env);
+
+            smartCard = cardSession.initCard();
+
+            EMVSession session = EMVSession.startSession(smartCard, cardConnection);
 
 
-            EMVSession session = EMVSession.startSession(env, cardConnection);
+//            AID visaClassicAID = new AID("a0 00 00 00 03 10 10");
 
-
-            AID visaClassicAID = new AID("a0 00 00 00 03 10 10");
-
-            emvCard = session.initCard();
-            for (EMVApplication app : emvCard.getApplications()) {
+            session.initContext();
+            for (EMVApplication app : smartCard.getApplications()) {
                 try{ //If processing an app fails, just skip it
                     session.selectApplication(app);
                     session.initiateApplicationProcessing(); //GET PROCESSING OPTIONS + READ RECORD(s)
@@ -96,23 +120,25 @@ public class CardExplorer {
                             //TODO
     //                        session.xxxx()
                         }
-                        //else //TODO 
+                        //else //TODO
                         if (app.getApplicationInterchangeProfile().isDDASupported()) {
                             session.internalAuthenticate();
                         }
                     }
-                    
+
                     session.readPINTryCounter();
-                    
+
                     //Only plaintext PIN verification has been implemented
                     //check CVM if app supports plaintext PIN verified by ICC
                     //Be VERY CAREFUL when running this, as it WILL block the application if the PIN Try Counter reaches 0
                     if(app.getPINTryCounter() > 0){
                     //  if (myAID.equals(app.getAID())) {
-                    //      session.verifyPIN(1234, true);
+                    //      char[] pin = {'1', '2', '3', '4'};
+                    //      session.verifyPIN(pin, true);
+                    //      Arrays.fill(pin, ' '); //Clear pin from memory
                     //  }
                     }
-                    
+
                     session.readAdditionalData(); //ATC, Last Online ATC, Log Format
 
                     //getChallenge -> only if DDA/CDA?
@@ -125,15 +151,15 @@ public class CardExplorer {
                     //next steps: Book 3 page 113
                     //-terminal shall perform offline data authentication
                     //-terminal action analysis
-                
-                } catch(Exception e) { 
+
+                } catch(Exception e) {
                     e.printStackTrace(System.err);
                     Log.info(String.format("Error processing app: %s. Skipping app: %s", e.getMessage(), app.toString()));
                     continue;
-                } 
+                }
             }
 
-            
+
 
             Log.info("\n");
             Log.info("Finished Processing card.");
@@ -161,13 +187,13 @@ public class CardExplorer {
                     ex.printStackTrace(System.err);
                 }
             }
-            if (emvCard != null) {
+            if (smartCard != null) {
                 try {
                     int indent = 0;
                     Log.getPrintWriter().println("======================================");
-                    Log.getPrintWriter().println("             [EMVContext]             ");
+                    Log.getPrintWriter().println("             [Smart Card]             ");
                     Log.getPrintWriter().println("======================================");
-                    emvCard.dump(Log.getPrintWriter(), indent);
+                    smartCard.dump(Log.getPrintWriter(), indent);
                     Log.getPrintWriter().println("---------------------------------------");
                     Log.getPrintWriter().println("                FINISHED               ");
                     Log.getPrintWriter().println("---------------------------------------");

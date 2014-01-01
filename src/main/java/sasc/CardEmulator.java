@@ -26,7 +26,7 @@ import sasc.iso7816.AID;
 import sasc.emv.EMVSession;
 import sasc.util.Log;
 import sasc.emv.SW;
-import sasc.emv.SessionProcessingEnv;
+import sasc.common.SessionProcessingEnv;
 import sasc.terminal.CardResponse;
 import sasc.terminal.Terminal;
 import sasc.terminal.TerminalException;
@@ -36,8 +36,7 @@ import sasc.util.Util;
 /**
  * An ICC emulator that uses data loaded from XML-file
  *
- * TODO write a better emulator that actually behaves like an ICC.
- * Maybe write a functional JavaCard EMV implementation that can also be used as an emulator..?
+ * Emulate the external behavior of a Smart Card. 
  * 
  * @author sasc
  */
@@ -211,7 +210,8 @@ public class CardEmulator implements CardConnection {
             }
         }
     }
-
+    
+    //TODO: if cmd.length == 5 && cmd[4] == 0x00  return true
     private static boolean hasLe(byte[] cmd){
         if(cmd.length <= 5){
             return false;
@@ -307,6 +307,9 @@ public class CardEmulator implements CardConnection {
         }
         if (Arrays.equals(cmd, SELECT_DDF_PSE)) {
             return createResponse(card.ddf, SW.SUCCESS);
+        }
+        if (cmd.length == 5 || cmd.length == 4){ //Zero length AID
+            return createResponse(null, SW.FILE_OR_APPLICATION_NOT_FOUND);
         }
         //Assume SELECT APPLICATION
         AID aid = new AID(getDataBytes(cmd));
@@ -440,7 +443,7 @@ public class CardEmulator implements CardConnection {
         for (int i = 0; i < pinLength; i++) { //Put each PIN digit into its own nibble
             int pos = i / 2;
             if (highNibble) {
-                buf.append(String.valueOf(pinBlock[1 + pos] >> 4));
+                buf.append(String.valueOf(pinBlock[1 + pos] >>> 4));
             } else {
                 buf.append(String.valueOf(pinBlock[1 + pos] & 0x0F));
             }

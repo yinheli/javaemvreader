@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.iso7816.ShortFileIdentifier;
 import sasc.iso7816.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;

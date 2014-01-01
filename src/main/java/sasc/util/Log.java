@@ -57,7 +57,7 @@ public class Log {
         return level;
     }
     
-    public void resetStepNo(){
+    public static void resetStepNo(){
         stepNo.set(1);
     }
 

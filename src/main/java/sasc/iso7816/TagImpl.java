@@ -15,7 +15,6 @@
  */
 package sasc.iso7816;
 
-import sasc.iso7816.Tag;
 import java.util.Arrays;
 import sasc.util.Util;
 

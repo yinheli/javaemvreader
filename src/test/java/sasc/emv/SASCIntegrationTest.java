@@ -15,6 +15,7 @@
  */
 package sasc.emv;
 
+import sasc.common.SessionProcessingEnv;
 import sasc.util.Log;
 import sasc.iso7816.AID;
 import java.io.PrintWriter;
@@ -30,6 +31,7 @@ import sasc.terminal.CardConnection;
 import sasc.util.Util;
 
 import static org.junit.Assert.*;
+import sasc.common.CardSession;
 import sasc.common.SmartCard;
 
 /**
@@ -64,32 +66,34 @@ public class SASCIntegrationTest {
      */
     @Test
     public void testStringOutput() throws Exception {
-        SmartCard emvCard = null;
+        SmartCard smartCard = null;
         StringWriter dumpWriter = new StringWriter();
         Log.setPrintWriter(new PrintWriter(dumpWriter));
 
         sasc.common.Context.init();
         CA.initFromFile("/CertificationAuthorities_Test.xml");
         CardConnection term = new CardEmulator("/SDACardTransaction.xml");
-        EMVSession session = EMVSession.startSession(new SessionProcessingEnv(), term);
+        CardSession cardSession = CardSession.createSession(term, new SessionProcessingEnv());
+        smartCard = cardSession.initCard();
+        EMVSession session = EMVSession.startSession(smartCard, term);
 
         AID targetAID = new AID("a1 23 45 67 89 10 10"); //Our TEST AID
 
         
-        emvCard = session.initCard();
-        for(EMVApplication app : emvCard.getApplications()){
+        session.initContext();
+        for(EMVApplication app : smartCard.getApplications()){
             session.selectApplication(app);
             session.initiateApplicationProcessing();
             session.readAdditionalData();
             if (targetAID.equals(app.getAID())) {
-                session.verifyPIN(1234, true);
+                session.verifyPIN(new char[]{'1','2','3','4'}, true);
             }
 //            session.getChallenge();
         }
-        
-        emvCard.dump(new PrintWriter(dumpWriter), 0);
 
-//        System.out.println(dumpWriter.toString());
+        smartCard.dump(new PrintWriter(dumpWriter), 0);
+
+//        System.out.println("dumpWriter: "+dumpWriter.toString());
 
         String expectedOutput = Util.readInputStreamToString(SASCIntegrationTest.class.getResourceAsStream("/output_svn_old_rev.txt"), "UTF-8").trim();
 
@@ -101,7 +105,7 @@ public class SASCIntegrationTest {
         int lineNumber = 1;
         while(tokenizerOutputOlderSVNRev.hasMoreTokens()){
             String tokenExpected = tokenizerOutputOlderSVNRev.nextToken().trim();
-            String tokenActual = tokenizerCurrentOutput.nextToken().trim();
+            String tokenActual = tokenizerCurrentOutput.hasMoreTokens()?tokenizerCurrentOutput.nextToken().trim():"";
 
             if(!tokenExpected.equals(tokenActual)){
                 System.err.println(actualOutput);

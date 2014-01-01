@@ -39,9 +39,12 @@ public class Iso7816Commands {
     }
 
     public static String selectByDFName(byte[] fileBytes, boolean lePresent, byte le) {
-        if (fileBytes.length > 16) throw new IllegalArgumentException("Dedicated File name not valid (length > 16). Length = "+fileBytes.length);
+        if (fileBytes.length > 16) {
+            throw new IllegalArgumentException("Dedicated File name not valid (length > 16). Length = "+fileBytes.length);
+        }
         //INS A4 = ISO SELECT FILE
         //04 - Direct selection by DF name (data field=DF name)
+        //TODO: when P2 = 0C : see 7816-4 doc..
         return "00 A4 04 00 " + Util.byte2Hex((byte) fileBytes.length) + " " + Util.prettyPrintHexNoWrap(fileBytes) + (lePresent?" " + Util.byte2Hex(le):"");
     }
     

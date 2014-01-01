@@ -68,6 +68,8 @@ public class ATR_DB {
                                 currentATR = line.toUpperCase().trim();
                                 if(!atrMap.containsKey(currentATR)){
                                     atrMap.put(currentATR, new PublicATR(line));
+                                }else{
+            //                        Log.debug("Found existing ATR: "+currentATR);
                                 }
                             }else{
                                 Log.debug("Encountered unexpected line in atr list: currentATR="+currentATR+" Line="+line);

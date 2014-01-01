@@ -86,29 +86,19 @@ public class IsoATR {
 
         //TODO throw ParseException if not ISO compliant
 
-        this.atrBytes = atrBytes;
-        if(atrBytes[0] == (byte)0x3B){
-            convention = Convention.DIRECT;
-        }else if(atrBytes[0] == (byte)0x3F){
-            convention = Convention.INVERSE;
-        }
+        try{
+        
+            this.atrBytes = atrBytes;
+            if(atrBytes[0] == (byte)0x3B){
+                convention = Convention.DIRECT;
+            }else if(atrBytes[0] == (byte)0x3F){
+                convention = Convention.INVERSE;
+            }
 
-        //TODO check these:
-        if((atrBytes[1] & 0xFF & 0x80) > 0){
-            TB1 = atrBytes[2];
+            numHistoricalBytes = atrBytes[1] & 0x0F;
+        }catch(RuntimeException e){ //Catch all RE
+            throw new ParseException("Unable to parse ATR according to ISO", e);
         }
-        if((atrBytes[1] & 0x40) > 0){
-            TC1 = atrBytes[3];
-        }
-        if((atrBytes[1] & 0x20) > 0){
-            TD1 = atrBytes[4];
-        }
-        if((atrBytes[1] & 0x10) > 0){
-
-        }
-
-
-        numHistoricalBytes = atrBytes[1] & 0x0F;
 
 
 

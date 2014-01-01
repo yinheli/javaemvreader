@@ -148,13 +148,13 @@ public class Util {
     public static String byte2Hex(byte b) {
         String[] HEX_DIGITS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"};
         int nb = b & 0xFF;
-        int i_1 = (nb >> 4) & 0xF;
+        int i_1 = (nb >>> 4) & 0xF;
         int i_2 = nb & 0xF;
         return HEX_DIGITS[i_1] + HEX_DIGITS[i_2];
     }
 
     public static String short2Hex(short s) {
-        byte b1 = (byte) (s >> 8);
+        byte b1 = (byte) (s >>> 8);
         byte b2 = (byte) (s & 0xFF);
         return byte2Hex(b1) + byte2Hex(b2);
     }
@@ -191,22 +191,22 @@ public class Util {
     //See EMV book 4 Annex B: Table 36: Common Character Set
     public static String getSafePrintChars(byte[] byteArray) {
         if (byteArray == null) {
-            //return "" instead?
-            throw new IllegalArgumentException("Argument 'byteArray' cannot be null");
+            return "";
+//            throw new IllegalArgumentException("Argument 'byteArray' cannot be null");
         }
         return getSafePrintChars(byteArray, 0, byteArray.length);
     }
     
     public static String getSafePrintChars(byte[] byteArray, int startPos, int length) {
         if (byteArray == null) {
-            //return "" instead?
-            throw new IllegalArgumentException("Argument 'byteArray' cannot be null");
+            return "";
+//            throw new IllegalArgumentException("Argument 'byteArray' cannot be null");
         }
         if(byteArray.length < startPos+length){
             throw new IllegalArgumentException("startPos("+startPos+")+length("+length+") > byteArray.length("+byteArray.length+")");
         }
         StringBuilder buf = new StringBuilder();
-        for (int i = startPos; i < length; i++) {
+        for (int i = startPos; i < startPos+length; i++) {
             if (byteArray[i] >= (byte) 0x20 && byteArray[i] < (byte) 0x7F) {
                 buf.append((char) byteArray[i]);
             } else {
@@ -286,7 +286,6 @@ public class Util {
 
         if (found || three > 0x00) {
             baos.write(three);
-            found = true;
         }
 
         baos.write(four);
@@ -318,9 +317,29 @@ public class Util {
         if (length <= 0 || length > 4) {
             throw new IllegalArgumentException("Length must be between 1 and 4. Length = " + length);
         }
+        if (length == 4 && Util.isBitSet(byteArray[startPos], 8)){
+            throw new IllegalArgumentException("Signed bit is set (leftmost bit): " + Util.byte2Hex(byteArray[startPos]));
+        }
         int value = 0;
-        for (int i = startPos; i < length; i++) {
-            value += ((byteArray[i] & 0xFF) << 8 * (byteArray.length - i - 1));
+        for (int i = 0; i < length; i++) {
+            value += ((byteArray[startPos+i] & 0xFF) << 8 * (length - i - 1));
+        }
+        return value;
+    }
+    
+    public static long byteArrayToLong(byte[] byteArray, int startPos, int length) {
+        if (byteArray == null) {
+            throw new IllegalArgumentException("Parameter 'byteArray' cannot be null");
+        }
+        if (length <= 0 || length > 8) {
+            throw new IllegalArgumentException("Length must be between 1 and 4. Length = " + length);
+        }
+        if (length == 8 && Util.isBitSet(byteArray[startPos], 8)){
+            throw new IllegalArgumentException("Signed bit is set (leftmost bit): " + Util.byte2Hex(byteArray[startPos]));
+        }
+        long value = 0;
+        for (int i = 0; i < length; i++) {
+            value += ((byteArray[startPos+i] & (long)0xFF) << 8 * (length - i - 1));
         }
         return value;
     }
@@ -487,7 +506,7 @@ public class Util {
         if (bitPos < 1 || bitPos > 8) {
             throw new IllegalArgumentException("parameter 'bitPos' must be between 1 and 8. bitPos=" + bitPos);
         }
-        if ((val >> (bitPos - 1) & 0x1) == 1) {
+        if ((val >>> (bitPos - 1) & 0x1) == 1) {
             return true;
         }
         return false;
@@ -498,7 +517,7 @@ public class Util {
 //     * @param val
 //     * @return
 //     */
-//    public static int numBitsSet(byte val) {
+//    public static int getBitsSetCount(byte val) {
 //        int numBitsSet = 0;
 //        for(int i=1; i<=8; i++){
 //            if(Util.isBitSet(val, i)){
@@ -567,25 +586,164 @@ public class Util {
         t.printStackTrace(new PrintWriter(sw));
         return sw.toString();
     }
+    
+    public static Class getCallerClass(int i) {
+        Class[] classContext = new SecurityManager() {
+            @Override public Class[] getClassContext() {
+                return super.getClassContext();
+            }
+        }.getClassContext();
+        if (classContext != null) {
+            for (int j = 0; j < classContext.length; j++) {
+                if (classContext[j] == Util.class) {
+                    return classContext[i+j];
+                }
+            }
+        } else {
+            // SecurityManager.getClassContext() returns null on Android 4.0
+            try {
+                StackTraceElement[] classNames = Thread.currentThread().getStackTrace();
+                for (int j = 0; j < classNames.length; j++) {
+                    if (Class.forName(classNames[j].getClassName()) == Util.class) {
+                        return Class.forName(classNames[i+j].getClassName());
+                    }
+                }
+            } catch (ClassNotFoundException e) { }
+        }
+        return null;
+    }
+    
+    public static String decodeOID(byte[] enc){
+        StringBuilder sb = new StringBuilder();
+       
+        //First OID Component (standard)
+        //0: ITU-T
+        //1: ISO
+        //2: joint-iso-itu-t
+        
+        //Second OID Component (part in a multi part standard)
+        //0: standard
+        //1: registration-authority
+        //2: member-body
+        //3: identified-organization
+
+
+        long firstSubidentifier = 0;
+
+        int i=0;
+        while(Util.isBitSet(enc[i], 8)){
+            firstSubidentifier = (firstSubidentifier << 7) | (enc[i] & 0x7f);
+            i++;
+        }
+        firstSubidentifier = (firstSubidentifier << 7) | (enc[i] & 0x7f);
+        i++;
+
+        if(firstSubidentifier >= 80){
+            long firstOIDComp = 2;
+            long secondOIDComp = firstSubidentifier - 80;
+            sb.append(firstOIDComp).append(".").append(secondOIDComp);
+        }else{
+            long secondOIDComp = firstSubidentifier % 40;
+            long firstOIDComp = (firstSubidentifier - secondOIDComp)/40;
+            sb.append(firstOIDComp).append(".").append(secondOIDComp);
+        }
+              
+        for(; i<enc.length; i++){
+            sb.append(".");
+            long subIdentifier = 0;
+            
+            while(Util.isBitSet(enc[i], 8)){
+                subIdentifier = (subIdentifier << 7) | (enc[i] & 0x7f);
+                i++;
+            }
+            subIdentifier = (subIdentifier << 7) | (enc[i] & 0x7f);
+            sb.append(subIdentifier);
+            
+        }
+        
+        String oid = sb.toString();
+        String desc = getOIDDescription(oid);
+        return oid + ((desc!=null && !desc.isEmpty())?" ("+desc +")":"");
+    }
+    
+    //Simple OID registry
+    //See: http://www.oid-info.com/
+    public static String getOIDDescription(String oid){
+
+//        1.2.840 - one of 2 US country OIDs 
+//        1.2.840.114283 - Global Platform
+        
+//        1.3.6.1 - the Internet OID 
+//        1.3.6.1.4.1 - IANA-assigned company OIDs, used for private MIBs and such things 
+//        1.3.6.1.4.1.42 - Sun Microsystems
+//        1.3.6.1.4.1.42.2 - Sun Products
+//        1.3.6.1.4.1.42.2.110 - java[XML]software
+//        1.3.6.1.4.1.42.2.110.1.2 - (Unknown - Java Card?)
+
+        if(oid.startsWith("1.2.840.114283.1")){
+            return "Global Platform - Card Recognition Data";
+        }
+        if(oid.startsWith("1.2.840.114283.2")){
+            return "Global Platform v"+oid.substring(17);
+        }
+        if(oid.startsWith("1.2.840.114283.3")){
+            return "Global Platform - Card Identification Scheme";
+        }
+        if(oid.startsWith("1.2.840.114283.4")){
+            return "Global Platform SCP "+oid.substring(17, 18) + " implementation option 0x"+Util.int2Hex(Integer.parseInt(oid.substring(19)));
+        }
+        if(oid.startsWith("1.2.840.114283")){
+            return "Global Platform";
+        }
+        if(oid.startsWith("1.2.840")){
+            return "USA";
+        }
+        if(oid.startsWith("1.3.6.1.4.1.42.2.110.1.2")){
+            return "Sun Microsystems - Java Card ?";
+        }
+        if(oid.startsWith("1.3.6.1.4.1.42.2")){
+            return "Sun Microsystems - Products";
+        }
+//        if(oid.startsWith("1.3.656.840."))
+        //JCOP includes GP refinements according to Visa GP 2.1.1 specification. 
+        //This tag is populated accordingly (Visa specific). 
+        //The last number tells you what configuration it is (3: SSD + PKI, 2: PKI, 1: just symmetric crypto). 
+        //Unfortunately this standard is not open.
+        
+
+        return "";
+    }
 
     public static void main(String[] args) {
-        System.out.println(Util.isBitSet((byte) 0x5f, 2)); // 0101 1111
-        System.out.println(Util.isBitSet((byte) 0x9f, 2)); // 1001 1111
-
-        System.out.println(Util.byte2Short((byte) 0x6F, (byte) 0xEF));
-        System.out.println(Util.short2Hex(Util.byte2Short((byte) 0x6F, (byte) 0xEF)));
-
-        System.out.println(Util.byteArrayToInt(new byte[]{(byte) 0x6F, (byte) 0xEF}));
-        System.out.println(Util.byteArrayToHexString(Util.intToByteArray(28655)));
-
-        System.out.println(Util.byte2BinaryLiteral((byte) 0x00));
-        System.out.println(Util.byte2BinaryLiteral((byte) 0x3F));
-        System.out.println(Util.byte2BinaryLiteral((byte) 0x80));
-        System.out.println(Util.byte2BinaryLiteral((byte) 0xAA));
-        System.out.println(Util.byte2BinaryLiteral((byte) 0xFF));
-
-        System.out.println(Util.byte2BinaryLiteral((byte) 0x8A));
-        System.out.println(Util.byte2BinaryLiteral(Util.setBit((byte) 0x8A, 5, true)));
-        System.out.println(Util.byte2BinaryLiteral(Util.setBit((byte) 0x8A, 8, false)));
+//        System.out.println(Util.isBitSet((byte) 0x5f, 2)); // 0101 1111
+//        System.out.println(Util.isBitSet((byte) 0x9f, 2)); // 1001 1111
+//
+//        System.out.println(Util.byte2Short((byte) 0x6F, (byte) 0xEF));
+//        System.out.println(Util.short2Hex(Util.byte2Short((byte) 0x6F, (byte) 0xEF)));
+//
+//        System.out.println(Util.byteArrayToInt(new byte[]{(byte) 0x6F, (byte) 0xEF}));
+//        System.out.println(Util.byteArrayToHexString(Util.intToByteArray(28655)));
+//
+//        System.out.println(Util.byte2BinaryLiteral((byte) 0x00));
+//        System.out.println(Util.byte2BinaryLiteral((byte) 0x3F));
+//        System.out.println(Util.byte2BinaryLiteral((byte) 0x80));
+//        System.out.println(Util.byte2BinaryLiteral((byte) 0xAA));
+//        System.out.println(Util.byte2BinaryLiteral((byte) 0xFF));
+//
+//        System.out.println(Util.byte2BinaryLiteral((byte) 0x8A));
+//        System.out.println(Util.byte2BinaryLiteral(Util.setBit((byte) 0x8A, 5, true)));
+//        System.out.println(Util.byte2BinaryLiteral(Util.setBit((byte) 0x8A, 8, false)));
+//        
+//        System.out.println(Util.byteArrayToLong(Util.fromHexString("7f ff ff ff ff ff ff ff"), 0, 8));
+//        System.out.println(Util.byteArrayToLong(Util.fromHexString("22 18 09 04 0b 00 e0 30 23 07 00 00 00 42 d2 85 4e 23 07 00 00 00 00 21 69 42"), 13, 4));
+        System.out.println("1.2.840.114283.1 : " + decodeOID(Util.fromHexString("2a 86 48 86 fc 6b 01")));
+        System.out.println("1.2.840.114283.2.2.1.1 : " + decodeOID(Util.fromHexString("2a 86 48 86 fc 6b 02 02 01 01")));
+        System.out.println("1.2.840.114283.4.XXXX : " + decodeOID(Util.fromHexString("2a 86 48 86 fc 6b 04 02 15"))); //JCOP 31
+        System.out.println("1.2.840.114283.4.XXXX : " + decodeOID(Util.fromHexString("2a 86 48 86 fc 6b 04 01 05"))); //JCOP 31
+        
+        System.out.println("Sun Microsystems : " + decodeOID(Util.fromHexString("2b 06 01 04 01 2a 02 6e 01 02")));
+        System.out.println("Unknown : " + decodeOID(Util.fromHexString("2b 85 10 86 48 64 02 01 03")));
+        System.out.println("{2 100 3} : " + decodeOID(Util.fromHexString("813403")));
+        
     }
 }

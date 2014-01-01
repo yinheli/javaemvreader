@@ -53,7 +53,7 @@ public class EMVAPDUCommands {
     public static String selectPSE() {
         return selectByDFName(Util.fromHexString("31 50 41 59 2E 53 59 53 2E 44 44 46 30 31")); //1PAY.SYS.DDF01
     }
-    
+
     public static String selectPPSE() {
         return selectByDFName(Util.fromHexString("32 50 41 59 2E 53 59 53 2E 44 44 46 30 31")); //2PAY.SYS.DDF01
     }
@@ -61,7 +61,7 @@ public class EMVAPDUCommands {
     public static String selectByDFName(byte[] fileBytes) {
         return Iso7816Commands.selectByDFName(fileBytes, true, (byte)0x00);
     }
-    
+
     public static String selectByDFNameNextOccurrence(byte[] fileBytes) {
         return Iso7816Commands.selectByDFNameNextOccurrence(fileBytes, true, (byte)0x00);
     }
@@ -71,7 +71,7 @@ public class EMVAPDUCommands {
     }
 
     /*
-     * 
+     *
      * Case 4s C-APDU
      */
     public static String getProcessingOpts(DOL pdol) {
@@ -107,6 +107,10 @@ public class EMVAPDUCommands {
         return "80 CA 9F 4F 00";
     }
 
+    public static String getData(byte p1, byte p2){
+		return "80 CA "+Util.byte2Hex(p1) + " " + Util.byte2Hex(p2) + " 00";
+	}
+
     public static String internalAuthenticate(byte[] authenticationRelatedData) {
         return Iso7816Commands.internalAuthenticate(authenticationRelatedData);
     }
@@ -114,14 +118,14 @@ public class EMVAPDUCommands {
     public static String externalAuthenticate(byte[] cryptogram, byte[] proprietaryBytes) {
         return Iso7816Commands.externalAuthenticate(cryptogram, proprietaryBytes);
     }
-    
+
     /**
-     * 
+     *
      * Case 4s C-APDU
-     * 
+     *
      * @param referenceControlParameterP1
      * @param transactionRelatedData
-     * @return 
+     * @return
      */
     public static String generateAC(byte referenceControlParameterP1, byte[] transactionRelatedData) {
         return "80 AE "+referenceControlParameterP1+"00 "+Util.int2Hex(transactionRelatedData.length)+
@@ -151,22 +155,22 @@ public class EMVAPDUCommands {
      *
      * TODO:
      * Plaintext PIN has been tested and verified OK. Enciphered PIN not implemented
-     * 
+     *
      * Case 3 C-APDU
      *
      * @param pin the PIN to verify
-     * @param transmitInPlaintext 
+     * @param transmitInPlaintext
      * @return
      */
-    public static String verifyPIN(long pin, boolean transmitInPlaintext) {
-        String pinStr = String.valueOf(pin);
+    public static String verifyPIN(char[] pin, boolean transmitInPlaintext) {
+        String pinStr = String.valueOf(pin);//TODO use byte[] instead of String, so we can clear PIN from memory
         int pinLength = pinStr.length();
         if (pinLength < 4 || pinLength > 12) { //0x0C
             throw new SmartCardException("Invalid PIN length. Must be in the range 4 to 12. Length=" + pinLength);
         }
         StringBuilder builder = new StringBuilder("00 20 00 ");
 
-        //EMV book 3 Table 23 (page 88) lists 7 qualifiers, 
+        //EMV book 3 Table 23 (page 88) lists 7 qualifiers,
         //but only 2 are relevant in our case (hence the use of boolean)
         byte p2QualifierPlaintextPIN = (byte) 0x80;
         byte p2QualifierEncipheredPIN = (byte) 0x88;
@@ -212,6 +216,6 @@ public class EMVAPDUCommands {
 //        return "8x 1E";
 //    }
     public static void main(String[] args) {
-        System.out.println(verifyPIN(1234, true));
+        System.out.println(verifyPIN(new char[]{'1','2','3','4'}, true));
     }
 }

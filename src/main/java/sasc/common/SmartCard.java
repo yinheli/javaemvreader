@@ -24,11 +24,21 @@ import java.util.*;
 import sasc.iso7816.ATR;
 import sasc.emv.DDF;
 import sasc.emv.EMVApplication;
+import sasc.iso7816.Application;
+import sasc.terminal.KnownAIDList;
 import sasc.util.Log;
 import sasc.util.Util;
 
 /**
- * A representation of the all the (EMV) applications (if any) on a smart card
+ * A representation of all the data discovered on a smart card.
+ * A card may adhere partly or fully to ISO7816-4, and/or use proprietary selection methods/communication commands.
+ * Thus, a card may:
+ * -contain Applications that are selectable using AIDs (selectable according to ISO7816-4)
+ * -contain a Master File (according to ISO7816-4)
+ * -contain a default selected Application (ISO7816-4 or proprietary)
+ * -contain other selectable files, either proprietary or according to ISO7816
+ * 
+ * This class should not contain any transient state, like connection state. Its just a POJO
  * 
  * @author sasc
  * 
@@ -38,18 +48,27 @@ public class SmartCard {
     //TODO separate EMV and non-emv apps
     //private Map<AID, Application> otherApplicationsMap = new LinkedHashMap<AID, Application>();
     private Map<AID, EMVApplication> applicationsMap = new LinkedHashMap<AID, EMVApplication>();
-    private Set<AID> otherAIDs = new LinkedHashSet<AID>();
+
+    private Map<String, Application> handlerToApplicationMap = new LinkedHashMap<String, Application>();
+
+    private Set<AID> allAIDs = new LinkedHashSet<AID>();
+    
+    //TODO For any default application
+//    private CardHandler cardHandler;
+    
     private EMVApplication selectedApp = null;
     private DDF pse = null;
     private List<BERTLV> unhandledRecords = new ArrayList<BERTLV>();
 
     private Set<ATR> atrSet = new LinkedHashSet<ATR>();
     private MasterFile mf = null;
-    private Type type = Type.CONTACTED; //default
+    private Type type = Type.UNKNOWN; //default
+    
+    private boolean allKnownAidsProbed = false;
     
     //Use info from ATR, PSE/PPSE presence etc to determine interface type
     public enum Type{
-        CONTACTED, CONTACTLESS;
+        CONTACTED, CONTACTLESS, UNKNOWN;
     }
     
     public SmartCard(ATR atr) {
@@ -65,6 +84,14 @@ public class SmartCard {
     
     public Type getType(){
         return type;
+    }
+    
+    public boolean allKnownAidsProbed(){
+        return allKnownAidsProbed;
+    }
+    
+    public void setAllKnownAidsProbed(){
+        allKnownAidsProbed = true;
     }
     
     /**
@@ -93,14 +120,14 @@ public class SmartCard {
         return this.mf;
     }
 
-    public void addApplication(EMVApplication app) {
+    public void addEMVApplication(EMVApplication app) {
 //        if (applicationsMap.containsKey(app.getAID())) {
 //            throw new IllegalArgumentException("EMVApplication already added: " + app.getAID() + " " + app.getPreferredName());
 //        }
         if(app.getAID() == null){
-            throw new IllegalArgumentException("Invalid Application object: AID == null");
+            throw new IllegalArgumentException("Invalid EMVApplication object: AID == null");
         }
-        Log.debug("ADDING aid: "+Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()));
+        Log.debug("ADDING EMV aid: "+Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()));
         applicationsMap.put(app.getAID(), app);
     }
 
@@ -118,6 +145,28 @@ public class SmartCard {
 
     public Collection<EMVApplication> getApplications() {
         return Collections.unmodifiableCollection(applicationsMap.values());
+    }
+    
+    public void addAID(AID aid){
+        allAIDs.add(aid);
+        
+        KnownAIDList.KnownAID knownAID = KnownAIDList.searchAID(aid.getAIDBytes());
+        if(knownAID != null){
+            String type = knownAID.getType();
+            if("EMV".equalsIgnoreCase(type)){
+                EMVApplication emvApp = new EMVApplication();
+                emvApp.setAID(aid);
+                applicationsMap.put(aid, emvApp);
+            }else if("GP".equalsIgnoreCase(type)){
+                //TODO
+            }
+        } else {
+            //TODO unhandled AIDs list
+        }
+    }
+    
+    public Set<AID> getAllAIDs(){
+        return Collections.unmodifiableSet(allAIDs);
     }
 
     public void setPSE(DDF pse) {
@@ -143,7 +192,7 @@ public class SmartCard {
         return sw.toString();
     }
 
-    //Dump all information read from card
+    //Dump all information read from the card
     public void dump(PrintWriter pw, int indent) {
 
         for(ATR atr : atrSet){
@@ -172,14 +221,26 @@ public class SmartCard {
             }
         }
         pw.println("");
-
+        
         pw.println("");
-        pw.println(Util.getSpaces(indent + Log.INDENT_SIZE*2) + "Applications (" + getApplications().size() + " found):");
+        pw.println(Util.getSpaces(indent + Log.INDENT_SIZE*2) + "EMV applications (" + getApplications().size() + " found):");
         pw.println("");
+        
         for (EMVApplication app : getApplications()) {
             app.dump(pw, indent + Log.INDENT_SIZE*3);
         }
+        
+        Set<AID> allAids = getAllAIDs();
+        if(allAids.size() > 0){
+            pw.println("");
+            pw.println(Util.getSpaces(indent + Log.INDENT_SIZE*2) + "All Applications (" + getAllAIDs().size() + " found):");
+            pw.println("");
 
+            for (AID aid : getAllAIDs()){
+                aid.dump(pw, indent + Log.INDENT_SIZE*3);
+                pw.println("");
+            }
+        }
         pw.flush();
     }
 }

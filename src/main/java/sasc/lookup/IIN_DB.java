@@ -31,6 +31,8 @@ import sasc.util.Util;
 
 /**
  * IIN (Issuer Identification Number), aka BIN - Bank Identification Number. 
+ * 
+ * ISO/IEC 7812
  *
  * @author sasc
  */

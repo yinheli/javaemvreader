@@ -337,7 +337,7 @@ A000000339; Dexit Inc; Canada
 A000000340; SMEG Co Ltd; Korea
 A000000341; InfoComm Development Authority of Signapore; Singapore
 A000000342; TTA (Telecommunications Technology Association); Korea
-A000000343; Telecommunication Industry Association; USA
+A000000343; 3GPP2 Telecommunication Industry Association; USA
 A000000344; C-SAM Inc; USA
 A000000345; Broadnet Engineering Limited; Kina
 A000000346; ATOS WORLDLINE; England

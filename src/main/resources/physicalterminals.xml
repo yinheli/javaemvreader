@@ -1,8 +1,0 @@
-?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<!--  This file lists extenstion classes for specific physical terminals -->
-<PhysicalTermials>
-    <PhysicalTerminal Name="OmniKey CardMan 5x21" 
-                      NamePattern="(?i)OMNIKEY CardMan 5[0-9x]21.*" 
-                      ImplementationClass="sasc.terminals.OmniKeyCardMan5x21" 
-                      Description=""/>
-</PhysicalTermials>

@@ -171,16 +171,63 @@ public class EMVTags {
     public static final Tag MASTERCARD_UPPER_OFFLINE_AMOUNT         = new TagImpl("9f52", TagValueType.BINARY, "Upper Cumulative Domestic Offline Transaction Amount", "Issuer specified data element indicating the required maximum cumulative offline amount allowed for the application before the transaction goes online.");
 
     //TODO Global Platform
-    //"73" Security Domain Management Data
+    //Template "73" Security Domain Management Data
+    public static final Tag UNIVERSAL_TAG_FOR_OID                   = new TagImpl("06",   TagValueType.BINARY, "Object Identifier (OID)", "");
+    public static final Tag APPLICATION_TAG_0                       = new TagImpl("60",   TagValueType.BINARY, "Card Management Type And Version OID", "{globalPlatform 2 v} - GP version in last 3 bytes");
+    public static final Tag APPLICATION_TAG_3                       = new TagImpl("63",   TagValueType.BINARY, "Card Identification Scheme OID", "{globalPlatform 3} - Indicates a GP card that is uniquely identified by the Issuer Identification Number (IIN) and Card Image Number (CIN)");
+    public static final Tag APPLICATION_TAG_4                       = new TagImpl("64",   TagValueType.BINARY, "Selected Security Domain Secure Channel Protocol OID", "{globalPlatform 4 scp i}");
+    public static final Tag APPLICATION_TAG_5                       = new TagImpl("65",   TagValueType.BINARY, "Card Configuration Details", "");
+    public static final Tag APPLICATION_TAG_6                       = new TagImpl("66",   TagValueType.BINARY, "Card / Chip Details", "");
     public static final Tag MAXIMUM_COMMAND_LENGTH                  = new TagImpl("9f65", TagValueType.BINARY, "Maximum length of data field in command message", "Global Platform");
     public static final Tag APP_LIFE_CYCLE_DATA                     = new TagImpl("9f6e", TagValueType.BINARY, "Application production life cycle data", "Global Platform");
 
+    
+    //Chipnip
+    //Tag[c1] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=PRIVATE BER-TLV[c1, 02 (raw 02), 1101]
+
+    //TODO
+    
+    
+    //Card from portugal
+//    a000000004 Unhandled tags:
+//
+//    df48 02 0620
+//    df40 01 00
+//    df27 08 0103000000000000
+//    df28 10 ffffffffffffffffffffffffffffffff
+//    df47 01 01
+//    df49 0d 48000001011900000000000000
+//    df44 28 00000000000000000000202020202020202020202020202020202020202020202020202020202020
+//    df45 22 00000000202020202020202020202020202020202020202020202020202020202020
+//    df46 03 000000
+//
+//
+//    501649ff20 Unhandled tags:
+//
+//    df48 02 0620
+//    df40 01 00
+//    df27 08 0100000000000000
+//    df28 10 ffffffffffffffffffffffffffffffff
+//    df47 01 01
+//    df49 0d 00000001010000000000000000
+
+    /* ISO7816 interindustry data tags */
+//ISO7816_II_CATEGORY_TLV         0x80
+//ISO7816_II_CATEGORY_NOT_TLV     0x00
     public static final Tag ISO7816_TAG_II_CARD_SERVICE             = new TagImpl("43", TagValueType.BINARY, "ISO 7816 Card Service", "");
     public static final Tag ISO7816_TAG_II_INITIAL_ACCESS_DATA      = new TagImpl("44", TagValueType.BINARY, "ISO 7816 Initial Access Data", "");
     public static final Tag ISO7816_TAG_II_CARD_ISSUER_DATA         = new TagImpl("45", TagValueType.BINARY, "ISO 7816 Card Issuer Data", "");
     public static final Tag ISO7816_TAG_II_PRE_ISSUING              = new TagImpl("46", TagValueType.BINARY, "ISO 7816 Pre Issuing", "");
     public static final Tag ISO7816_TAG_II_CARD_CAPABILITIES        = new TagImpl("47", TagValueType.BINARY, "ISO 7816 Card Capabilities", "");
-
+//public static final Tag ISO7816_TAG_II_AID                      = new TagImpl("4f", TagValueType.BINARY, "Card Capabilities", "");
+//ISO7816_TAG_II_ALLOCATION_SCHEME        0x78
+//ISO7816_TAG_II_STATUS_LCS               0x81
+//ISO7816_TAG_II_STATUS_SW                0x82
+//ISO7816_TAG_II_STATUS_LCS_SW            0x83
+//
+///* Other interindustry data tags */
+//
+//IASECC_TAG_II_IO_BUFFER_SIZES           0xE0
 
     /**
      * If the tag is not found, this method returns the "[UNHANDLED TAG]" containing 'tagBytes'

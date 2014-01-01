@@ -78,7 +78,7 @@ public class RSAKeyGenerator {
 
         //From EMV docs:
         //The value of the Issuer Public Key Exponent and the ICC Public Key Exponent is determined by the issuer.
-        //The Certification Authority, Issuer, and ICC Public Key Exponents shall be equal to 3 or 216 + 1.
+        //The Certification Authority, Issuer, and ICC Public Key Exponents shall be equal to 3 or 2^16 + 1.
 
         //NOTE: using a low public exponent in RSA, like 3, leaves the system vulnerable to certain types of attack.
         //However, in EMV, these attacks do not apply. (TODO: Verify!)

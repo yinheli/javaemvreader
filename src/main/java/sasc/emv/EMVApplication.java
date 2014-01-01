@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import sasc.iso7816.Application;
+import sasc.lookup.IIN_DB;
 import sasc.util.ISO3166_1;
 import sasc.util.ISO4217_Numeric;
 import sasc.util.Log;
@@ -50,12 +51,15 @@ public class EMVApplication implements Application {
     private ApplicationFileLocator afl = new ApplicationFileLocator(new byte[]{}); //Default
     private String label = "";
     private String preferredName = "";
+    private String issuerUrl = null;
     private AID aid = null;
     private IssuerPublicKeyCertificate issuerCert = null;
     private ICCPublicKeyCertificate iccCert = null;
     private int applicationCurrencyCode = -1;
     private int applicationCurrencyExponent = -1;
     private int issuerCountryCode = -1;
+    private String issuerCountryCodeAlpha3 = null;
+    private int issuerIdentificationNumber = -1;
     private int applicationTransactionCounter = -1;
     private int lastOnlineATCRegister = -1;
     private int pinTryCounter = -1;
@@ -86,6 +90,9 @@ public class EMVApplication implements Application {
     private byte[] issuerActionCodeDefault = null;
     private byte[] issuerActionCodeDenial = null;
     private byte[] issuerActionCodeOnline = null;
+    private IBAN iban;
+    private BankIdentifierCode bic;
+
     //Transaction related data elements
     private TransactionStatusInformation transactionStatusInformation = new TransactionStatusInformation();
     private List<BERTLV> unhandledRecords = new ArrayList<BERTLV>();
@@ -94,7 +101,7 @@ public class EMVApplication implements Application {
     }
 
     public void setAID(AID _aid) {
-        if(this.aid != null && !Arrays.equals(this.aid.getAIDBytes(), _aid.getAIDBytes())){
+        if (this.aid != null && !Arrays.equals(this.aid.getAIDBytes(), _aid.getAIDBytes())) {
             throw new SmartCardException("Attempting to assign a different AID value. Current: " + Util.prettyPrintHexNoWrap(this.aid.getAIDBytes()) + " new: " + Util.prettyPrintHexNoWrap(_aid.getAIDBytes()));
         }
         this.aid = _aid;
@@ -160,8 +167,21 @@ public class EMVApplication implements Application {
     public String getPreferredName() {
         return preferredName;
     }
+    
+    public void setIssuerUrl(String issuerUrl) {
+        this.issuerUrl = issuerUrl;
+    }
+
+    public String getIssuerUrl() {
+        return issuerUrl;
+    }
 
     public void addUnhandledRecord(BERTLV bertlv) {
+        if (aid != null 
+                && Arrays.equals(aid.getAIDBytes(), Util.fromHexString("a0 00 00 00 03 00 00 00"))
+                && Arrays.equals(bertlv.getTag().getTagBytes(), Util.fromHexString("9f 65"))) {
+            //TODO: this is a hack for GP App with tag 9f65 which is very common, but not handled yet
+        }
         unhandledRecords.add(bertlv);
     }
 
@@ -197,6 +217,22 @@ public class EMVApplication implements Application {
         return issuerCountryCode;
     }
 
+    public String getIssuerCountryCodeAlpha3() {
+        return issuerCountryCodeAlpha3;
+    }
+
+    public void setIssuerCountryCodeAlpha3(String issuerCountryCodeAlpha3) {
+        this.issuerCountryCodeAlpha3 = issuerCountryCodeAlpha3;
+    }
+
+    public int getIssuerIdentificationNumber() {
+        return issuerIdentificationNumber;
+    }
+
+    public void setIssuerIdentificationNumber(int issuerIdentificationNumber) {
+        this.issuerIdentificationNumber = issuerIdentificationNumber;
+    }
+
     public void setLastOnlineATCRecord(int lastOnlineATCRecord) {
         this.lastOnlineATCRegister = lastOnlineATCRecord;
     }
@@ -204,32 +240,32 @@ public class EMVApplication implements Application {
     public void setPINTryCounter(int counter) {
         this.pinTryCounter = counter;
     }
-    
-    public int getPINTryCounter(){
+
+    public int getPINTryCounter() {
         return pinTryCounter;
     }
 
     public void setLogFormat(LogFormat logFormat) {
         this.transactionLog = new TransactionLog(logFormat);
     }
-    
-    public void addTransactionLogRecord(byte[] logRecordBytes){
-        if(transactionLog != null){
+
+    public void addTransactionLogRecord(byte[] logRecordBytes) {
+        if (transactionLog != null) {
             transactionLog.addRecord(logRecordBytes);
         }
     }
-    
+
     public LogFormat getLogFormat() {
-        if(transactionLog != null){
+        if (transactionLog != null) {
             return transactionLog.getLogFormat();
         }
         return null;
     }
-    
-    public void setLogEntry(LogEntry logEntry){
+
+    public void setLogEntry(LogEntry logEntry) {
         this.logEntry = logEntry;
     }
-    
+
     public LogEntry getLogEntry() {
         return logEntry;
     }
@@ -247,16 +283,16 @@ public class EMVApplication implements Application {
     }
 
     public void setDDOL(DOL ddol) {
-        if(ddol == null){
+        if (ddol == null) {
             throw new IllegalArgumentException("DDOL cannot be null");
         }
         boolean unpredictableNumberFound = false;
-        for(TagAndLength tal : ddol.getTagAndLengthList()) {
-            if(tal.getTag().equals(EMVTags.UNPREDICTABLE_NUMBER)){
+        for (TagAndLength tal : ddol.getTagAndLengthList()) {
+            if (tal.getTag().equals(EMVTags.UNPREDICTABLE_NUMBER)) {
                 unpredictableNumberFound = true;
             }
         }
-        if(!unpredictableNumberFound){
+        if (!unpredictableNumberFound) {
             throw new IllegalArgumentException("DDOL must contain the Unpredictable Number (tag 0x9F37)");
         }
         this.ddol = ddol;
@@ -268,6 +304,22 @@ public class EMVApplication implements Application {
 
     public String getCardholderName() {
         return cardholderName;
+    }
+    
+    public IBAN getIBAN() {
+        return iban;
+    }
+    
+    public void setIBAN(IBAN iban) {
+        this.iban = iban;
+    }
+    
+    public BankIdentifierCode getBIC() {
+        return bic;
+    }
+    
+    public void setBIC(BankIdentifierCode bic){
+        this.bic = bic;
     }
 
     public IssuerPublicKeyCertificate getIssuerPublicKeyCertificate() {
@@ -324,6 +376,10 @@ public class EMVApplication implements Application {
     }
 
     public Date getExpirationDate() {
+        if (applicationExpirationDate==null) {
+            return null;
+        }
+
         return (Date) applicationExpirationDate.clone();
     }
 
@@ -430,20 +486,20 @@ public class EMVApplication implements Application {
     public String getIssuerCodeTable() {
         return "ISO-8859-" + issuerCodeTableIndex;
     }
-    
-    public void setLowerConsecutiveOfflineLimit(int limit){
+
+    public void setLowerConsecutiveOfflineLimit(int limit) {
         this.lowerConsecutiveOfflineLimit = limit;
     }
-    
-    public int getLowerConsecutiveOfflineLimit(){
+
+    public int getLowerConsecutiveOfflineLimit() {
         return lowerConsecutiveOfflineLimit;
     }
-    
-    public void setUpperConsecutiveOfflineLimit(int limit){
+
+    public void setUpperConsecutiveOfflineLimit(int limit) {
         this.upperConsecutiveOfflineLimit = limit;
     }
-    
-    public int getUpperConsecutiveOfflineLimit(){
+
+    public int getUpperConsecutiveOfflineLimit() {
         return upperConsecutiveOfflineLimit;
     }
 
@@ -520,7 +576,7 @@ public class EMVApplication implements Application {
         //The value field of the AIP is to be concatenated to the current end of the input string.
         //The tag and length of the AIP are not included in the concatenation.
         StaticDataAuthenticationTagList sdaTagListObject = this.getStaticDataAuthenticationTagList();
-        if(sdaTagListObject != null){
+        if (sdaTagListObject != null) {
             List<Tag> sdaTagList = sdaTagListObject.getTagList();
             if (sdaTagList != null && !sdaTagList.isEmpty()) {
                 if (sdaTagList.size() > 1 || sdaTagList.get(0) != EMVTags.APPLICATION_INTERCHANGE_PROFILE) {
@@ -563,7 +619,7 @@ public class EMVApplication implements Application {
     }
 
     public void dump(PrintWriter pw, int indent) {
-        pw.println(Util.getSpaces(indent) + "Application");
+        pw.println(Util.getSpaces(indent) + "EMV Application");
 
         String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
@@ -572,6 +628,9 @@ public class EMVApplication implements Application {
         }
         pw.println(indentStr + "Label: " + getLabel());
         pw.println(indentStr + "Preferred Name: " + getPreferredName());
+        if (issuerUrl != null){
+            pw.println(indentStr + "Issuer URL: " + issuerUrl);
+        }
         if (applicationEffectiveDate != null) {
             pw.println(indentStr + "Application Effective Date: " + applicationEffectiveDate);
         }
@@ -599,6 +658,17 @@ public class EMVApplication implements Application {
                 description = " (" + countryStr + ")";
             }
             pw.println(indentStr + "Issuer Country Code (ISO 3166-1): " + issuerCountryCode + description);
+        }
+        if (issuerCountryCodeAlpha3 != null && issuerCountryCodeAlpha3.trim().length() > 0) {
+            pw.println(indentStr + "Issuer Country Code (Alpha 3) : " + issuerCountryCodeAlpha3.trim());
+        }
+        if (issuerIdentificationNumber != -1) {
+            String description = "";
+            IIN_DB.IIN iin = IIN_DB.searchIIN(issuerIdentificationNumber);
+            if (iin != null && iin.getDescription().trim().length() > 0) {
+                description = " (" + iin.getDescription().trim() + ")";
+            }
+            pw.println(indentStr + "Issuer Identification Number : " + issuerIdentificationNumber + description);
         }
         if (lowerConsecutiveOfflineLimit != -1) {
             pw.println(indentStr + "Lower Consecutive Offline Limit: " + lowerConsecutiveOfflineLimit);
@@ -680,6 +750,12 @@ public class EMVApplication implements Application {
         if (track2EquivalentData != null) {
             track2EquivalentData.dump(pw, indent + Log.INDENT_SIZE);
         }
+        if (iban != null) {
+            iban.dump(pw, indent + Log.INDENT_SIZE);
+        }
+        if (bic != null) {
+            bic.dump(pw, indent + Log.INDENT_SIZE);
+        }
         if (serviceCode != -1) {
             pw.println(indentStr + "Service Code: " + serviceCode);
         }
@@ -711,7 +787,7 @@ public class EMVApplication implements Application {
             pw.println(indentStr + "UNHANDLED APPLICATION RECORDS (" + unhandledRecords.size() + " found):");
         }
         for (BERTLV tlv : unhandledRecords) {
-            pw.println(Util.getSpaces(indent + Log.INDENT_SIZE*2) + tlv.getTag() + " " + tlv);
+            pw.println(Util.getSpaces(indent + Log.INDENT_SIZE * 2) + tlv.getTag() + " " + tlv);
         }
         pw.println("");
     }

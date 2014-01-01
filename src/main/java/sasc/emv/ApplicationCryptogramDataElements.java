@@ -13,20 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv.provider.visa;
-
-import sasc.emv.EMVApplication;
-import sasc.iso7816.AID;
+package sasc.emv;
 
 /**
  *
  * @author sasc
  */
-public class VISAApplication extends EMVApplication {
-
-    public VISAApplication(AID aid){
-		//if(df60) in ADF then...
-		//else
-        //getData(df60) //Visa log entry (SFI)
-    }
+public class ApplicationCryptogramDataElements {
+    
 }

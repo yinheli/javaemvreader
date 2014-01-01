@@ -74,9 +74,9 @@ public class IssuerPublicKey {
 
         pw.println(indentStr + "Length: "+getKeyLengthInBytes()*8+"bit");
         pw.println(indentStr + "Exponent:");
-        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(getExponent()), indent+Log.INDENT_SIZE*2));
+        pw.println(indentStr + Util.getSpaces(Log.INDENT_SIZE) + Util.prettyPrintHex(Util.byteArrayToHexString(getExponent()), indent+Log.INDENT_SIZE*2));
         pw.println(indentStr + "Modulus:");
-        pw.println(indentStr + "   " + Util.prettyPrintHex(Util.byteArrayToHexString(getModulus()), indent+Log.INDENT_SIZE*2));
+        pw.println(indentStr + Util.getSpaces(Log.INDENT_SIZE) + Util.prettyPrintHex(Util.byteArrayToHexString(getModulus()), indent+Log.INDENT_SIZE*2));
 
     }
 }

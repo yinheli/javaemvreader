@@ -15,9 +15,11 @@
  */
 package sasc;
 
+import sasc.common.SessionProcessingEnv;
 import sasc.common.Context;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import sasc.common.CardSession;
 import sasc.iso7816.AID;
 import sasc.emv.EMVApplication;
 import sasc.emv.CA;
@@ -44,11 +46,13 @@ public class CardEmulatorMain {
             Context.init();
             CA.initFromFile("/certificationauthorities_test.xml");
             CardConnection conn = new CardEmulator("/sdacardtransaction.xml");
-            EMVSession session = EMVSession.startSession(new SessionProcessingEnv(), conn);
+            CardSession cardSession = CardSession.createSession(conn, new SessionProcessingEnv());
+            smartCard = cardSession.initCard();
+            EMVSession session = EMVSession.startSession(smartCard, conn);
 
             AID targetAID = new AID("a1 23 45 67 89 10 10"); //Our TEST AID
 
-            smartCard = session.initCard();
+            session.initContext();
             for (EMVApplication app : smartCard.getApplications()) {
                 session.selectApplication(app);
                 session.initiateApplicationProcessing(); //Also reads application data
@@ -62,7 +66,7 @@ public class CardEmulatorMain {
                 
                 session.readAdditionalData();
                 if (targetAID.equals(app.getAID())) {
-                    session.verifyPIN(1234, true);
+                    session.verifyPIN(new char[]{'1','2','3','4'}, true);
                 }
 //            session.getChallenge(app);
             }
@@ -78,7 +82,7 @@ public class CardEmulatorMain {
                 StringWriter dumpWriter = new StringWriter();
                 PrintWriter pw = new PrintWriter(dumpWriter);
                 pw.println("======================================");
-                pw.println("             [EMVContext]             ");
+                pw.println("             [Smart Card]             ");
                 pw.println("======================================");
                 smartCard.dump(new PrintWriter(dumpWriter), 0);
                 pw.println("---------------------------------------");

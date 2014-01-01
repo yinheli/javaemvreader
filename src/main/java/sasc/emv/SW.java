@@ -20,7 +20,8 @@ import sasc.util.Util;
 /**
  * EMV book 3 page 61
  * 
- * //TODO check these against generic iso7816-4:2005 codes
+ * //TODO check these against generic iso7816-4:2005/2013 codes
+ * //and refactor to iso7816 package
  *
  * @author sasc
  */
@@ -28,9 +29,11 @@ public enum SW {
 
     SUCCESS("9000", "Success"),
     PART_OF_RETURNED_DATA_MAY_BE_CORRUPTED("6281", "Part of returned data may be corrupted"),
-    SELECTED_FILE_INVALIDATED("6283", "State of non-volatile memory unchanged; selected file invalidated"),
-    AUTHENTICATION_FAILED("6300", "State of non-volatile memory changed; authentication failed"),
-    LENGTH_FIELD_INCORRECT("6700", "Length field (P3) incorrect"),
+    SELECTED_FILE_INVALIDATED("6283", "State of non-volatile memory unchanged; selected file invalidated"), //For GP: Card Life Cycle State is CARD_LOCKED
+    AUTHENTICATION_FAILED("6300", "State of non-volatile memory changed; authentication failed"), //63CX: Wrong PIN. X=num retries left
+    LENGTH_FIELD_INCORRECT("6700", "Length field (P3) incorrect"), //(Lc and/or Le)
+    NO_INFORMATION_GIVEN("6800", "No information given"),
+    COMMAND_NOT_ALLOWED_SECURITY_STATUS_NOT_SATISFIED("6982", "Command not allowed; security status not satisfied"),
     COMMAND_NOT_ALLOWED_AUTHENTICATION_METHOD_BLOCKED("6983", "Command not allowed; authentication method blocked"),
     COMMAND_NOT_ALLOWED_REFERENCE_DATA_INVALIDATED("6984", "Command not allowed; referenced data invalidated"),
     COMMAND_NOT_ALLOWED_CONDITIONS_OF_USE_NOT_SATISFIED("6985", "Command not allowed; conditions of use not satisfied"),
@@ -95,6 +98,16 @@ public enum SW {
     public static String getSWDescription(String swStr) {
         for (SW sw : SW.values()) {
             if (sw.getSWCodeAsString().equalsIgnoreCase(swStr)) {
+                return sw.getDescription();
+            }
+        }
+
+        return "";
+    }
+
+    public static String getSWDescription(short sw1sw2) {
+        for (SW sw : SW.values()) {
+            if (sw.getSW() == sw1sw2) {
                 return sw.getDescription();
             }
         }
