@@ -664,10 +664,13 @@ Answer To Reset (ATR)
           Expiration Date: Wed Feb 29 00:00:00 CET 2012
           Service Code - 201:
             2 : Interchange Rule - International interchange, use IC (chip) where feasible
-            0 : Authorisation Processing - Normal
+            0 : Authorization Processing - Normal
             1 : Range of Services - No restrictions
           Discretionary Data: 1234567890000 (may include Pin Verification Key Indicator (PVKI, 1 character), PIN Verification Value (PVV, 4 characters), Card Verification Value or Card Verification Code (CVV or CVC, 3 characters))
-        Service Code: 201
+        Service Code - 201:
+          2 : Interchange Rule - International interchange, use IC (chip) where feasible
+          0 : Authorization Processing - Normal
+          1 : Range of Services - No restrictions
         Language Preference (in order of preference):
           Language: no (Norwegian)
           Language: en (English)
@@ -761,7 +764,7 @@ Answer To Reset (ATR)
           Expiration Date: Wed Feb 29 00:00:00 CET 2012
           Service Code - 601:
             6 : Interchange Rule - National interchange only except under bilateral agreement, use IC (chip) where feasible
-            0 : Authorisation Processing - Normal
+            0 : Authorization Processing - Normal
             1 : Range of Services - No restrictions
           Discretionary Data: 12345678900 (may include Pin Verification Key Indicator (PVKI, 1 character), PIN Verification Value (PVV, 4 characters), Card Verification Value or Card Verification Code (CVV or CVC, 3 characters))
         Language Preference (in order of preference):

@@ -79,14 +79,42 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         return connectAnyTerminal("*");
     }
     
+	/**
+	 * For this to work, all other cards in all other attached readers must be removed first
+	 *
+	 */
+    @Override
+    public CardConnection connectAnyTerminalWithCardPresent(String protocol) throws TerminalException {
+        try {
+            while (true) {
+                for (CardTerminal smartCardIOTerminal : terminals.list(javax.smartcardio.CardTerminals.State.CARD_PRESENT)) {
+                    Log.debug("Terminal: "+smartCardIOTerminal.getName());
+                    Card _card = smartCardIOTerminal.connect(protocol); //if proto, eg T=1, is specified and not supported by card: throws PCSCException SCARD_E_PROTO_MISMATCH
+                    Log.debug("Connected to card using protocol: "+_card.getProtocol());
+
+                    return new SmartcardioCardConnection(_card, smartCardIOTerminal);
+                }
+                boolean changeOccurred = terminals.waitForChange(200);
+                if(!changeOccurred){ //Timeout
+                    if(Thread.currentThread().isInterrupted()) {
+                        return null;
+                    }
+                    continue; //waitForChange again
+                }
+            }
+        } catch (CardException ex) {
+            if(isNoCardReadersAvailable(ex)){ //No card readers available
+                throw new NoTerminalsAvailableException(ex);
+            }
+            throw new TerminalException(getPCSCErrorDescription(ex), ex);
+        } catch (IllegalStateException ex){
+            throw new TerminalException(ex);
+        }
+    }
+
     @Override
     public CardConnection connectAnyTerminal(String protocol) throws TerminalException {
         try {
-//            //First check if a card is present in any terminal
-//            for (CardTerminal terminal : terminals.list(javax.smartcardio.CardTerminals.State.CARD_PRESENT)) {
-//                Card _card = terminal.connect("*");
-//                return new SmartcardioCardConnection(_card);
-//            }
             //Do not use State.CARD_PRESENT. Some systems might have a card present at all times in a specific termial 
             //(for example a 3G mobile card with SIM slot that is listed as a PC/SC reader on the host system)
             //wait for a card to be inserted
@@ -109,7 +137,7 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
             if(isNoCardReadersAvailable(ex)){ //No card readers available 
                 throw new NoTerminalsAvailableException(ex);
             }
-            throw new TerminalException(ex);
+            throw new TerminalException(getPCSCErrorDescription(ex), ex);
         } catch (IllegalStateException ex){
             throw new TerminalException(ex);
         }
@@ -191,7 +219,6 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         }
     }
     
-    //TODO refactor this to utility class, and use reflection
     //http://pcsclite.alioth.debian.org/api/pcsclite_8h_source.html
     public static Integer getPCSCError(CardException ce){
         if(ce == null){
@@ -233,6 +260,8 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
   
 
     
+    final static int WINDOWS_ERROR_CODE_22_ERROR_BAD_COMMAND = 0x00000016;
+
     //MS Undocumented
     final static int SCARD_E_NO_READERS_AVAILABLE = 0x8010002E;
 
@@ -245,5 +274,14 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
             return true;
         }
         return false;
+    }
+
+    private static String getPCSCErrorDescription(CardException ex){
+        Integer i = getPCSCError(ex);
+        switch(i){
+            case WINDOWS_ERROR_CODE_22_ERROR_BAD_COMMAND:
+                return "The device does not recognize the command.";
+        }
+        return "";
     }
 }

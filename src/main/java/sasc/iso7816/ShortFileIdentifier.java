@@ -62,7 +62,5 @@ public class ShortFileIdentifier {
         String indentStr = Util.getSpaces(indent + Log.INDENT_SIZE);
 
         pw.println(indentStr + sfi + " (" + ShortFileIdentifier.getDescription(sfi) + ")");
-
-
     }
 }

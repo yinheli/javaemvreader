@@ -211,10 +211,13 @@ public class CardEmulator implements CardConnection {
         }
     }
     
-    //TODO: if cmd.length == 5 && cmd[4] == 0x00  return true
     private static boolean hasLe(byte[] cmd){
-        if(cmd.length <= 5){
+        if(cmd.length < 5){
             return false;
+        }
+        
+        if(cmd.length == 5){
+            return true;
         }
         
         if(Util.byteToInt(cmd[4]) == cmd.length-5-1){
@@ -239,7 +242,6 @@ public class CardEmulator implements CardConnection {
         byte ins = cmd[1];
         byte p1 = cmd[2];
         byte p2 = cmd[3];
-        byte lc = cmd[4];
 
         Log.debug("Emulator.transmit() cmdStr: " + cmdStr);
 
@@ -305,11 +307,11 @@ public class CardEmulator implements CardConnection {
                 return createResponse(null, SW.INSTRUCTION_CODE_NOT_SUPPORTED_OR_INVALID);
             }
         }
+        if (cmd.length <= 5){ //Zero length AID
+            return createResponse(null, SW.FILE_OR_APPLICATION_NOT_FOUND);
+        }
         if (Arrays.equals(cmd, SELECT_DDF_PSE)) {
             return createResponse(card.ddf, SW.SUCCESS);
-        }
-        if (cmd.length == 5 || cmd.length == 4){ //Zero length AID
-            return createResponse(null, SW.FILE_OR_APPLICATION_NOT_FOUND);
         }
         //Assume SELECT APPLICATION
         AID aid = new AID(getDataBytes(cmd));

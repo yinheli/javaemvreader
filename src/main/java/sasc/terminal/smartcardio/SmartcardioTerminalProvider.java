@@ -78,6 +78,11 @@ public class SmartcardioTerminalProvider implements TerminalProvider {
     }
     
     @Override
+    public CardConnection connectAnyTerminalWithCardPresent(String protocol) throws TerminalException {
+        return terminalProvider.connectAnyTerminalWithCardPresent(protocol);
+    }
+    
+    @Override
     public CardConnection connectAnyTerminal(String protocol) throws TerminalException {
         return terminalProvider.connectAnyTerminal(protocol);
     }

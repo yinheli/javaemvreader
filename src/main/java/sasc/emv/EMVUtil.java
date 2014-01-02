@@ -33,6 +33,7 @@ import sasc.iso7816.TLVException;
 import sasc.terminal.CardResponse;
 import sasc.terminal.TerminalException;
 import sasc.terminal.CardConnection;
+import static sasc.util.Log.COMMAND_HEADER_FRAMING;
 import sasc.util.Util;
 
 /**
@@ -72,7 +73,7 @@ public class EMVUtil {
         byte sw2 = (byte) response.getSW2();
         byte[] data = response.getData(); //Copy
         Log.debug("Received data+SW1+SW2: " + Util.byteArrayToHexString(data) + " " + Util.byte2Hex(sw1) + " " + Util.byte2Hex((byte) sw2));
-
+        Log.debug("data.length: 0x"+Util.int2Hex(data.length) + " ("+data.length+")");
         if (sw1 == (byte) 0x6c) { //"Wrong length" (resend last command with correct length)
             //Re-issue command with correct length
             cmdBytes[4] = sw2;
@@ -113,17 +114,32 @@ public class EMVUtil {
     }
 
     public static void printResponse(CardResponse response, boolean doParseTLVData) {
-        Log.info("response hex    :\n" + Util.prettyPrintHex(response.getData()));
+        printResponse(response.getData(), response.getSW1(), response.getSW2(), response.getSW(), doParseTLVData);
+    }
+
+
+    public static void printResponse(byte[] dataAndSw, boolean doParseTLVData){
+        byte[] tmp = new byte[dataAndSw.length-2];
+        System.arraycopy(dataAndSw, 0, tmp, 0, tmp.length);
+        byte sw1 = dataAndSw[dataAndSw.length-2];
+        byte sw2 = dataAndSw[dataAndSw.length-1];
+        short sw = Util.byte2Short(sw1, sw2);
+        printResponse(tmp, sw1, sw2, sw, doParseTLVData);
+    }
+
+    public static void printResponse(byte[] data, byte sw1, byte sw2, short sw, boolean doParseTLVData) {
+        Log.info("response hex    :\n" + Util.prettyPrintHex(data));
+
         String swDescription = "";
-        String tmp = SW.getSWDescription(response.getSW());
+        String tmp = SW.getSWDescription(sw);
         if (tmp != null && tmp.trim().length() > 0) {
             swDescription = " (" + tmp + ")";
         }
-        Log.info("response SW1SW2 : " + Util.byte2Hex(response.getSW1()) + " " + Util.byte2Hex(response.getSW2()) + swDescription);
-        Log.info("response ascii  : " + Util.getSafePrintChars(response.getData()));
+        Log.info("response SW1SW2 : " + Util.byte2Hex(sw1) + " " + Util.byte2Hex(sw2) + swDescription);
+        Log.info("response ascii  : " + Util.getSafePrintChars(data));
         if (doParseTLVData) {
             try{
-                Log.info("response parsed :\n" + EMVUtil.prettyPrintAPDUResponse(response.getData()));
+                Log.info("response parsed :\n" + EMVUtil.prettyPrintAPDUResponse(data));
             }catch(TLVException ex){
                 Log.debug(ex.getMessage()); //Util.getStackTrace(ex)
             }
@@ -160,6 +176,10 @@ public class EMVUtil {
                         } else if (tlv.getTag().equals(EMVTags.ISSUER_CODE_TABLE_INDEX)) {
                             int index = Util.byteArrayToInt(tlv.getValueBytes());
                             ddf.setIssuerCodeTableIndex(index);
+                        } else if (tlv.getTag().equals(EMVTags.APPLICATION_LABEL)) {
+							//TODO is this tag expected at this point? Should be located in APP_TEMPLATE! Are there any info in book 1?
+						    String label = Util.getSafePrintChars(tlv.getValueBytes());
+                            //ddf.setApplicationLabel(label);
                         } else if (tlv.getTag().equals(EMVTags.FCI_ISSUER_DISCRETIONARY_DATA)) { //PPSE
                             ByteArrayInputStream discrStream = new ByteArrayInputStream(tlv.getValueBytes());
                             int total3Len = discrStream.available();
@@ -630,6 +650,12 @@ public class EMVUtil {
         return prettyPrintAPDUResponse(data, 0);
     }
 
+    public static String prettyPrintAPDUResponse(byte[] data, int startPos, int length) {
+        byte[] tmp = new byte[length-startPos];
+        System.arraycopy(data, startPos, tmp, 0, length);
+        return prettyPrintAPDUResponse(tmp, 0);
+    }
+
     public static String prettyPrintAPDUResponse(byte[] data, int indentLength) {
         StringBuilder buf = new StringBuilder();
 
@@ -915,6 +941,8 @@ public class EMVUtil {
 
     public static void main(String[] args) {
 
+        System.out.println(readTagLength(new ByteArrayInputStream(new byte[]{(byte)0x81, (byte)0x97})));
+
 //        EMVApplication app = new EMVApplication();
 //        parseFCIADF(Util.fromHexString("6f198407a0000000038002a50e5009564953412041757468870101"), app);
 //
@@ -929,7 +957,13 @@ public class EMVUtil {
 
 //        System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("6F388407 A0000000 031010A5 2D500B56 69736144 616E6B6F 72748701 015F2D08 6461656E 6E6F7376 9F110101 9F120B56 69736144 616E6B6F 7274")));
 
-          System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("9f 4f 18 9f 36 02 9f 02 06 9f 03 06 9f 1a 02 95 05 5f 2a 02 9a 03 9c 01 9f 80 04")));
     
+    }
+
+    private static void printCmdHdr(String hex){
+
+            Log.info("\n"+COMMAND_HEADER_FRAMING
+                + "\n[CMD] " + hex
+                + "\n"+COMMAND_HEADER_FRAMING);
     }
 }

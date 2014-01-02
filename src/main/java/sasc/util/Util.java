@@ -247,7 +247,7 @@ public class Util {
 
     public static String int2Hex(int i) {
         String hex = Integer.toHexString(i);
-        if (hex.length() < 2) {
+        if (hex.length() % 2 != 0) {
             hex = "0" + hex;
         }
         return hex;
@@ -557,6 +557,33 @@ public class Util {
         return cls.getResourceAsStream(path);
     }
     
+    /**
+     * Copies the specified array, prepending 0x00, or cutting off MSBytes if necessary
+     * @param original
+     * @param newLength
+     * @return 
+     */
+    public static byte[] resizeArray(byte[] original, int newLength) {
+        if(original == null){
+            throw new IllegalArgumentException("byte array cannot be null");
+        }
+        if(newLength < 0){
+            throw new IllegalArgumentException("Illegal new length: "+newLength+". Must be >= 0");
+        }
+        if(newLength == 0){
+            return new byte[0];
+        }
+        byte[] tmp = new byte[newLength];
+        
+        int srcPos  = tmp.length > original.length ? 0 : original.length - tmp.length;
+        int destPos = tmp.length > original.length ? tmp.length - original.length : 0;
+        int length  = tmp.length > original.length ? original.length : tmp.length;
+        
+        System.arraycopy(original, srcPos, tmp, destPos, length);
+        
+        return tmp;
+    }
+    
     public static byte[] copyByteArray(byte[] array2Copy){
 //        byte[] copy = new byte[array2Copy.length];
 //        System.arraycopy(array2Copy, 0, copy, 0, array2Copy.length);
@@ -745,5 +772,11 @@ public class Util {
         System.out.println("Unknown : " + decodeOID(Util.fromHexString("2b 85 10 86 48 64 02 01 03")));
         System.out.println("{2 100 3} : " + decodeOID(Util.fromHexString("813403")));
         
+        System.out.println(Util.prettyPrintHexNoWrap(Util.resizeArray(new byte[]{0x01}, 0)));
+        System.out.println(Util.prettyPrintHexNoWrap(Util.resizeArray(new byte[]{0x01}, 1)));
+        System.out.println(Util.prettyPrintHexNoWrap(Util.resizeArray(new byte[]{0x01}, 2)));
+        
+        System.out.println(Util.prettyPrintHexNoWrap(Util.resizeArray(new byte[]{0x01, 0x02}, 1)));
+        System.out.println(Util.prettyPrintHexNoWrap(Util.resizeArray(new byte[]{0x01, 0x02}, 4)));
     }
 }

@@ -1,5 +1,12 @@
 changelog
 
+v0.5.1
+Added more CA test keys
+Parse Service Code
+Try to guess Terminal Country Code and Transaction Currency Code in GPO response
+Handle Application Label Tag in P(P)SE DDF
+Get PC/SC error message if available
+
 v0.5.0
 Preliminary refactoring work
 Fixed bit shift bug when parsing SFI in ApplicationElementaryFile

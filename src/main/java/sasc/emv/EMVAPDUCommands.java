@@ -74,10 +74,10 @@ public class EMVAPDUCommands {
      *
      * Case 4s C-APDU
      */
-    public static String getProcessingOpts(DOL pdol) {
+    public static String getProcessingOpts(DOL pdol, EMVApplication app) {
         String command;
         if (pdol != null && pdol.getTagAndLengthList().size() > 0) {
-            byte[] pdolResponseData = EMVTerminalProfile.constructDOLResponse(pdol);
+            byte[] pdolResponseData = EMVTerminalProfile.constructDOLResponse(pdol, app);
             command = "80 A8 00 00";
             command += " " + Util.int2Hex(pdolResponseData.length + 2) + " 83 " + Util.int2Hex(pdolResponseData.length);
             command += " " + Util.prettyPrintHexNoWrap(pdolResponseData);

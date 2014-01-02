@@ -30,6 +30,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import sasc.common.SmartCard;
 import sasc.iso7816.Application;
 import sasc.lookup.IIN_DB;
 import sasc.util.ISO3166_1;
@@ -82,7 +83,7 @@ public class EMVApplication implements Application {
     private byte[] track1DiscretionaryData = null; //Optional data encoded by the issuer.
     private byte[] track2DiscretionaryData = null; //Optional data encoded by the issuer.
     private Track2EquivalentData track2EquivalentData = null;
-    private int serviceCode = -1;
+    private ServiceCode serviceCode = null;
     private LanguagePreference languagePreference = null;
     private int issuerCodeTableIndex = -1;
     private int lowerConsecutiveOfflineLimit = -1;
@@ -96,6 +97,7 @@ public class EMVApplication implements Application {
     //Transaction related data elements
     private TransactionStatusInformation transactionStatusInformation = new TransactionStatusInformation();
     private List<BERTLV> unhandledRecords = new ArrayList<BERTLV>();
+    private SmartCard card = null;
 
     public EMVApplication() {
     }
@@ -105,6 +107,15 @@ public class EMVApplication implements Application {
             throw new SmartCardException("Attempting to assign a different AID value. Current: " + Util.prettyPrintHexNoWrap(this.aid.getAIDBytes()) + " new: " + Util.prettyPrintHexNoWrap(_aid.getAIDBytes()));
         }
         this.aid = _aid;
+    }
+
+    public void setCard(SmartCard card){
+        this.card = card;
+    }
+    
+    @Override
+    public SmartCard getCard() {
+        return card;
     }
 
     public ApplicationUsageControl getApplicationUsageControl() {
@@ -433,10 +444,10 @@ public class EMVApplication implements Application {
     }
 
     void setServiceCode(int serviceCode) {
-        this.serviceCode = serviceCode;
+        this.serviceCode = new ServiceCode(serviceCode);
     }
 
-    public int getServiceCode() {
+    public ServiceCode getServiceCode() {
         return serviceCode;
     }
 
@@ -618,6 +629,7 @@ public class EMVApplication implements Application {
         return sw.toString();
     }
 
+    @Override
     public void dump(PrintWriter pw, int indent) {
         pw.println(Util.getSpaces(indent) + "EMV Application");
 
@@ -756,8 +768,8 @@ public class EMVApplication implements Application {
         if (bic != null) {
             bic.dump(pw, indent + Log.INDENT_SIZE);
         }
-        if (serviceCode != -1) {
-            pw.println(indentStr + "Service Code: " + serviceCode);
+        if (serviceCode != null) {
+            serviceCode.dump(pw, indent + Log.INDENT_SIZE);
         }
         if (languagePreference != null) {
             languagePreference.dump(pw, indent + Log.INDENT_SIZE);

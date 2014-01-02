@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 sasc
+ * Copyright 2010 sasc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,19 @@ public class CardSession {
             Thread.currentThread().interrupt();
             throw new TerminalException(ex);
         }
+
+        //TODO special access data in ATR?? 
+        //Example of how a PC/SC compliant IFD announces that it translates communication to a memory card
+        //Samsung Galaxy S3 Secure Element:
+        //4F = AID (or possibly just RID of authority for the data??)
+        //0C = Length of AID
+        //A0 00 00 03 06 = RID of PC/SC
+        //00 = No information given
+        //00 00 = Name (registered ID in PC/SC doc)
+        //00 00 00 00 = RFU
+        //http://smartcard-atr.appspot.com/parse?ATR=3b8f8001804f0ca0000003060000000000000068
+        //See isotype.py
+        //And http://www.pcscworkgroup.com/specifications/files/pcsc3_v2.01.08_sup.pdf
 
         if (sessionEnv.getWarmUpCard()) {
             //Some cards/readers seem to misbehave on the first command 

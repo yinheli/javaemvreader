@@ -47,9 +47,6 @@ public class IssuerPublicKeyCertificate {
 
     public IssuerPublicKeyCertificate(CA ca) {
         //ca == null is permitted
-//        if(ca == null) {
-//            throw new IllegalArgumentException("Argument 'ca' cannot be null");
-//        }
         this.ca = ca;
         issuerPublicKey = new IssuerPublicKey();
     }
@@ -225,5 +222,33 @@ public class IssuerPublicKeyCertificate {
                 pw.println(indentStr + "CERTIFICATE NOT VALID");
             }
         }
+    }
+    
+    public static void main(String[] args) throws Exception {
+        byte[] rid = Util.fromHexString("a0 00 00 00 03");
+        byte[] mod = Util.fromHexString("BE9E1FA5E9A803852999C4AB432DB28600DCD9DAB76DFAAA47355A0FE37B1508AC6BF38860D3C6C2E5B12A3CAAF2A7005A7241EBAA7771112C74CF9A0634652FBCA0E5980C54A64761EA101A114E0F0B5572ADD57D010B7C9C887E104CA4EE1272DA66D997B9A90B5A6D624AB6C57E73C8F919000EB5F684898EF8C3DBEFB330C62660BED88EA78E909AFF05F6DA627B");
+        byte[] chksum = CA.calculateCAPublicKeyCheckSum(rid, Util.intToByteArray(149), mod, new byte[]{0x03});
+        System.out.println(Util.prettyPrintHexNoWrap(chksum));
+        CA.initFromFile("/certificationauthorities_test.xml");
+        CA ca = CA.getCA(rid);
+        IssuerPublicKeyCertificate cert = new IssuerPublicKeyCertificate(ca);
+        cert.setCAPublicKeyIndex(149);
+        String signedBytesStr = "8b 39 01 f6 25 30 48 a8 b2 cb 08 97 4a 42 45 d9" +
+                                "0e 1f 0c 4a 2a 69 bc a4 69 61 5a 71 db 21 ee 7b" +
+                                "3a a9 42 00 cf ae dc d6 f0 a7 d9 ad 0b f7 92 13" +
+                                "b6 a4 18 d7 a4 9d 23 4e 5c 97 15 c9 14 0d 87 94" +
+                                "0f 2e 04 d6 97 1f 4a 20 4c 92 7a 45 5d 4f 8f c0" +
+                                "d6 40 2a 79 a1 ce 05 aa 3a 52 68 67 32 98 53 f5" +
+                                "ac 2f eb 3c 6f 59 ff 6c 45 3a 72 45 e3 9d 73 45" +
+                                "14 61 72 57 95 ed 73 09 70 99 96 3b 82 eb f7 20" +
+                                "3c 1f 78 a5 29 14 0c 18 2d bb e6 b4 2a e0 0c 02";
+        byte[] signedBytes = Util.fromHexString(signedBytesStr);
+        cert.setSignedBytes(signedBytes);
+        
+        String remainderStr = "33 f5 e4 44 7d 4a 32 e5 93 6e 5a 13 39 32 9b b4 e8 dd 8b f0 04 4c e4 42 8e 24 d0 86 6f ae fd 23 48 80 9d 71";
+        cert.getIssuerPublicKey().setExponent(new byte[]{0x03});
+        cert.getIssuerPublicKey().setRemainder(Util.fromHexString(remainderStr));
+        
+        System.out.println(cert.toString());
     }
 }

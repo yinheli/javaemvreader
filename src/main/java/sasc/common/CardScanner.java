@@ -72,7 +72,10 @@ public class CardScanner {
                 Log.commandHeader("Transmit Control Command to discover the terminal features");
                 byte[] ccResponse = terminal.transmitControlCommand(PCSC.CM_IOCTL_GET_FEATURE_REQUEST, new byte[0]);
                 if(ccResponse != null){
-                    Log.info("controlCommandResponse: "+Util.prettyPrintHexNoWrap(ccResponse));
+					Log.info("GET TERMINAL FEATURES controlCommandResponse: "+Util.prettyPrintHexNoWrap(ccResponse));
+                    //TODO parse response
+                    //Ex
+                    //12 04 42 33 00 12 13 04 42 00 00 01
                 }
             }catch(Exception e){
                 Log.debug(e.toString());
@@ -156,6 +159,105 @@ public class CardScanner {
                 //      8c 08 
                 //            1f a1 a1 a1 a1 a1 88 a1
 
+                //4th example (EMV card w/3 AIDs. 2xVISA ! + 1xBRADESCO)
+                //6f 0b
+                //      84 09
+                //            46 2e 4d 41 45 53 54 52 4f (=MAESTRO)
+                
+                
+                //5th example (MASTERCARD : 
+                //                       CL        3b 8e 80 01 13 78 80 80 02 46 49 4f 4d 4b 5f 30 30 31 4e
+                //                       CONTACT   3b ef 00 00 81 31 fe 45 46 49 4f 4d 4b 5f 30 30 31 20 30 31 30 41 00 9c
+                //(same response for: 00 a4 00 00 02 3f 00 00)
+                //
+                //6f 20 
+                //      81 02 00 1a 
+                //      82 01 38 
+                //      83 02 3f 00 
+                //      84 06 00 00 00 00 00 00 
+                //      85 01 00 
+                //      8c 08 1f a1 a1 a1 a1 a1 88 a1
+                
+                
+                //6th example (IBM JC testcard from book)
+                //Note: Tag 0x63 does not seem to match structure of 'Wrapper' TAG according to 7816-4:2005
+                //
+                //ATR: 3b ef 00 ff 81 31 66 45 49 42 4d 20 4d 46 43 34 30 30 32 30 38 33 31 a1
+                //
+                //00 a4 00 00 02 3f 00 00
+                //
+                //63 0c 
+                //      1e b4 3f 00 00 00 ff 33 ff 01 01 10
+                //90 00 (Success)
+                //
+                //
+                ////EF.DIR
+                //00 a4 00 00 02 2f 00
+                //
+                //63 0d 
+                //      00 78 2f 00 01 00 03 ff ff 03 02 01 28
+                //90 00 (Success)
+                //
+                //------------------------------------------------
+                //[Step 4] Send READ RECORD to read all records in SFI 0
+                //------------------------------------------------
+                //00 b2 01 04 00
+                //
+                //61 26 
+                //      4f 09 
+                //            d2 76 00 00 22 00 00 00 60 
+                //      50 10 
+                //            P  K  C  S  #  1  1     T  o  k  e  n
+                //            50 4b 43 53 23 31 31 20 74 6f 6b 65 6e 20 20 20 
+                //      52 07 
+                //            a4 a4 00 00 02 c1 10 // command to perform?
+                //
+                //90 00 (Success)
+                //
+                //------------------------------------------------
+                //[Step 5] Send READ RECORD to read all records in SFI 0
+                //------------------------------------------------
+                //00 b2 02 04 00
+                //
+                //61 21 
+                //      4f 09 
+                //            d2 76 00 00 22 00 00 00 01 
+                //      50 0b 
+                //            S  C  T     L  O  Y  A  L  T  Y
+                //            53 43 54 20 4c 4f 59 41 4c 54 59 
+                //      52 07 
+                //            a4 a4 00 00 02 10 00 
+                //
+                //      00 00 00 00 00
+                //
+                //90 00 (Success)
+                //
+                //------------------------------------------------
+                //[Step 6] Send READ RECORD to read all records in SFI 0
+                //------------------------------------------------
+                //00 b2 03 04 00
+                //
+                //61 21 
+                //      4f 09 
+                //            d2 76 00 00 22 00 00 00 02 
+                //      50 0d 
+                //            B  U  S  I  N  E  S  S     C  A  R  D
+                //            42 55 53 49 4e 45 53 53 20 43 41 52 44 
+                //      52 07 
+                //            a4 a4 00 00 02 10 00 
+                //
+                //      00 00 00
+                //
+                //90 00 (Success)
+                //
+                //------------------------------------------------
+                //[Step 7] Send READ RECORD to read all records in SFI 0
+                //------------------------------------------------
+                //00 b2 04 04 00
+                //
+                //94 04
+
+
                 MasterFile mf = new MasterFile(selectMFResponse.getData());
                 getCard().setMasterFile(mf);
             }
@@ -191,8 +293,8 @@ public class CardScanner {
                 //DIR file (path='3F002F00'). contains a set of BER-TLV data objects
                 Log.commandHeader("SELECT FILE EF.DIR (if available)");
 
-                command = "00 A4 08 0C 02 2F 00";
-//                command = "00 A4 00 00 02 2F 00";
+                command = "00 A4 08 0C 02 2F 00 00";
+          //      command = "00 A4 02 00 02 2F 00 00";
 
                 CardResponse selectDIRFileResponse = EMVUtil.sendCmd(terminal, command);
 
@@ -256,7 +358,7 @@ public class CardScanner {
                     //DIR file (path='3F002F00'). contains a set of BER-TLV data objects
                     Log.commandHeader("SELECT FILE DIR File (if available)");
 
-                    command = "00 A4 00 00 04 3F 00 2F 00";
+                    command = "00 A4 00 00 04 3F 00 2F 00 00";
 
                     CardResponse selectDIRFileAbsPathResponse = EMVUtil.sendCmd(terminal, command);
 
@@ -296,8 +398,8 @@ public class CardScanner {
 
                 Log.commandHeader("SELECT FILE ATR File (if available)");
 
-                command = "00 A4 08 0C 02 2F 01";
-//                command = "00 A4 00 00 02 2F 01";
+                command = "00 A4 08 0C 02 2F 01 00";
+//                command = "00 A4 00 00 02 2F 01 00";
                 
                 CardResponse selectATRFileResponse = EMVUtil.sendCmd(terminal, command);
 
@@ -334,7 +436,7 @@ public class CardScanner {
                 } else {
                     Log.commandHeader("SELECT FILE ATR File (if available)");
 
-                    command = "00 A4 00 00 04 3F 00 2F 01";
+                    command = "00 A4 00 00 04 3F 00 2F 01 00";
 
                     CardResponse selectATRFileAbsPathResponse = EMVUtil.sendCmd(terminal, command);
 

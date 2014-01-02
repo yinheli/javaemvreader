@@ -361,7 +361,8 @@ public class TerminalVerificationResults {
         tvr.setNewCard(true);
         System.out.println(tvr.toString());
         
-        System.out.println(new TerminalVerificationResults(Util.fromHexString("8000048000")));
+        System.out.println(new TerminalVerificationResults(Util.fromHexString("8000048000"))); //Hobby store
+        System.out.println(new TerminalVerificationResults(Util.fromHexString("0000008000"))); //Autogrill (IT)
 
     }
 }

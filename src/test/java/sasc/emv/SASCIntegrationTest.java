@@ -47,6 +47,8 @@ public class SASCIntegrationTest {
 
     @BeforeClass
     public static void setUpClass() throws Exception {
+        EMVTerminalProfile.setProperty(EMVTags.TERMINAL_COUNTRY_CODE, new byte[]{0x08, 0x26});
+        EMVTerminalProfile.setProperty(EMVTags.TRANSACTION_CURRENCY_CODE, new byte[]{0x08, 0x26});
     }
 
     @AfterClass

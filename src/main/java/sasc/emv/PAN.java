@@ -168,6 +168,7 @@ public class PAN {
     }
 
     public static void main(String[] args) {
+        IIN_DB.initialize();
         PAN pan = new PAN("5411118888888882");
         System.out.println(pan);
         System.out.println(new PAN("6737200111111111112f"));

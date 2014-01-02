@@ -45,7 +45,6 @@ import sasc.util.Util;
 public class EMVSession {
 
     private SmartCard card = null;
-//    private SessionProcessingEnv sessionEnv;
     private CardConnection terminal;
     //TODO find a better way to verify correct invocation of methods (flow)? EMVSessionState?
     private boolean contextInitialized = false;
@@ -133,7 +132,7 @@ public class EMVSession {
             }
         } else { // SW1SW2 = 6a81
 
-            //try to select the  PPSE (Proximity Payment System Environment) 2PAY.SYS.DDF01
+            //try to select the PPSE (Proximity Payment System Environment) 2PAY.SYS.DDF01
 
             Log.commandHeader("SELECT FILE 2PAY.SYS.DDF01 to get the PPSE directory");
 
@@ -149,7 +148,7 @@ public class EMVSession {
                 try{
                     DDF ppseDDF = EMVUtil.parseFCIDDF(selectPPSEdirResponse.getData(), card);
                     card.setType(SmartCard.Type.CONTACTLESS);
-                    card.setPSE(ppseDDF);
+                    getCard().setPSE(ppseDDF);
                 }catch(TLVException tlvex){
                     Log.debug(Util.getStackTrace(tlvex));
                 }
@@ -157,7 +156,7 @@ public class EMVSession {
             }
         }
 
-        if(card.getPSE() != null && card.getPSE().getSFI() != null){
+        if(card.getPSE() != null && card.getPSE().getSFI() != null) {
             try {
                 int sfi = card.getPSE().getSFI().getValue();
 
@@ -317,7 +316,7 @@ public class EMVSession {
 
         DOL pdol = app.getPDOL();
 
-        command = EMVAPDUCommands.getProcessingOpts(pdol);
+        command = EMVAPDUCommands.getProcessingOpts(pdol, app);
 
         CardResponse getProcessingOptsResponse = EMVUtil.sendCmd(terminal, command);
 
@@ -476,7 +475,7 @@ public class EMVSession {
 
         DOL ddol = app.getDDOL();
         if (ddol != null) {
-            authenticationRelatedData = EMVTerminalProfile.constructDOLResponse(ddol);
+            authenticationRelatedData = EMVTerminalProfile.constructDOLResponse(ddol, app);
         }
         if (authenticationRelatedData == null) {
             authenticationRelatedData = EMVTerminalProfile.getDefaultDDOLResponse();

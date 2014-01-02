@@ -99,7 +99,11 @@ public class SmartCard {
      * @return the final ATR (cold or warm)
      */
     public ATR getATR(){
-        return atrSet.iterator().next();
+        ATR last = null;
+        for(ATR atr : atrSet){
+            last = atr;
+        }
+        return last;
     }
     
     /**
@@ -120,6 +124,7 @@ public class SmartCard {
         return this.mf;
     }
 
+    //TODO this vs addAID ?
     public void addEMVApplication(EMVApplication app) {
 //        if (applicationsMap.containsKey(app.getAID())) {
 //            throw new IllegalArgumentException("EMVApplication already added: " + app.getAID() + " " + app.getPreferredName());
@@ -128,6 +133,9 @@ public class SmartCard {
             throw new IllegalArgumentException("Invalid EMVApplication object: AID == null");
         }
         Log.debug("ADDING EMV aid: "+Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()));
+        if(app.getCard() == null){
+            app.setCard(this);
+        }
         applicationsMap.put(app.getAID(), app);
     }
 
@@ -156,7 +164,8 @@ public class SmartCard {
             if("EMV".equalsIgnoreCase(type)){
                 EMVApplication emvApp = new EMVApplication();
                 emvApp.setAID(aid);
-                applicationsMap.put(aid, emvApp);
+                emvApp.setCard(this);
+                addEMVApplication(emvApp);
             }else if("GP".equalsIgnoreCase(type)){
                 //TODO
             }

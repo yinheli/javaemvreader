@@ -1,5 +1,33 @@
 <!-- Dummy CAs used when unit testing the project -->
 <CertificationAuthorities>
+    <CA RID="A0 00 00 00 03">
+	<Name>VISA</Name>
+	<Description>VISA Test CA</Description>
+	<PublicKeys>
+	    <PublicKey index="149"> <!-- 0x95 -->
+		<Description>1152-Bit TEST CA Public Key</Description>
+	        <ExpirationDate>31 December 2999</ExpirationDate>
+		<Exponent>03</Exponent>
+		<Modulus>
+		    BE 9E 1F A5 E9 A8 03 85 29 99 C4 AB 43 2D B2 86 
+		    00 DC D9 DA B7 6D FA AA 47 35 5A 0F E3 7B 15 08
+		    AC 6B F3 88 60 D3 C6 C2 E5 B1 2A 3C AA F2 A7 00
+		    5A 72 41 EB AA 77 71 11 2C 74 CF 9A 06 34 65 2F
+		    BC A0 E5 98 0C 54 A6 47 61 EA 10 1A 11 4E 0F 0B
+		    55 72 AD D5 7D 01 0B 7C 9C 88 7E 10 4C A4 EE 12
+		    72 DA 66 D9 97 B9 A9 0B 5A 6D 62 4A B6 C5 7E 73
+		    C8 F9 19 00 0E B5 F6 84 89 8E F8 C3 DB EF B3 30
+		    C6 26 60 BE D8 8E A7 8E 90 9A FF 05 F6 DA 62 7B
+		</Modulus>
+		<HashAlgorithmIndicator>01</HashAlgorithmIndicator>
+		<Hash>
+		    ee 15 11 ce c7 10 20 a9 b9 04 43 b3 7b 1d 5f 6e
+		    70 30 30 f6
+		</Hash>
+		<PublicKeyAlgorithmIndicator>01</PublicKeyAlgorithmIndicator>
+            </PublicKey>
+	</PublicKeys>
+    </CA>
     <CA RID="A1 23 45 67 89">
         <Name>TEST</Name>
         <Description>Test CA used for ICC emulation</Description>

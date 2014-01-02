@@ -56,9 +56,11 @@ public class ATR_DB {
                         is2 = Util.loadResource(ATR_DB.class, "/smartcard_list_additional_atrs.txt");
                         br = new BufferedReader(new InputStreamReader(new SequenceInputStream(is1, is2), "UTF-8"));
 
+                        int lineNumber = 0;
                         String line;
                         String currentATR = null;
                         while((line = br.readLine()) != null){
+                            ++lineNumber;
                             if(line.startsWith("#")  || line.trim().length() == 0){ //comment ^#/ empty line ^$/
                                 continue;
                             }else if(line.startsWith("\t") && currentATR != null){
@@ -72,7 +74,7 @@ public class ATR_DB {
             //                        Log.debug("Found existing ATR: "+currentATR);
                                 }
                             }else{
-                                Log.debug("Encountered unexpected line in atr list: currentATR="+currentATR+" Line="+line);
+                                Log.debug("Encountered unexpected line in atr list: currentATR="+currentATR+" Line("+lineNumber+")="+line);
                                 //Just skip
                                 //throw new RuntimeException("Encountered unexpected line in atr list: currentATR="+currentATR+" Line="+line);
                             }

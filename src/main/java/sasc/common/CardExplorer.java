@@ -1,31 +1,28 @@
 /*
- *  Copyright 2010 sasc
+ * Copyright 2010 sasc
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *  under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package sasc.common;
 
+import sasc.emv.CA;
 import sasc.emv.EMVApplication;
 import sasc.emv.EMVSession;
 import sasc.iso7816.SmartCardException;
 import sasc.lookup.ATR_DB;
 import sasc.terminal.CardConnection;
-import sasc.terminal.NoTerminalsAvailableException;
-import sasc.terminal.TerminalAPIManager;
 import sasc.terminal.TerminalException;
-import sasc.terminal.TerminalProvider;
-import sasc.util.BuildProperties;
+import sasc.terminal.TerminalUtil;
 import sasc.util.Log;
 import sasc.util.Util;
 
@@ -43,38 +40,18 @@ public class CardExplorer {
     }
 
     public void start() {
+        //Add test keys so we can read and validate acquirer test cards (DO NOT use this if validating production cards only!)
+        CA.addFromXmlFile("/certificationauthorities_test.xml");
+        CA.addFromDirectory("/cakeys_test");
 
         CardConnection cardConnection = null;
         try {
-            Context.init();
-            TerminalProvider terminalProvider = TerminalAPIManager.getProvider(TerminalAPIManager.SelectionPolicy.ANY_PROVIDER);
-            Log.info(BuildProperties.getProperty("APP_NAME", "JER") + " built on " + BuildProperties.getProperty("BUILD_TIMESTAMP", "N/A"));
+            cardConnection = TerminalUtil.connect(TerminalUtil.State.CARD_INSERTED);
             
-            while(true) {
-                if (terminalProvider.listTerminals().isEmpty()) {
-                    Log.info("No smart card readers found. Please attach readers(s)");
-
-                }
-                while (terminalProvider.listTerminals().isEmpty()) {
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException ex) {
-                        Log.debug(ex.toString());
-                    }
-                }
-                Log.info("Please insert a Smart Card into any attached reader.");
-                try{
-                    cardConnection = terminalProvider.connectAnyTerminal(); //Waits for card present
-                    break;
-                }catch(NoTerminalsAvailableException ntex){
-                    Log.debug(Util.getStackTrace(ntex));
-                    //All Terminals were removed while waiting for card
-                    //go back and try again
-                }
+            if(cardConnection == null){
+                Log.debug("TerminalUtil.connect returned null");
+                return;
             }
-            Log.info("OK, card found");
-			Log.info("Using terminal: "+cardConnection.getTerminal().getName());
-
             //TODO
             //If the ATR received following a cold reset as described in EMV Book 1 section 6.1.3.1 does not
             //conform to the specification in EMV Book 1 section 8, the terminal shall initiate a warm reset
@@ -91,8 +68,7 @@ public class CardExplorer {
 
             SessionProcessingEnv env = new SessionProcessingEnv();
             env.setReadMasterFile(true);
-//            env.setSelectAllRIDs(true);
-            env.setProbeAllKnownAIDs(false);
+            env.setProbeAllKnownAIDs(true);
 
             CardSession cardSession = CardSession.createSession(cardConnection, env);
 
@@ -135,7 +111,7 @@ public class CardExplorer {
                     //  if (myAID.equals(app.getAID())) {
                     //      char[] pin = {'1', '2', '3', '4'};
                     //      session.verifyPIN(pin, true);
-                    //      Arrays.fill(pin, ' '); //Clear pin from memory
+                    //      Arrays.fill(pin, '0'); //Clear pin from memory
                     //  }
                     }
 

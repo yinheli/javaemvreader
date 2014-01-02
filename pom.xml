@@ -4,18 +4,19 @@
     <groupId>com.googlecode</groupId>
     <artifactId>javaemvreader</artifactId>
     <packaging>jar</packaging>
-    <version>0.5.0</version>
+    <version>0.5.1-SNAPSHOT</version>
     <name>Java EMV Reader</name>
     <prerequisites>
         <maven>3.1.1</maven>
     </prerequisites>
     <licenses>
         <license>
-            <name>Apache 2</name>
+            <name>Apache License v2</name>
             <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
     <url>http://code.google.com/p/javaemvreader/</url>
+    <inceptionYear>2010</inceptionYear>
     
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -57,7 +58,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-release-plugin</artifactId>
-                <version>2.4.1</version>
+                <version>2.4.2</version>
                 <configuration>
                     <tagBase>https://javaemvreader.googlecode.com/svn/tags/</tagBase>
                 </configuration>
@@ -73,30 +74,32 @@
             <plugin>
                 <!-- Set system properties for unit testing -->
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.15</version>
+                <version>2.16</version>
                 <configuration>
                     <testFailureIgnore>true</testFailureIgnore>
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>com.mycila.maven-license-plugin</groupId>
-                <artifactId>maven-license-plugin</artifactId>
-                <version>1.10.b1</version>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>2.5</version>
                 <configuration>
                     <header>src/etc/license_header.txt</header>
-                    <strictCheck>false</strictCheck>
-                    <failIfMissing>false</failIfMissing>
+                    <mapping>
+                        <java>SLASHSTAR_STYLE</java>
+                    </mapping>
                     <properties>
-                        <year>2008-2013</year>
+                        <owner>sasc</owner>
+                        <year>${project.inceptionYear}</year>
                     </properties>
                     <includes>
-                        <include>src/**/*.java</include>
+                        <include>src/main/java/**</include>
+                        <include>src/test/java/**</include>
                     </includes>
-                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <strictCheck>true</strictCheck>
                 </configuration>
                 <executions>
                     <execution>
-                        <phase>package</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
@@ -203,31 +206,72 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>2.1</version>
+                <version>2.2</version>
                 <executions>
                     <execution>
+                        <id>full</id>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <finalName>${project.artifactId}-${project.version}-full</finalName>
+                            <filters>
+                                <filter>
+                                    <!-- Exclude all signatures. We will regenerate these later -->
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>minimal-withdeps</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>${project.artifactId}-${project.version}-minimal-noswing-withdeps</finalName>
+                            <minimizeJar>true</minimizeJar>
+                            <artifactSet>
+                                <!-- Exclude Swing deps -->
+                                <excludes>
+                                    <exclude>org.jdesktop:appframework</exclude>
+                                    <exclude>org.jdesktop:swing-worker</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <filters>
+                                <filter>
+                                    <!-- Exclude all signatures. We will regenerate these later -->
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <!-- Exclude classes that are using Swing  -->
+                                        <exclude>sasc/GUI.*</exclude>
+                                        <exclude>sasc/GUI$*</exclude>
+                                        <exclude>sasc/Main.*</exclude>
+                                        <!-- Exclude large bin file -->
+                                        <exclude>iin_bin_list.txt</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <finalName>${project.artifactId}-${project.version}-full</finalName>
-                    <filters>
-                        <filter>
-                            <!-- Exclude all signatures. We will regenerate these later -->
-                            <artifact>*:*</artifact>
-                            <excludes>
-                                <exclude>META-INF/*.SF</exclude>
-                                <exclude>META-INF/*.DSA</exclude>
-                                <exclude>META-INF/*.RSA</exclude>
-                            </excludes>
-                        </filter>
-                    </filters>
-                </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jarsigner-plugin</artifactId>
@@ -238,6 +282,16 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
+                        <configuration>
+                            <archive>${project.build.directory}/${project.artifactId}-${project.version}-full.jar</archive>
+                            <archiveDirectory>${project.build.directory}</archiveDirectory>
+                            <keystore>${basedir}/keystore</keystore>
+                            <alias>sasc</alias>
+                            <storepass>storepass</storepass>
+                            <keypass>keypass</keypass>
+                            <verbose>false</verbose>
+                            <certs>true</certs>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>verify</id>
@@ -246,16 +300,7 @@
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <archive>${project.build.directory}/${project.artifactId}-${project.version}-full.jar</archive>
-                    <archiveDirectory>${project.build.directory}</archiveDirectory>
-                    <keystore>${basedir}/keystore</keystore>
-                    <alias>sasc</alias>
-                    <storepass>storepass</storepass>
-                    <keypass>keypass</keypass>
-                    <verbose>false</verbose>
-                    <certs>true</certs>
-                </configuration>
+
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -273,6 +318,31 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>timestamp</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jarsigner-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign</id>
+                                <configuration>
+                                    <arguments>
+                                        <argument>-tsa</argument>
+                                        <argument>https://timestamp.geotrust.com/tsa</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <dependencies>
         <dependency>
@@ -301,7 +371,7 @@
             <groupId>com.licel</groupId>
             <artifactId>jcardsim</artifactId>
             <version>2.2.1</version>
-            <classifier>all</classifier>
+            <classifier>2013-12-12-all</classifier>
         </dependency>
     </dependencies>
 

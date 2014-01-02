@@ -18,7 +18,9 @@ package sasc.util;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
@@ -98,20 +100,21 @@ public class ISO4217_Numeric {
         return currencyCode2NumericMap.get(currencyCode);
     }
 
-    public static Integer getNumericCodeForLocale(Locale locale) {
+    public static List<Integer> getNumericCodeForLocale(final Locale locale) {
+        List<Integer> codeList = new ArrayList<Integer>();
         if (locale.getCountry() == null || locale.getCountry().length() != 2) {
+            //We have no country! Might find more than 1 match
             for (Locale l : Locale.getAvailableLocales()) {
                 if (l.getLanguage().equals(locale.getLanguage()) && l.getCountry() != null && l.getCountry().length() == 2) {
-                    locale = l;
-                    break;
+                    String currencyCode = java.util.Currency.getInstance(l).getCurrencyCode();
+                    codeList.add(ISO4217_Numeric.getNumericCodeForCurrencyCode(currencyCode));
                 }
             }
-        }
-        if (locale.getCountry() != null && locale.getCountry().length() == 2) {
+        }else if (locale.getCountry() != null && locale.getCountry().length() == 2) {
             String currencyCode = java.util.Currency.getInstance(locale).getCurrencyCode();
-            return ISO4217_Numeric.getNumericCodeForCurrencyCode(currencyCode);
+            codeList.add(ISO4217_Numeric.getNumericCodeForCurrencyCode(currencyCode));
         }
-        return null;
+        return codeList;
     }
 
     public static class Currency {

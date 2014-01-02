@@ -37,6 +37,7 @@ public enum SW {
     COMMAND_NOT_ALLOWED_AUTHENTICATION_METHOD_BLOCKED("6983", "Command not allowed; authentication method blocked"),
     COMMAND_NOT_ALLOWED_REFERENCE_DATA_INVALIDATED("6984", "Command not allowed; referenced data invalidated"),
     COMMAND_NOT_ALLOWED_CONDITIONS_OF_USE_NOT_SATISFIED("6985", "Command not allowed; conditions of use not satisfied"),
+    APPLET_SELECTION_FAILED("6999", "Applet selection failed"),
     INCORRECT_PARAMS_IN_DATA_FIELD("6a80", "Incorrect parameters in the command data field"),
     FUNCTION_NOT_SUPPORTED("6a81", "Function not supported"),
     FILE_OR_APPLICATION_NOT_FOUND("6a82", "File or application not found"),
@@ -81,6 +82,14 @@ public enum SW {
 
     public short getSW(){
         return sw;
+    }
+
+    /**
+     * 
+     * @return a new byte array with sw1 sw2
+     */
+    public byte[] getBytes() {
+       return new byte[]{sw1, sw2}; 
     }
 
     public String getSWCodeAsString(){

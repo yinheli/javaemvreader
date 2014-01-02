@@ -22,7 +22,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import org.jdesktop.application.Application;
 import sasc.util.Log;
 import sasc.util.Util;
 
@@ -242,5 +241,48 @@ public class ICCPublicKeyCertificate {
 				pw.println(indentStr + "CERTIFICATE NOT VALID");
 			}
         }
+    }
+    
+    public static void main(String[] args){
+        
+        EMVApplication app = new EMVApplication();
+        
+        EMVUtil.parseProcessingOpts(Util.fromHexString("80 0e 3c 00 08 02 02 00 10 01 01 00 18 01 03 01"), app);
+        
+        System.out.println(app.getApplicationFileLocator());
+                
+        byte[] appRecord = Util.fromHexString("70 56 5f 25 03 12 08 01 5f 24 03 15 08 31 5a 08"
+                +"46 92 98 20 36 76 95 49 5f 34 01 01 9f 07 02 ff"
+                +"80 8e 14 00 00 00 00 00 00 00 00 02 01 44 03 01"
+                +"03 02 03 1e 03 1f 00 9f 0d 05 b8 60 ac 88 00 9f"
+                +"0e 05 00 10 00 00 00 9f 0f 05 b8 68 bc 98 00 5f"
+                +"28 02 06 42 9f 4a 01 82");
+        
+        EMVUtil.printResponse(appRecord, true);
+        
+          Record record = new Record(appRecord, 1, true);
+         app.getApplicationFileLocator().getApplicationElementaryFiles().get(2).setRecord(1, record);
+        
+        StaticDataAuthenticationTagList staticDataAuthTagList = new StaticDataAuthenticationTagList(new byte[]{(byte)0x82});
+        app.setStaticDataAuthenticationTagList(staticDataAuthTagList);
+
+        
+        
+        
+        IssuerPublicKeyCertificate issuerPKCert = new IssuerPublicKeyCertificate(CA.getCA(Util.fromHexString("A0 00 00 00 03")));
+        
+        issuerPKCert.setSignedBytes(Util.fromHexString(" SIGNED BYTES HERE "));
+        
+        issuerPKCert.setCAPublicKeyIndex(7);
+        
+        issuerPKCert.getIssuerPublicKey().setExponent(new byte[]{0x03});
+        issuerPKCert.getIssuerPublicKey().setRemainder(Util.fromHexString(" REMAINDER "));
+        
+        ICCPublicKeyCertificate iccPKCert = new ICCPublicKeyCertificate(app, issuerPKCert);
+        iccPKCert.setSignedBytes(Util.fromHexString(" SIGNED BYTES HERE "));
+        
+        iccPKCert.getICCPublicKey().setExponent(new byte[]{0x03});
+        
+        System.out.println(iccPKCert);
     }
 }

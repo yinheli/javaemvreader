@@ -17,6 +17,7 @@ package sasc.iso7816;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import sasc.emv.EMVTags;
 import sasc.util.Util;
 
 /**
@@ -46,6 +47,18 @@ public class BERTLV {
         this.rawEncodedLengthBytes = rawEncodedLengthBytes;
         this.valueBytes = valueBytes;
         this.length = length;
+    }
+
+    public BERTLV(Tag tag, byte[] valueBytes) {
+        this.tag = tag;
+        this.rawEncodedLengthBytes = encodeLength(valueBytes.length);
+        this.valueBytes = valueBytes;
+        this.length = valueBytes.length;
+    }
+    
+    public static byte[] encodeLength(int length){
+        //TODO
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 
     public byte[] getTagBytes() {
@@ -84,5 +97,23 @@ public class BERTLV {
 
     public int getLength() {
         return length;
+    }
+    
+    public static void main(String[] args) throws Exception {
+//> 6f 23 -- File Control Information (FCI) Template
+//>       84 0e -- Dedicated File (DF) Name
+//>             32 50 41 59 2e 53 59 53 2e 44 44 46 30 31 (BINARY)
+//>       a5 11 -- File Control Information (FCI) Proprietary Template
+//>             bf 0c 0e -- File Control Information (FCI) Issuer Discretionary Data
+//>                      61 0c -- Application Template
+//>                            4f 07 -- Application Identifier (AID) - card
+//>                                  a0 00 00 00 04 10 10 (BINARY)
+//>                            87 01 -- Application Priority Indicator
+//>                                  01 (BINARY)
+        
+//        BERTLV fciTemplate = new BERTLV(EMVTags.FCI_TEMPLATE, )
+                
+        //TODO create PPSE.toBytes(byte[] outBuf, short len)
+
     }
 }
