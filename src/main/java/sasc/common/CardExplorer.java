@@ -42,7 +42,7 @@ public class CardExplorer {
     public void start() {
         //Add test keys so we can read and validate acquirer test cards (DO NOT use this if validating production cards only!)
         CA.addFromXmlFile("/certificationauthorities_test.xml");
-        CA.addFromDirectory("/cakeys_test");
+//        CA.addFromDirectory("/cakeys_test");
 
         CardConnection cardConnection = null;
         try {

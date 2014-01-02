@@ -4,7 +4,7 @@
     <groupId>com.googlecode</groupId>
     <artifactId>javaemvreader</artifactId>
     <packaging>jar</packaging>
-    <version>0.5.1-SNAPSHOT</version>
+    <version>0.5.2</version>
     <name>Java EMV Reader</name>
     <prerequisites>
         <maven>3.1.1</maven>

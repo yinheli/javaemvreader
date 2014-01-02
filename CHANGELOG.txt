@@ -1,5 +1,8 @@
 changelog
 
+v0.5.2
+Temporarily disabled loading of CA test keys
+
 v0.5.1
 Added more CA test keys
 Parse Service Code
