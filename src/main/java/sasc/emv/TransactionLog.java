@@ -31,7 +31,8 @@ public class TransactionLog {
 
     private LogFormat logFormat;
     private List<Record> logRecords = new ArrayList<Record>();
-
+    private boolean isProcessed = false;
+    
     public TransactionLog(LogFormat logFormat) {
         this.logFormat = logFormat;
     }
@@ -45,10 +46,25 @@ public class TransactionLog {
             if (logRecord.length == logFormat.getRecordLength()) {
                 logRecords.add(new Record(logRecord));
             } else {
-                //TODO
                 Log.debug("logRecord length (" + logRecord.length + ") does not match logFormat length (" + logFormat.getRecordLength() + ")");
             }
         }
+    }
+    
+    public boolean isEmpty() {
+        return logRecords.isEmpty();
+    }
+    
+    public boolean isProcessed() {
+        return isProcessed;
+    }
+    
+    public void setProcessed() {
+        this.isProcessed = true;
+    }
+    
+    public List<Record> getRecords() {
+        return logRecords;
     }
 
     @Override
@@ -67,8 +83,8 @@ public class TransactionLog {
         pw.println(indentStr + "Log Record(s):");
         if (!logRecords.isEmpty()) {
 
-
             for (Record record : logRecords) {
+                //TODO format record
                 record.dump(pw, indent + Log.INDENT_SIZE*2);
             }
         } else {
@@ -77,11 +93,11 @@ public class TransactionLog {
 
     }
 
-    private class Record {
+    public class Record {
 
         private byte[] recordData;
 
-        public Record(byte[] recordData) {
+        private Record(byte[] recordData) {
             this.recordData = recordData;
         }
 

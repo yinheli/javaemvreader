@@ -15,7 +15,7 @@
  */
 package sasc.terminal;
 
-import sasc.common.Context;
+import sasc.smartcard.common.Context;
 import sasc.util.BuildProperties;
 import sasc.util.Log;
 import sasc.util.Util;
@@ -35,6 +35,7 @@ public class TerminalUtil {
         Context.init();
         TerminalProvider terminalProvider = TerminalAPIManager.getProvider(TerminalAPIManager.SelectionPolicy.ANY_PROVIDER);
         Log.info(BuildProperties.getProperty("APP_NAME", "JER") + " built on " + BuildProperties.getProperty("BUILD_TIMESTAMP", "N/A"));
+        Log.info("Java " + System.getProperty("java.version") + " on " + System.getProperty("os.name"));
 
         while (true) {
             if (terminalProvider.listTerminals().isEmpty()) {

@@ -97,8 +97,6 @@ public class SignedStaticApplicationData {
 
         stream.read(dataAuthenticationCode, 0, dataAuthenticationCode.length);
 
-        //TODO The Data Authentication Code shall be stored in tag '9F45'
-
         //Now read the padding bytes (0xbb)
         //The padding bytes are not used
         byte[] padding = new byte[stream.available() - 21];
@@ -145,10 +143,6 @@ public class SignedStaticApplicationData {
         if (stream.available() > 0) {
             throw new SmartCardException("Error parsing Signed Static Application Data. Bytes left=" + stream.available());
         }
-
-        //Upon completion of the offline data authentication function, the terminal shall set the
-        //'Offline data authentication was performed' bit in the TSI to 1.
-        application.getTransactionStatusInformation().setOfflineDataAuthenticationWasPerformed(true);
 
         isValid = true;
         return true;

@@ -15,24 +15,20 @@
  */
 package sasc;
 
-import sasc.common.SessionProcessingEnv;
-import sasc.common.Context;
+import sasc.smartcard.common.SessionProcessingEnv;
+import sasc.smartcard.common.Context;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import sasc.common.CardSession;
+import sasc.smartcard.common.CardSession;
 import sasc.iso7816.AID;
 import sasc.emv.EMVApplication;
 import sasc.emv.CA;
-import sasc.common.SmartCard;
+import sasc.smartcard.common.SmartCard;
 import sasc.emv.*;
 import sasc.iso7816.SmartCardException;
 import sasc.util.Log;
-import sasc.lookup.ATR_DB;
-import sasc.lookup.IIN_DB;
-import sasc.lookup.RID_DB;
 import sasc.terminal.CardConnection;
 import sasc.terminal.TerminalException;
-import sasc.util.Util;
 
 /**
  *
@@ -44,7 +40,7 @@ public class CardEmulatorMain {
         SmartCard smartCard = null;
         try {
             Context.init();
-            CA.initFromFile("/certificationauthorities_test.xml");
+            CA.initFromFile("/certificationauthorities_mock.xml");
             CardConnection conn = new CardEmulator("/sdacardtransaction.xml");
             CardSession cardSession = CardSession.createSession(conn, new SessionProcessingEnv());
             smartCard = cardSession.initCard();
@@ -53,7 +49,7 @@ public class CardEmulatorMain {
             AID targetAID = new AID("a1 23 45 67 89 10 10"); //Our TEST AID
 
             session.initContext();
-            for (EMVApplication app : smartCard.getApplications()) {
+            for (EMVApplication app : smartCard.getEmvApplications()) {
                 session.selectApplication(app);
                 session.initiateApplicationProcessing(); //Also reads application data
 
@@ -62,13 +58,10 @@ public class CardEmulatorMain {
                     continue;
                 }
                 
-                //Internal auth here
+                session.prepareTransactionProcessing();
                 
-                session.readAdditionalData();
-                if (targetAID.equals(app.getAID())) {
-                    session.verifyPIN(new char[]{'1','2','3','4'}, true);
-                }
-//            session.getChallenge(app);
+                session.performTransaction();
+
             }
             Log.info("Finished Processing card.");
             Log.info("Now dumping card data in a more readable form:");

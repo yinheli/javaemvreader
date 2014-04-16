@@ -26,7 +26,7 @@ import sasc.iso7816.AID;
 import sasc.emv.EMVSession;
 import sasc.util.Log;
 import sasc.emv.SW;
-import sasc.common.SessionProcessingEnv;
+import sasc.smartcard.common.SessionProcessingEnv;
 import sasc.terminal.CardResponse;
 import sasc.terminal.Terminal;
 import sasc.terminal.TerminalException;
@@ -36,8 +36,8 @@ import sasc.util.Util;
 /**
  * An ICC emulator that uses data loaded from XML-file
  *
- * Emulate the external behavior of a Smart Card. 
- * 
+ * Emulate the external behavior of a Smart Card.
+ *
  * @author sasc
  */
 public class CardEmulator implements CardConnection {
@@ -210,16 +210,16 @@ public class CardEmulator implements CardConnection {
             }
         }
     }
-    
+
     private static boolean hasLe(byte[] cmd){
         if(cmd.length < 5){
             return false;
         }
-        
+
         if(cmd.length == 5){
             return true;
         }
-        
+
         if(Util.byteToInt(cmd[4]) == cmd.length-5-1){
             return true;
         }
@@ -229,7 +229,7 @@ public class CardEmulator implements CardConnection {
     @Override
     public CardResponse transmit(byte[] cmd) throws TerminalException {
         CardResponse response = null;
-        
+
         if(hasLe(cmd)){ //Strip Le
             byte[] tmp = new byte[cmd.length-1];
             System.arraycopy(cmd, 0, tmp, 0, tmp.length);
@@ -275,7 +275,7 @@ public class CardEmulator implements CardConnection {
                         throw new RuntimeException("INS " + Util.byte2Hex(ins) + " not implemented yet. cmd=" + cmdStr);
                 }
                 break;
-            case (byte) 0xF0: 
+            case (byte) 0xF0:
                 if(cls == (byte) 0xFF){
                     responseBytes = new byte[]{0x67, 0x00};
                     break;

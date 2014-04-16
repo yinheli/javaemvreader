@@ -50,23 +50,23 @@ import sasc.util.Util;
  */
 public class EMVAPDUCommands {
 
-    public static String selectPSE() {
+    public static byte[] selectPSE() {
         return selectByDFName(Util.fromHexString("31 50 41 59 2E 53 59 53 2E 44 44 46 30 31")); //1PAY.SYS.DDF01
     }
 
-    public static String selectPPSE() {
+    public static byte[] selectPPSE() {
         return selectByDFName(Util.fromHexString("32 50 41 59 2E 53 59 53 2E 44 44 46 30 31")); //2PAY.SYS.DDF01
     }
 
-    public static String selectByDFName(byte[] fileBytes) {
+    public static byte[] selectByDFName(byte[] fileBytes) {
         return Iso7816Commands.selectByDFName(fileBytes, true, (byte)0x00);
     }
 
-    public static String selectByDFNameNextOccurrence(byte[] fileBytes) {
+    public static byte[] selectByDFNameNextOccurrence(byte[] fileBytes) {
         return Iso7816Commands.selectByDFNameNextOccurrence(fileBytes, true, (byte)0x00);
     }
 
-    public static String readRecord(int recordNum, int sfi) {
+    public static byte[] readRecord(int recordNum, int sfi) {
         return Iso7816Commands.readRecord(recordNum, sfi);
     }
 
@@ -74,10 +74,10 @@ public class EMVAPDUCommands {
      *
      * Case 4s C-APDU
      */
-    public static String getProcessingOpts(DOL pdol, EMVApplication app) {
+    public static byte[] getProcessingOpts(DOL pdol, EMVApplication app) {
         String command;
         if (pdol != null && pdol.getTagAndLengthList().size() > 0) {
-            byte[] pdolResponseData = EMVTerminalProfile.constructDOLResponse(pdol, app);
+            byte[] pdolResponseData = EMVTerminal.constructDOLResponse(pdol, app);
             command = "80 A8 00 00";
             command += " " + Util.int2Hex(pdolResponseData.length + 2) + " 83 " + Util.int2Hex(pdolResponseData.length);
             command += " " + Util.prettyPrintHexNoWrap(pdolResponseData);
@@ -85,37 +85,37 @@ public class EMVAPDUCommands {
         } else {
             command = "80 A8 00 00 02 83 00 00"; //Last 00 is Le
         }
-        return command;
+        return Util.fromHexString(command);
     }
 
-    public static String getApplicationTransactionCounter() {
-        return "80 CA 9F 36 00";
+    public static byte[] getApplicationTransactionCounter() {
+        return Util.fromHexString("80 CA 9F 36 00");
     }
 
-    public static String getLastOnlineATCRegister() {
-        return "80 CA 9F 13 00";
+    public static byte[] getLastOnlineATCRegister() {
+        return Util.fromHexString("80 CA 9F 13 00");
     }
 
-    public static String getPINTryConter() {
-        return "80 CA 9F 17 00";
+    public static byte[] getPINTryConter() {
+        return Util.fromHexString("80 CA 9F 17 00");
     }
 
     /*
      * Case 2 C-APDU
      */
-    public static String getLogFormat() {
-        return "80 CA 9F 4F 00";
+    public static byte[] getLogFormat() {
+        return Util.fromHexString("80 CA 9F 4F 00");
     }
 
-    public static String getData(byte p1, byte p2){
-		return "80 CA "+Util.byte2Hex(p1) + " " + Util.byte2Hex(p2) + " 00";
+    public static byte[] getData(byte p1, byte p2){
+		return Util.fromHexString("80 CA "+Util.byte2Hex(p1) + " " + Util.byte2Hex(p2) + " 00");
 	}
 
-    public static String internalAuthenticate(byte[] authenticationRelatedData) {
+    public static byte[] internalAuthenticate(byte[] authenticationRelatedData) {
         return Iso7816Commands.internalAuthenticate(authenticationRelatedData);
     }
 
-    public static String externalAuthenticate(byte[] cryptogram, byte[] proprietaryBytes) {
+    public static byte[] externalAuthenticate(byte[] cryptogram, byte[] proprietaryBytes) {
         return Iso7816Commands.externalAuthenticate(cryptogram, proprietaryBytes);
     }
 
@@ -127,9 +127,19 @@ public class EMVAPDUCommands {
      * @param transactionRelatedData
      * @return
      */
-    public static String generateAC(byte referenceControlParameterP1, byte[] transactionRelatedData) {
-        return "80 AE "+referenceControlParameterP1+"00 "+Util.int2Hex(transactionRelatedData.length)+
-                Util.prettyPrintHexNoWrap(transactionRelatedData)+" 00"; // Last 00 is Le
+    public static byte[] generateAC(byte referenceControlParameterP1, byte[] transactionRelatedData) {
+        if(transactionRelatedData == null) {
+            throw new IllegalArgumentException("Param 'transactionRelatedData' cannot be null");
+        }
+        byte[] cmd = new byte[5+transactionRelatedData.length+1];
+        cmd[0] = (byte)0x80;
+        cmd[1] = (byte)0xAE;
+        cmd[2] = referenceControlParameterP1;
+        cmd[3] = 0x00;
+        cmd[4] = (byte)transactionRelatedData.length;
+        System.arraycopy(transactionRelatedData, 0, cmd, 5, transactionRelatedData.length);
+        cmd[cmd.length-1] = 0x00; //Le
+        return cmd;
     }
 
     /**
@@ -141,8 +151,8 @@ public class EMVAPDUCommands {
      *
      * @return String the APDU command GET CHALLENGE
      */
-    public static String getChallenge() {
-        return "00 84 00 00 00";
+    public static byte[] getChallenge() {
+        return Util.fromHexString("00 84 00 00 00");
     }
 
     /**
@@ -150,11 +160,8 @@ public class EMVAPDUCommands {
      * The Transaction PIN Data (input) is compared with the Reference PIN Data
      * stored in the application (ICC).
      *
-     * NOTE: The EMV command "Offline PIN" is vulnerable to a Man-in-the-middle attack.
-     * Terminals should request online pin verification instead!!
-     *
-     * TODO:
-     * Plaintext PIN has been tested and verified OK. Enciphered PIN not implemented
+     * NOTE: The EMV command "Offline PIN" (plaintext) is vulnerable to a Man-in-the-middle attack.
+     * Terminals should request online pin verification instead (or encipher PIN) !!
      *
      * Case 3 C-APDU
      *
@@ -162,60 +169,57 @@ public class EMVAPDUCommands {
      * @param transmitInPlaintext
      * @return
      */
-    public static String verifyPIN(char[] pin, boolean transmitInPlaintext) {
-        String pinStr = String.valueOf(pin);//TODO use byte[] instead of String, so we can clear PIN from memory
-        int pinLength = pinStr.length();
-        if (pinLength < 4 || pinLength > 12) { //0x0C
-            throw new SmartCardException("Invalid PIN length. Must be in the range 4 to 12. Length=" + pinLength);
+    public static byte[] verifyPIN(char[] pin, boolean transmitInPlaintext) {
+        if (pin.length < 4 || pin.length > 12) { //0x0C
+            throw new SmartCardException("Invalid PIN length. Must be in the range 4 to 12. Length=" + pin.length);
         }
-        StringBuilder builder = new StringBuilder("00 20 00 ");
+        for(char c : pin){
+            if(!Character.isDigit(c)) {
+                throw new SmartCardException("Only decimal digits allowed in PIN");
+            }
+        }
+        byte[] cmd = new byte[13];
+        cmd[0] = 0x00;
+        cmd[1] = 0x20;
+        cmd[2] = 0x00;
 
         //EMV book 3 Table 23 (page 88) lists 7 qualifiers,
         //but only 2 are relevant in our case (hence the use of boolean)
         byte p2QualifierPlaintextPIN = (byte) 0x80;
         byte p2QualifierEncipheredPIN = (byte) 0x88;
         if (transmitInPlaintext) {
-            builder.append(Util.byte2Hex(p2QualifierPlaintextPIN));
-            byte[] tmp = new byte[8]; //Plaintext Offline PIN Block. This block is split into nibbles (4 bits)
-            tmp[0] = (byte) 0x20; //Control field (binary 0010xxxx)
-            tmp[0] |= pinLength;
-            Arrays.fill(tmp, 1, tmp.length, (byte) 0xFF); //Filler bytes
+            cmd[3] = p2QualifierPlaintextPIN;
+            cmd[4] = 0x08; //Lc
+            cmd[5] = (byte)(0x20 | pin.length); //Control field (binary 0010xxxx)
+            //The remaining 8 bytes is the plaintext Offline PIN Block. This block is split into nibbles (4 bits)
+            Arrays.fill(cmd, 6, cmd.length, (byte)0xFF); //Filler bytes
 
             boolean highNibble = true; //Alternate between high and low nibble
-            for (int i = 0; i < pinLength; i++) { //Put each PIN digit into its own nibble
+            for (int i = 0; i < pin.length; i++) { //Put each PIN digit into its own nibble
                 int pos = i / 2;
-                int digit = Integer.parseInt(pinStr.substring(i, i + 1)); //Safe to use parseInt here, since the original String data came from a 'long'
+                int digit = Character.digit(pin[i], 10);
                 if (highNibble) {
-                    tmp[1 + pos] &= (byte) 0x0F; //Clear bits
-                    tmp[1 + pos] |= (byte) (digit << 4);
+                    cmd[6 + pos] &= (byte) 0x0F; //Clear bits
+                    cmd[6 + pos] |= (byte) (digit << 4);
 
                 } else {
-                    tmp[1 + pos] &= (byte) 0xF0; //Clear bits
-                    tmp[1 + pos] |= (byte) (digit);
+                    cmd[6 + pos] &= (byte) 0xF0; //Clear bits
+                    cmd[6 + pos] |= (byte) (digit);
                 }
                 highNibble = !highNibble;
             }
-            builder.append(" 08 "); //Lc length
-            builder.append(Util.prettyPrintHexNoWrap(tmp)); //block
-
 
         } else {
-            builder.append(Util.byte2Hex(p2QualifierEncipheredPIN));
+            cmd[3] = p2QualifierEncipheredPIN;
             //Encipher PIN
-            //TODO
+            //TODO: Implement enciphered PIN
             throw new UnsupportedOperationException("Enciphered PIN not implemented");
         }
 
-
-
-        return builder.toString();
+        return cmd;
     }
 
-//    //Example
-//    public static String applicationBlock(int data){
-//        return "8x 1E";
-//    }
     public static void main(String[] args) {
-        System.out.println(verifyPIN(new char[]{'1','2','3','4'}, true));
+        System.out.println(Util.prettyPrintHexNoWrap(verifyPIN(new char[]{'1','2','3','4'}, true)));
     }
 }

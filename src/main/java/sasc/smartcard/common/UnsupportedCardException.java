@@ -13,40 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sasc.emv;
+package sasc.smartcard.common;
 
-import sasc.iso7816.File;
-import java.io.PrintWriter;
+import sasc.iso7816.SmartCardException;
 
 /**
- * Application Definition File (ADF)
  *
  * @author sasc
  */
-public class ApplicationDefinitionFile implements File{// implements DF{
-//    private Type type = Type.ADF;
-    private byte[] name;
-    
-    public ApplicationDefinitionFile() {
-//        type = Type.ADF;
+public class UnsupportedCardException extends SmartCardException {
+    public UnsupportedCardException(String msg){
+        super(msg);
     }
-    
-    public void setName(byte[] name) {
-        this.name = name;
+    public UnsupportedCardException(String msg, Throwable cause){
+        super(msg, cause);
     }
-
-    public byte[] getName() {
-        return name;
+    public UnsupportedCardException(Throwable cause){
+        super(cause);
     }
-
-//    @Override
-//    public Type getType() {
-//        return type;
-//    }
-
-//    @Override
-    public void dump(PrintWriter pw, int indent) {
-        //TODO
-    }
-
 }

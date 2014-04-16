@@ -27,7 +27,7 @@ public class TerminalAPIManager {
         ANY_PROVIDER("Any Provider"), SMARTCARD_IO_API("SmartcardIO API");
 
         private String name;
-        private SelectionPolicy(String name){
+        private SelectionPolicy(String name){ //Strategy
             this.name = name;
         }
 

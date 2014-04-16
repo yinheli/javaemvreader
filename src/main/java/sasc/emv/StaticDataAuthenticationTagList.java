@@ -23,6 +23,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import sasc.iso7816.TLVUtil;
 import sasc.util.Log;
 import sasc.util.Util;
 
@@ -39,7 +40,7 @@ public class StaticDataAuthenticationTagList {
         //Parse tags and lengths
         ByteArrayInputStream stream = new ByteArrayInputStream(data);
         while(stream.available() > 0){
-            this.tagList.add(EMVTags.getNotNull(EMVUtil.readTagIdBytes(stream)));
+            this.tagList.add(EMVTags.getNotNull(TLVUtil.readTagIdBytes(stream)));
         }
         if(!(tagList.size() == 1 && tagList.get(0).equals(EMVTags.APPLICATION_INTERCHANGE_PROFILE))){
             //If the Static Data Authentication Tag List exists, it shall contain

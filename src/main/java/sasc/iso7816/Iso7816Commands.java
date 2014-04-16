@@ -26,36 +26,64 @@ import sasc.util.Util;
  */
 public class Iso7816Commands {
     
+    public static final byte ISO_CLA           = (byte)0x00;
+    public static final byte ISO_SELECT        = (byte)0xa4;
+    public static final byte ISO_READ_RECORD   = (byte)0xb2;
+    public static final byte ISO_INTERNAL_AUTH = (byte)0x88;
+    public static final byte ISO_EXTERNAL_AUTH = (byte)0x82;
+    public static final byte ISO_GET_DATA      = (byte)0xca;
+    
     /**
      * Select Master File.
      * Standard iso7816 command
      */
-    public static String selectMasterFile() {
-        return "00 A4 00 00 00 00";
+    public static byte[] selectMasterFile() {
+        return Util.fromHexString("00 A4 00 00 00");
     }
 
-    public static String selectMasterFileByIdentifier() {
-        return "00 A4 00 00 02 3F 00 00";
+    public static byte[] selectMasterFileByIdentifier() {
+        return Util.fromHexString("00 A4 00 00 02 3F 00 00");
     }
 
-    public static String selectByDFName(byte[] fileBytes, boolean lePresent, byte le) {
+    public static byte[] selectByDFName(byte[] fileBytes, boolean lePresent, byte le) {
         if (fileBytes.length > 16) {
             throw new IllegalArgumentException("Dedicated File name not valid (length > 16). Length = "+fileBytes.length);
         }
-        //INS A4 = ISO SELECT FILE
+        byte[] cmd = new byte[5+fileBytes.length+(lePresent?1:0)];
+        cmd[0] = ISO_CLA;
+        cmd[1] = ISO_SELECT;
         //04 - Direct selection by DF name (data field=DF name)
-        //TODO: when P2 = 0C : see 7816-4 doc..
-        return "00 A4 04 00 " + Util.byte2Hex((byte) fileBytes.length) + " " + Util.prettyPrintHexNoWrap(fileBytes) + (lePresent?" " + Util.byte2Hex(le):"");
+        cmd[2] = 0x04;
+        //TODO: when P2 = 0C : see 7816-4 spec..
+        cmd[3] = 0x00;
+        cmd[4] = (byte)fileBytes.length;
+        System.arraycopy(fileBytes, 0, cmd, 5, fileBytes.length);
+        if(lePresent) {
+            cmd[cmd.length-1] = 0x00;
+        }
+        return cmd;
     }
     
-    public static String selectByDFNameNextOccurrence(byte[] fileBytes, boolean lePresent, byte le) {
-        //INS A4 = ISO SELECT FILE
+    public static byte[] selectByDFNameNextOccurrence(byte[] fileBytes, boolean lePresent, byte le) {
+        if (fileBytes.length > 16) {
+            throw new IllegalArgumentException("Dedicated File name not valid (length > 16). Length = "+fileBytes.length);
+        }
+        byte[] cmd = new byte[5+fileBytes.length+(lePresent?1:0)];
+        cmd[0] = ISO_CLA;
+        cmd[1] = ISO_SELECT;
         //04 - Direct selection by DF name (data field=DF name)
+        cmd[2] = 0x04;
         //02 - Next occurrence
-        return "00 A4 04 02 " + Util.byte2Hex((byte) fileBytes.length) + " " + Util.prettyPrintHexNoWrap(fileBytes) + (lePresent?" " + Util.byte2Hex(le):"");
+        cmd[3] = 0x02;
+        cmd[4] = (byte)fileBytes.length;
+        System.arraycopy(fileBytes, 0, cmd, 5, fileBytes.length);
+        if(lePresent) {
+            cmd[cmd.length-1] = 0x00;
+        }
+        return cmd;
     }
 
-    public static String readRecord(int recordNum, int sfi) {
+    public static byte[] readRecord(int recordNum, int sfi) {
         //Valid Record numbers: 1 to 255
         //Valid SFI: 1 to 30
         //SFI=0 : Currently selected EF
@@ -66,45 +94,78 @@ public class Iso7816Commands {
             throw new IllegalArgumentException("Argument 'sfi' must be in the rage 1 to 30. Use 0 for currently selected EF. sfi=" + sfi);
         }
 
-        String P1 = Util.byte2Hex((byte) recordNum);
+        byte P1 = (byte) recordNum;
 
         //00010100 = P2
         //00010    = SFI (= 2 << 3)
         //     100 = "Record number can be found in P1" (=4)
-        String P2 = Util.byte2Hex((byte) ((sfi << 3) | 4));
+        byte P2 = (byte) ((sfi << 3) | 4);
 
         Log.debug("Iso7816Commands.readRecord() P1=" + P1 + " P2=" + P2);
 
+        byte[] cmd = new byte[5];
         //00 = No secure messaging
+        cmd[0] = ISO_CLA;
         //B2 = READ RECORD
+        cmd[1] = ISO_READ_RECORD;
         //P1 = Record number or record identifier of the first record to be read ('00' indicates the current record)
+        cmd[2] = P1;
         //P2 = SFI + 4 (Indicates that the record number can be found in P1)
-
-        return "00 B2 " + P1 + " " + P2 + " 00";
+        cmd[3] = P2;
+        cmd[4] = 0x00;
+        return cmd;
     }
 
-    public static String internalAuthenticate(byte[] authenticationRelatedData) {
-        return "00 88 00 00 " + Util.byte2Hex((byte) authenticationRelatedData.length) + " " + Util.prettyPrintHex(authenticationRelatedData) + " 00";
+    public static byte[] internalAuthenticate(byte[] authenticationRelatedData) {
+        if (authenticationRelatedData == null) {
+            throw new IllegalArgumentException("Argument 'authenticationRelatedData' cannot be null");
+        }
+        byte[] cmd = new byte[5+authenticationRelatedData.length+1];
+        cmd[0] = ISO_CLA;
+        cmd[1] = ISO_INTERNAL_AUTH;
+        cmd[2] = 0x00;
+        cmd[3] = 0x00;
+        cmd[4] = (byte)authenticationRelatedData.length;
+        System.arraycopy(authenticationRelatedData, 0, cmd, 5, authenticationRelatedData.length);
+        cmd[cmd.length-1] = 0x00;
+        return cmd;
     }
 
-    public static String externalAuthenticate(byte[] cryptogram, byte[] proprietaryBytes) {
+    public static byte[] externalAuthenticate(byte[] cryptogram, byte[] proprietaryBytes) {
         if (cryptogram == null) {
             throw new IllegalArgumentException("Argument 'cryptogram' cannot be null");
         }
         if (cryptogram.length != 8) {
             throw new IllegalArgumentException("Argument 'cryptogram' must have a length of 8. length=" + cryptogram.length);
         }
+        if (proprietaryBytes != null && (proprietaryBytes.length < 1 || proprietaryBytes.length > 8)) {
+            throw new IllegalArgumentException("Argument 'proprietaryBytes' must have a length in the range 1 to 8. length=" + proprietaryBytes.length);
+        }
         int length = cryptogram.length;
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        stream.write(ISO_CLA);
+        stream.write(ISO_EXTERNAL_AUTH);
+        stream.write(0x00);
+        stream.write(0x00);
+        if (proprietaryBytes != null) {
+            length += proprietaryBytes.length;
+        }
+        stream.write(length);
         stream.write(cryptogram, 0, cryptogram.length);
         if (proprietaryBytes != null) {
-            if (proprietaryBytes.length < 1 || proprietaryBytes.length > 8) {
-                throw new IllegalArgumentException("Argument 'proprietaryBytes' must have a length in the range 1 to 8. length=" + proprietaryBytes.length);
-            }
-            length += proprietaryBytes.length;
             stream.write(proprietaryBytes, 0, proprietaryBytes.length);
         }
-        String lengthStr = Util.byte2Hex((byte) length);
-        return "00 82 00 00 " + lengthStr + " " + Util.prettyPrintHex(stream.toByteArray());
+        stream.write(0x00); //Le
+        return stream.toByteArray();
+    }
+    
+    public static byte[] getData(byte p1, byte p2, byte le) {
+        byte[] cmd = new byte[5];
+        cmd[0] = ISO_CLA;
+        cmd[1] = ISO_GET_DATA;
+        cmd[2] = p1;
+        cmd[3] = p2;
+        cmd[4] = le;
+        return cmd;
     }
 }

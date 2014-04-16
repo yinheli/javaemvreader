@@ -17,16 +17,46 @@ package sasc.emv;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import sasc.util.ISO4217_Numeric;
 import sasc.util.Log;
 import sasc.util.Util;
 
 /**
- * Describes Cardholder Verification Method (CVM) Codes
+ * Describes Card holder Verification Method (CVM) Codes
  * EMV book 3 page 184
  * 
  * @author sasc
  */
 public class CVRule {
+    
+    public static enum Rule {
+        FAIL_PROCESSING("Fail CVM processing"), 
+        NO_CVM_REQUIRED("No CVM required"),
+        PLAINTEXT_PIN_VERIFIED_BY_ICC("Plaintext PIN verification performed by ICC"), 
+        PLAINTEXT_PIN_VERIFIED_BY_ICC_AND_SIGNATURE_ON_PAPER("Plaintext PIN verification performed by ICC and signature (paper)"),
+        ENCIPHERED_PIN_VERIFIED_ONLINE("Enciphered PIN verified online"),
+        ENCIPHERED_PIN_VERIFIED_BY_ICC("Enciphered PIN verification performed by ICC"),
+        ENCIPHERED_PIN_VERIFIED_BY_ICC_AND_SIGNATURE_ON_PAPER("Enciphered PIN verification performed by ICC and signature (paper)"),
+        SIGNATURE_ON_PAPER("Signature (paper)"),
+        RESERVED_FOR_USE_BY_THE_INDIVIDUAL_PAYMENT_SYSTEMS("Reserved for use by individual payment systems"),
+        RESERVED_FOR_USE_BY_THE_ISSUER("Reserved for use by the issuer"),
+        NOT_AVAILABLE_FOR_USE("Value is not available for use"),
+        RFU("Reserved for future use");
+        
+        private String description;
+        
+        private Rule(String description){
+            this.description = description;
+        }
+        
+        public String getDescription() {
+            return description;
+        }
+    }
+    
+    public static enum Condition {
+        
+    }
 
     byte firstByte;
     byte secondByte;
@@ -34,8 +64,8 @@ public class CVRule {
     String amountFieldXStr;
     byte[] secondAmountFieldYBytes;
     String secondAmountFieldYStr;
+    Rule rule;
 
-    //TODO send in param Application Currency Code?
     public CVRule(byte firstByte, byte secondByte, byte[] amountFieldX, byte[] secondAmountFieldY) {
         this.firstByte = firstByte;
         this.secondByte = secondByte;
@@ -43,49 +73,86 @@ public class CVRule {
         this.amountFieldXStr = CVRule.formatAmountField(amountFieldX);
         this.secondAmountFieldYBytes = secondAmountFieldY;
         this.secondAmountFieldYStr = CVRule.formatAmountField(secondAmountFieldYBytes);
+        
+        if(failCVMProcessing()){
+            rule = Rule.FAIL_PROCESSING;
+        }else if(noCVMRequired()) {
+            rule = Rule.NO_CVM_REQUIRED;
+        }else if(plaintextPINVerificationPerformedByICC()) {
+            rule = Rule.PLAINTEXT_PIN_VERIFIED_BY_ICC;
+        }else if(plaintextPINVerificationPerformedByICCAndSignature_paper_()) {
+            rule = Rule.PLAINTEXT_PIN_VERIFIED_BY_ICC_AND_SIGNATURE_ON_PAPER;
+        }else if(encipheredPINVerifiedOnline()) {
+            rule = Rule.ENCIPHERED_PIN_VERIFIED_ONLINE;
+        }else if(encipheredPINVerificationPerformedByICC()) {
+            rule = Rule.ENCIPHERED_PIN_VERIFIED_BY_ICC;
+        }else if(encipheredPINVerificationPerformedByICCAndSignature_paper_()) {
+            rule = Rule.ENCIPHERED_PIN_VERIFIED_BY_ICC_AND_SIGNATURE_ON_PAPER;
+        }else if(signature_paper_()) {
+            rule = Rule.SIGNATURE_ON_PAPER;
+        }else if((firstByte & (byte) 0x30) == 0x20) {
+            rule = Rule.RESERVED_FOR_USE_BY_THE_INDIVIDUAL_PAYMENT_SYSTEMS;
+        }else if((firstByte & (byte) 0x30) == 0x30) {
+            rule = Rule.RESERVED_FOR_USE_BY_THE_ISSUER;
+        }else if(firstByte >= 0x06 && firstByte <= 0x1D) {
+            rule = Rule.RFU;
+        }
     }
 
+    //These 2 are mutually exclusive
     //Most significant bit (0x80) of the first byte is RFU
-    public boolean failCardholderVerificationIfThisCVMIsUnsuccessful() {
+    public final boolean failCardholderVerificationIfThisCVMIsUnsuccessful() {
         return (firstByte & (byte) 0x40) == 0;
     }
 
-    public boolean applySucceedingCVRuleIfThisCVMIsUnsuccessful() {
+    public final boolean applySucceedingCVRuleIfThisCVMIsUnsuccessful() {
         return (firstByte & (byte) 0x40) == (byte) 0x40;
     }
 
-    public boolean failCVMProcessing() {
+    public final boolean failCVMProcessing() {
         return (firstByte & (byte) 0x3F) == 0;
     }
 
-    public boolean plaintextPINVerificationPerformedByICC() {
+    public final boolean plaintextPINVerificationPerformedByICC() {
         return (firstByte & (byte) 0x3F) == (byte) 0x01;
     }
 
-    public boolean encipheredPINVerifiedOnline() {
+    public final boolean encipheredPINVerifiedOnline() {
         return (firstByte & (byte) 0x3F) == (byte) 0x02;
     }
 
-    public boolean plaintextPINVerificationPerformedByICCAndSignature_paper_() {
+    public final boolean plaintextPINVerificationPerformedByICCAndSignature_paper_() {
         return (firstByte & (byte) 0x3F) == (byte) 0x03;
     }
 
-    public boolean encipheredPINVerificationPerformedByICC() {
+    public final boolean encipheredPINVerificationPerformedByICC() {
         return (firstByte & (byte) 0x3F) == (byte) 0x04;
     }
 
-    public boolean encipheredPINVerificationPerformedByICCAndSignature_paper_() {
+    public final boolean encipheredPINVerificationPerformedByICCAndSignature_paper_() {
         return (firstByte & (byte) 0x3F) == (byte) 0x05;
     }
 
     //Values in the range 000110 (0x06) - 011101 (0x1D) reserved for future use
 
-    public boolean signature_paper_() {
+    public final boolean signature_paper_() {
         return (firstByte & (byte) 0x3F) == (byte) 0x1E;
     }
 
-    public boolean noCVMRequired() {
+    public final boolean noCVMRequired() {
         return (firstByte & (byte) 0x3F) == (byte) 0x1F;
+    }
+    
+    public boolean isPinRelated() {
+        return plaintextPINVerificationPerformedByICC() 
+                || encipheredPINVerificationPerformedByICC()
+                || plaintextPINVerificationPerformedByICCAndSignature_paper_()
+                || encipheredPINVerificationPerformedByICCAndSignature_paper_()
+                || encipheredPINVerifiedOnline();
+    }
+    
+    public Rule getRule(){
+        return rule;
     }
 
     public String getCVMUnsuccessfulRuleString() {
@@ -97,39 +164,7 @@ public class CVRule {
     }
 
     public String getRuleString(){
-        switch (firstByte & (byte)0x3F) {
-            case 0x00:
-                return "Fail CVM processing";
-            case 0x01:
-                return "Plaintext PIN verification performed by ICC";
-            case 0x02:
-                return "Enciphered PIN verified online";
-            case 0x03:
-                return "Plaintext PIN verification performed by ICC and signature (paper)";
-            case 0x04:
-                return "Enciphered PIN verification performed by ICC";
-            case 0x05:
-                return "Enciphered PIN verification performed by ICC and signature (paper)";
-            //0x06-0x1D: reserved for future use
-            case 0x1E:
-                return "Signature (paper)";
-            case 0x1F:
-                return "No CVM required";
-            //Values in the range 100000 (0x20) - 101111 (0x2F) reserved for use by the individual payment systems
-            //Values in the range 110000 (0x30) - 111110 (0x3E) reserved for use by the issuer
-            //111111 (0x3F): This value is not available for use
-            default:
-                if (firstByte <= 0x1D) { //0x06 - 0x1D
-                    return "Reserved for future use";
-                } else if(firstByte <= 0x2F){ //0x80 - 0xFF
-                    return "Reserved for use by individual payment systems";
-                } else if(firstByte <= 0x3E){
-                    return "Reserved for use by the issuer";
-                } else{ //0x3F
-                    //This value is not available for use
-                    return "";
-                }
-        }
+        return rule.getDescription();
     }
 
     private static String formatAmountField(byte[] amount){ //TODO Application Currency Code
@@ -138,6 +173,15 @@ public class CVRule {
             sb.insert(0, '0');
         }
         sb.insert(sb.length()-2, ".");
+        
+        int currencyCode = -1; //TODO get from app (if available)
+        if(currencyCode != -1){
+            String codeAlpha3 = ISO4217_Numeric.getCurrencyForCode(currencyCode).getCode();
+            if(codeAlpha3 != null && !codeAlpha3.isEmpty()) {
+                sb.append(" ").append(codeAlpha3);
+            }
+        }
+        
         return sb.toString();
     }
 
@@ -151,10 +195,10 @@ public class CVRule {
     //'00' Always
     //'01' If unattended cash
     //'02' If not unattended cash and not manual cash and not purchase with cashback
-    //'03' If terminal supports the CVM 21
+    //'03' If terminal supports the CVM 
     //'04' If manual cash
     //'05' If purchase with cashback
-    //'06' If transaction is in the application currency 22 and is under X value (see section 10.5 for a discussion of ―X)
+    //'06' If transaction is in the application currency and is under X value (see section 10.5 for a discussion of ―X)
     //'07' If transaction is in the application currency and is over X value
     //'08' If transaction is in the application currency and is under Y value (see section 10.5 for a discussion of ―Y)
     //'09' If transaction is in the application currency and is over Y value
@@ -191,6 +235,14 @@ public class CVRule {
                 }
 
         }
+    }
+    
+    public byte getConditionCode() {
+        return secondByte;
+    }
+    
+    public boolean getConditionAlways() {
+        return secondByte == 0x00;
     }
 
     @Override

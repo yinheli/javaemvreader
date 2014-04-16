@@ -136,6 +136,11 @@ public class TransactionStatusInformation {
         }
     }
 
+    public void reset() {
+        firstByte = 0x00;
+        secondByte = 0x00;
+    }
+    
     public byte[] getBytes(){
         return new byte[]{firstByte, secondByte};
     }

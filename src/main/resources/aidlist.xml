@@ -35,7 +35,7 @@
     <Application AID="A000000004 1010"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="MasterCard Credit" Description="Standard MasterCard"/>
     <Application AID="A000000004 2010"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="MasterCard Specific" Description=""/>
     <Application AID="A000000004 3010"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="MasterCard Specific" Description=""/>
-    <Application AID="A000000004 3060"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="Maestro (Debit)" Description=""/>
+    <Application AID="A000000004 3060"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="Maestro (Debit)" Description="(Bankomat)"/>
     <Application AID="A000000004 4010"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="MasterCard Specific" Description=""/>
     <Application AID="A000000004 5010"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="MasterCard Specific" Description=""/>
     <Application AID="A000000004 5555"       Supported="false" ASI="EXACT_MATCH"   Type=""    Name="APDULogger" Description="AID on Cirrus Test Card"/>
@@ -102,7 +102,7 @@
 
     <Application AID="A000000454 0010"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="Etranzact Genesis Card" Description="Nigerian local switch company"/>
     <Application AID="A000000454 0011"       Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="Etranzact Genesis Card 2" Description="Nigerian local switch company"/>
-    
+        
     <!-- Google Wallet -->
     <Application AID="A000000151 53504341534400" Supported="false" ASI="EXACT_MATCH" Type="GP" Name="CASD_AID" Description="SPCASD" />  
     <Application AID="A000000476 6C"         Supported="false" ASI="EXACT_MATCH"   Type="EMV" Name="GOOGLE_PAYMENT_AID" Description=""/>
@@ -137,7 +137,7 @@
     <Application AID="A000000003 534441"     Supported="false" ASI="EXACT_MATCH"   Type="GP"  Name="Schlumberger Security Domain" Description=""/>
     <Application AID="A000000003 5350"       Supported="false" ASI="EXACT_MATCH"   Type="GP"  Name="Security Domain" Description="OCS Oberthur Card System Security Domain Package AID / VGP Card Manager (for ISD and ASD)"/>
     <Application AID="A000000003 535041"     Supported="false" ASI="EXACT_MATCH"   Type="GP"  Name="Security Domain" Description="OCS Oberthur Card System Security Domain Applet AID / VGP Card Manager (for ISD and ASD)"/>
-    <Application AID="A000000004 0000"       Supported="false" ASI="EXACT_MATCH"   Type="GP"  Name="MasterCard Card Manager" Description="Security Domain"/>
+    <Application AID="A000000004 000000"     Supported="false" ASI="EXACT_MATCH"   Type="GP"  Name="MasterCard Card Manager" Description="Security Domain"/>
     <Application AID="A000000018 434D"       Supported="false" ASI="EXACT_MATCH"   Type="GP"  Name="Gemplus card manager" Description="434D = CM (ascii). Security domain for some GCX/GXP cards (GemXpresso Pro) (Gemalto)"/>
     <Application AID="A000000018 434D00"     Supported="false" ASI="EXACT_MATCH"   Type="GP"  Name="Gemplus Security Domain" Description="(Gemalto)"/>
     <Application AID="A000000096 0200"       Supported="false" ASI="EXACT_MATCH"   Type="GP"  Name="Proton World International Security Domain" Description="Proton, which is owned in part by Visa International and American Express Co., is in three other European countries: the original Proton program in Belgium, Chipknip in the Netherlands, and Cash in Switzerland"/>
@@ -190,6 +190,7 @@
     <!--              PIX ASCII: W A P - W I M -->
     <Application AID="A000000063 5741502D57494D"         Supported="false" ASI="EXACT_MATCH"   Type="" Name="WAP-WIM" Description="WAP (Wireless Application Protocol) Identity Module / Wireless Identification Module"/>
 
+    <Application AID="A000000088 102001048100"           Supported="false" ASI="EXACT_MATCH"   Type="BuyPass" Name="BuyPass BIDA" Description="" />
     <Application AID="A000000088 10200105C100"           Supported="false" ASI="EXACT_MATCH"   Type="BuyPass" Name="BuyPass BIDA" Description="Used by norwegian public betting company Norsk-Tipping?"/>
     <Application AID="A000000088 102201034221"           Supported="false" ASI="EXACT_MATCH"   Type="BuyPass" Name="BuyPass BEID (BuyPass Electronic ID?)" Description=""/>
     <Application AID="A000000088 102201034321"           Supported="false" ASI="EXACT_MATCH"   Type="BuyPass" Name="BuyPass BEID (BuyPass Electronic ID?)" Description=""/>
@@ -218,6 +219,13 @@
     <Application AID="A000000397 42544659"               Supported="false" ASI="EXACT_MATCH"   Type="" Name="Microsoft IDMP AID" Description="Identity Device With Microsoft Generic Profile application. 2 bytes can be added at the end. This byte must be set to the IDMP specification revision number which is currently 0x01. The second byte (yy) is reserved for use by the card application."/>
     <Application AID="A000000397 4349445F0100"           Supported="false" ASI="EXACT_MATCH"   Type="" Name="Microsoft PNP AID" Description="MS Plug and Play"/>
  
+    <!-- Proprietary payment application featured on Austrian Maestro debit cards -->
+    <Application AID="D040000001 000002"                 Supported="false" ASI="EXACT_MATCH"   Type="" Name="Paylife Quick (IEP)" Description="Preloaded Electronic Purse - http://www.paylife.at"/>
+    
+    <Application AID="D040000002 000002"                 Supported="false" ASI="EXACT_MATCH"   Type="" Name="?" Description="Unknown application found on Austrian Maestro debit cards"/>
+    <Application AID="D04000000B 000002"                 Supported="false" ASI="EXACT_MATCH"   Type="" Name="?" Description="Unknown application found on Austrian Maestro debit cards"/>
+    <Application AID="D04000000C 000002"                 Supported="false" ASI="EXACT_MATCH"   Type="" Name="?" Description="Unknown application found on Austrian Maestro debit cards"/>
+    
     <Application AID="D276000022 00000001"               Supported="false" ASI="EXACT_MATCH"   Type="" Name="SCT LOYALTY" Description="IBM Test card from the book 'Smart Card Application Development Using Java'"/> 
     <Application AID="D276000022 00000002"               Supported="false" ASI="EXACT_MATCH"   Type="" Name="BUSINESS CARD" Description="IBM Test card from the book 'Smart Card Application Development Using Java'"/> 
     <Application AID="D276000022 00000060"               Supported="false" ASI="EXACT_MATCH"   Type="" Name="PKCS#11 Token" Description="IBM Test card from the book 'Smart Card Application Development Using Java'"/> 
@@ -225,7 +233,11 @@
     <Application AID="D276000085 0100"                   Supported="false" ASI="EXACT_MATCH"   Type="" Name="NDEF Tag Application / Mifare DESFire Tag Application" Description="NFC Forum Type 4 Tag"/>
     <Application AID="D276000085 0101"                   Supported="false" ASI="EXACT_MATCH"   Type="" Name="NDEF Tag Application" Description="NFC Tag type 4 tag"/>
                       
-    <Application AID="D276000118 0101"                   Supported="false" ASI="EXACT_MATCH"   Type="" Name="Giesecke &amp; Devrient Test Applet?" Description="Seek 4 Android webapi test"/>
+    <Application AID="A000000151 41434C00"               Supported="false" ASI="EXACT_MATCH"   Type="" Name="Seek 4 Android AllowAll Applet" Description="ARA dummy Applet" />
+    <Application AID="D276000005 0002FF49402589C0016D01" Supported="false" ASI="EXACT_MATCH"   Type="" Name="Seek 4 Android Secure File Manager Applet" Description="Test Applet" />
+    <Application AID="D276000118 0002FF49502589C0019B01" Supported="false" ASI="EXACT_MATCH"   Type="" Name="Seek 4 Android HelloSmartCard Applet" Description="Test Applet" />
+    <Application AID="D276000118 0101"                   Supported="false" ASI="EXACT_MATCH"   Type="" Name="Seek 4 Android ApduTester Applet" Description="Test Applet by Giesecke &amp; Devrient"/>
+    <Application AID="D276000118 AAFFFF4910488901"       Supported="false" ASI="EXACT_MATCH"   Type="" Name="Seek 4 Android Access Controller Applet" Description="" />
     
     <!-- The full OpenPGP AID is specified in the respective PGP/GPG certificate. -->
     <!-- If not known, then issue select with PIX = 0x01. This should select the OpenPGP application on the card. -->
@@ -242,8 +254,8 @@
     <Application AID="D276000124 0200010000000000000000" Supported="false" ASI="EXACT_MATCH"   Type="SmartChess" Name="SmartChess" Description="http://smartchess.de/englisch/SmartChess_1.0.pdf"/>
 
     <Application AID="A000000527 1002"                   Supported="false" ASI="EXACT_MATCH"   Type="YKNEO" Name="Yubikey NEO U2F Demo applet" Description="Universal 2-Factor Proof-of-concept/Demo"/>
-<!--<Application AID="A000000527 2001"                   Supported="false" ASI="EXACT_MATCH"   Type="YKNEO" Name="Yubikey NEO Yubikey2 applet interface" Description="Javacard Package AID"/>--> <!-- This will select the applet below -->
-    <Application AID="A000000527 200101"                 Supported="false" ASI="EXACT_MATCH"   Type="YKNEO" Name="Yubikey NEO Yubikey2 applet interface" Description="Javacard Applet AID"/> 
+<!--<Application AID="A000000527 2001"                   Supported="false" ASI="EXACT_MATCH"   Type="YKNEO" Name="Yubikey NEO Yubikey2 admin interface" Description="Javacard Package AID"/>--> <!-- This will select the applet below -->
+    <Application AID="A000000527 200101"                 Supported="false" ASI="EXACT_MATCH"   Type="YKNEO" Name="Yubikey NEO Yubikey2 admin interface" Description="Javacard Applet AID"/> 
 <!--<Application AID="A000000527 2101"                   Supported="false" ASI="EXACT_MATCH"   Type="YKNEO" Name="Yubikey NEO OATH Applet" Description="Javacard Package AID"/> -->
     <Application AID="A000000527 210101"                 Supported="false" ASI="EXACT_MATCH"   Type="YKNEO" Name="Yubikey NEO OATH Applet" Description="Javacard Applet AID"/>
     

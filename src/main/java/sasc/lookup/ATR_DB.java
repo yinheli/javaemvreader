@@ -41,7 +41,6 @@ public class ATR_DB {
 	public synchronized static void initialize() {
         if(initCalled.getAndSet(true)){
             return;
-//            throw new IllegalStateException("initialize() already called");
         }
 		new Thread(new Runnable(){
 				@Override

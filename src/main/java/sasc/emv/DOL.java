@@ -21,6 +21,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import sasc.iso7816.TLVUtil;
 import sasc.util.Log;
 import sasc.util.Util;
 
@@ -84,7 +85,7 @@ public class DOL {
     public DOL(Type type, byte[] data){
         //Parse tags and lengths
         this.type = type;
-        this.tagAndLengthList = EMVUtil.parseTagAndLength(data);
+        this.tagAndLengthList = TLVUtil.parseTagAndLength(data);
     }
 
     public List<TagAndLength> getTagAndLengthList(){

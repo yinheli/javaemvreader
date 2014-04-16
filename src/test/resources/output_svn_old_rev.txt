@@ -316,7 +316,55 @@ response parsed :
                   37 da d9 f8 3c 64 96 32 ce ab 8b 3c 1c d1 eb 58 (BINARY)
 
 ------------------------------------------------
-[Step 13] Send GET DATA command to find the Application Transaction Counter (ATC)
+[Step 13] Send GET DATA command to find the PIN Try Counter
+------------------------------------------------
+80 ca 9f 17 00
+response hex    :
+9f 17 01 03
+response SW1SW2 : 90 00 (Success)
+response ascii  : ....
+response parsed :
+
+9f 17 01 -- Personal Identification Number (PIN) Try Counter
+         03 (BINARY)
+
+------------------------------------------------
+[Step 14] Send VERIFY (PIN) command
+------------------------------------------------
+00 20 00 80 08 24 12 34 ff ff ff ff ff 00
+response hex    :
+
+response SW1SW2 : 90 00 (Success)
+response ascii  : 
+response parsed :
+
+
+------------------------------------------------
+[Step 15] Send GET DATA command to find the PIN Try Counter
+------------------------------------------------
+80 ca 9f 17 00
+response hex    :
+9f 17 01 03
+response SW1SW2 : 90 00 (Success)
+response ascii  : ....
+response parsed :
+
+9f 17 01 -- Personal Identification Number (PIN) Try Counter
+         03 (BINARY)
+
+------------------------------------------------
+[Step 16] Send GET DATA command to find the Log Format
+------------------------------------------------
+80 ca 9f 4f 00
+response hex    :
+
+response SW1SW2 : 6a 81 (Function not supported)
+response ascii  : 
+response parsed :
+
+
+------------------------------------------------
+[Step 17] Send GET DATA command to find the Application Transaction Counter (ATC)
 ------------------------------------------------
 80 ca 9f 36 00
 response hex    :
@@ -329,7 +377,7 @@ response parsed :
          00 79 (BINARY)
 
 ------------------------------------------------
-[Step 14] Send GET DATA command to find the Last Online ATC Register
+[Step 18] Send GET DATA command to find the Last Online ATC Register
 ------------------------------------------------
 80 ca 9f 13 00
 response hex    :
@@ -342,29 +390,7 @@ response parsed :
          00 67 (BINARY)
 
 ------------------------------------------------
-[Step 15] Send GET DATA command to find the Log Format
-------------------------------------------------
-80 ca 9f 4f 00
-response hex    :
-
-response SW1SW2 : 6a 81 (Function not supported)
-response ascii  : 
-response parsed :
-
-
-------------------------------------------------
-[Step 16] VERIFY (PIN)
-------------------------------------------------
-00 20 00 80 08 24 12 34 ff ff ff ff ff
-response hex    :
-
-response SW1SW2 : 90 00 (Success)
-response ascii  : 
-response parsed :
-
-
-------------------------------------------------
-[Step 17] Select application by AID
+[Step 19] Select application by AID
 ------------------------------------------------
 00 a4 04 00 07 d5 78 00 00 02 10 10 00
 response hex    :
@@ -391,7 +417,7 @@ response parsed :
                      62 61 6e 6b 61 78 65 70 74 (=bankaxept)
 
 ------------------------------------------------
-[Step 18] Send GET PROCESSING OPTIONS command
+[Step 20] Send GET PROCESSING OPTIONS command
 ------------------------------------------------
 80 a8 00 00 02 83 00 00
 response hex    :
@@ -404,7 +430,7 @@ response parsed :
       18 00 08 01 01 00 (BINARY)
 
 ------------------------------------------------
-[Step 19] Send READ RECORD to read SFI 1 record 1
+[Step 21] Send READ RECORD to read SFI 1 record 1
 ------------------------------------------------
 00 b2 01 0c 00
 response hex    :
@@ -454,7 +480,18 @@ response parsed :
                b0 40 04 88 00 (BINARY)
 
 ------------------------------------------------
-[Step 20] Send GET DATA command to find the Application Transaction Counter (ATC)
+[Step 22] Send GET DATA command to find the Log Format
+------------------------------------------------
+80 ca 9f 4f 00
+response hex    :
+
+response SW1SW2 : 6a 81 (Function not supported)
+response ascii  : 
+response parsed :
+
+
+------------------------------------------------
+[Step 23] Send GET DATA command to find the Application Transaction Counter (ATC)
 ------------------------------------------------
 80 ca 9f 36 00
 response hex    :
@@ -467,7 +504,7 @@ response parsed :
          01 73 (BINARY)
 
 ------------------------------------------------
-[Step 21] Send GET DATA command to find the Last Online ATC Register
+[Step 24] Send GET DATA command to find the Last Online ATC Register
 ------------------------------------------------
 80 ca 9f 13 00
 response hex    :
@@ -478,17 +515,6 @@ response parsed :
 
 9f 13 02 -- Last Online Application Transaction Counter (ATC) Register
          01 72 (BINARY)
-
-------------------------------------------------
-[Step 22] Send GET DATA command to find the Log Format
-------------------------------------------------
-80 ca 9f 4f 00
-response hex    :
-
-response SW1SW2 : 6a 81 (Function not supported)
-response ascii  : 
-response parsed :
-
 Answer To Reset (ATR)
   3b 67 00 00 a6 40 40 00 09 90 00
   Description From Public Database - [Visa card issued by Norway bank DNBNor, VISA Classic - Landkreditt Bank (Norway), VISA Classic - Nordea Bank (Norway), VISA Gold - Nordea Bank (Norway)]
@@ -525,6 +551,7 @@ Answer To Reset (ATR)
         Issuer Country Code (ISO 3166-1): 578 (Norway)
         Application Transaction Counter (ATC): 121
         Last Online ATC Register: 103
+        PIN Try Counter: 3 (Number of PIN tries remaining)
         Cardholder Name: SMITH/JOHN                
         Primary Account Number (PAN) - 5411118888888882
           Major Industry Identifier = 5 (Banking and financial)

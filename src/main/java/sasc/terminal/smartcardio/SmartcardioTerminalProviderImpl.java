@@ -24,6 +24,7 @@ import javax.smartcardio.CardException;
 import javax.smartcardio.CardTerminal;
 import javax.smartcardio.CardTerminals;
 import javax.smartcardio.TerminalFactory;
+import sasc.smartcard.pcsc.WinErrorCodes;
 import sasc.terminal.CardConnection;
 import sasc.terminal.NoTerminalsAvailableException;
 import sasc.terminal.Terminal;
@@ -88,7 +89,7 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         try {
             while (true) {
                 for (CardTerminal smartCardIOTerminal : terminals.list(javax.smartcardio.CardTerminals.State.CARD_PRESENT)) {
-                    Log.debug("Terminal: "+smartCardIOTerminal.getName());
+                    Log.debug("SmartcardioProvider Terminal: "+smartCardIOTerminal.getName());
                     Card _card = smartCardIOTerminal.connect(protocol); //if proto, eg T=1, is specified and not supported by card: throws PCSCException SCARD_E_PROTO_MISMATCH
                     Log.debug("Connected to card using protocol: "+_card.getProtocol());
 
@@ -226,19 +227,21 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
         }
         Throwable cause = ce.getCause();
         while(cause != null){
-            Log.debug("checking field in class: "+cause.getClass().getName());
-            Log.debug("cause: "+cause);
-            try{
-                Field f = cause.getClass().getDeclaredField("code");
-                f.setAccessible(true);
-                Integer i = (Integer)f.get(cause);
-                return i;
-            }catch(NoSuchFieldException ex){
-                Log.debug(Util.getStackTrace(ex));
-            }catch(IllegalAccessException ex){
-                Log.debug(Util.getStackTrace(ex));
-            }catch(ClassCastException ex){
-                Log.debug(Util.getStackTrace(ex));
+            if("sun.security.smartcardio.PCSCException".equals(cause.getClass().getName())){
+                Log.debug("checking field in class: "+cause.getClass().getName());
+                Log.debug("cause: "+cause);
+                try{
+                    Field f = cause.getClass().getDeclaredField("code");
+                    f.setAccessible(true);
+                    Integer i = (Integer)f.get(cause);
+                    return i;
+                }catch(NoSuchFieldException ex){
+                    Log.debug(Util.getStackTrace(ex));
+                }catch(IllegalAccessException ex){
+                    Log.debug(Util.getStackTrace(ex));
+                }catch(ClassCastException ex){
+                    Log.debug(Util.getStackTrace(ex));
+                }
             }
             cause = cause.getCause();
         }
@@ -256,21 +259,13 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
 //    extern WINSCARDAPI void WINAPI
 //    SCardReleaseStartedEvent(void);
 //    #endif // (NTDDI_VERSION >= NTDDI_WINXP)
-//    final static int SCARD_E_SYSTEM_CANCELLED = 0x80100012;
-  
-
-    
-    final static int WINDOWS_ERROR_CODE_22_ERROR_BAD_COMMAND = 0x00000016;
-
-    //MS Undocumented
-    final static int SCARD_E_NO_READERS_AVAILABLE = 0x8010002E;
 
     private static boolean isNoCardReadersAvailable(CardException ex){
         Integer i = getPCSCError(ex);
         if(i == null){
             return false;
         }
-        if(i == SCARD_E_NO_READERS_AVAILABLE){
+        if(i == WinErrorCodes.SCARD_E_NO_READERS_AVAILABLE.getCode()){
             return true;
         }
         return false;
@@ -278,10 +273,10 @@ public class SmartcardioTerminalProviderImpl implements TerminalProvider {
 
     private static String getPCSCErrorDescription(CardException ex){
         Integer i = getPCSCError(ex);
-        switch(i){
-            case WINDOWS_ERROR_CODE_22_ERROR_BAD_COMMAND:
-                return "The device does not recognize the command.";
+        if(i == null) {
+            return "";
         }
-        return "";
-    }
+        String description = WinErrorCodes.getDescription(i);
+        return description != null ? description : "";
+    }    
 }

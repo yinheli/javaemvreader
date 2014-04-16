@@ -19,9 +19,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
 import sasc.iso7816.Tag;
 import sasc.iso7816.TagAndLength;
 import sasc.iso7816.TagImpl;
@@ -31,34 +36,42 @@ import sasc.util.Log;
 import sasc.util.Util;
 
 /**
+ * Representation of a Point of Sale (POS)
+ * 
+ * There is only 1 Terminal
  * 
  * @author sasc
  */
-public class EMVTerminalProfile {
+public class EMVTerminal {
 
     private final static Properties defaultTerminalProperties = new Properties();
     private final static Properties runtimeTerminalProperties = new Properties();
     private final static TerminalVerificationResults terminalVerificationResults = new TerminalVerificationResults();
-
+    
+    private static CallbackHandler pinCallbackHandler;
+    
+    private static boolean doVerifyPinIfRequired = false;
+    private static boolean isOnline = true;
+    
     static {
         
         try {
             //Default properties
-            defaultTerminalProperties.load(EMVTerminalProfile.class.getResourceAsStream("/terminal.properties"));
+            defaultTerminalProperties.load(EMVTerminal.class.getResourceAsStream("/terminal.properties"));
             for (String key : defaultTerminalProperties.stringPropertyNames()) {
                 //Sanitize
                 String sanitizedKey = Util.byteArrayToHexString(Util.fromHexString(key)).toLowerCase();
-                String sanitizedValue = Util.byteArrayToHexString(Util.fromHexString(key)).toLowerCase();
+                String sanitizedValue = Util.byteArrayToHexString(Util.fromHexString(defaultTerminalProperties.getProperty(key))).toLowerCase();
                 defaultTerminalProperties.setProperty(sanitizedKey, sanitizedValue);
             }
-            //Overridden properties
+            //Runtime/overridden properties
             String runtimeTerminalPropertiesFile = System.getProperty("terminal.properties");
             if (runtimeTerminalPropertiesFile != null) {
                 runtimeTerminalProperties.load(new FileInputStream(runtimeTerminalPropertiesFile));
                 for(String key : runtimeTerminalProperties.stringPropertyNames()) {
                     //Sanitize
                     String sanitizedKey   = Util.byteArrayToHexString(Util.fromHexString(key)).toLowerCase();
-                    String sanitizedValue = Util.byteArrayToHexString(Util.fromHexString(key)).toLowerCase();
+                    String sanitizedValue = Util.byteArrayToHexString(Util.fromHexString(runtimeTerminalProperties.getProperty(key))).toLowerCase();
                     if(defaultTerminalProperties.contains(sanitizedKey) && sanitizedValue.length() != defaultTerminalProperties.getProperty(key).length()) {
                         //Attempt to set different length for a default value
                         throw new RuntimeException("Attempted to set a value with unsupported length for key: "+sanitizedKey + " (value: "+sanitizedValue+")");
@@ -77,7 +90,19 @@ public class EMVTerminalProfile {
     //     (Default to be used for constructing the INTERNAL AUTHENTICATE command if the DDOL in the card is not present)
     //TDOL (*Default* Transaction Certificate Data Object List)
     //     (Default to be used for generating the TC Hash Value if the TDOL in the card is not present)
-    public static byte[] getTerminalResidentData(TagAndLength tal, EMVApplication app) {
+    
+    //PDOL example (Visa Electron, contactless)
+//    9f 38 18 -- Processing Options Data Object List (PDOL)
+//         9f 66 04 -- Terminal Transaction Qualifiers
+//         9f 02 06 -- Amount, Authorised (Numeric)
+//         9f 03 06 -- Amount, Other (Numeric)
+//         9f 1a 02 -- Terminal Country Code
+//         95 05 -- Terminal Verification Results (TVR)
+//         5f 2a 02 -- Transaction Currency Code
+//         9a 03 -- Transaction Date
+//         9c 01 -- Transaction Type
+//         9f 37 04 -- Unpredictable Number
+    private static byte[] getTerminalResidentData(TagAndLength tal, EMVApplication app) {
         //Check if the value is specified in the runtime properties file
         String propertyValueStr = runtimeTerminalProperties.getProperty(Util.byteArrayToHexString(tal.getTag().getTagBytes()).toLowerCase());
 
@@ -109,6 +134,7 @@ public class EMVTerminalProfile {
         if (tal.getTag().equals(EMVTags.UNPREDICTABLE_NUMBER)) {
             return Util.generateRandomBytes(tal.getLength());
         } else if (tal.getTag().equals(EMVTags.TERMINAL_TRANSACTION_QUALIFIERS) && tal.getLength() == 4) {
+            //This seems only to be used in contactless mode. Construct accordingly
             TerminalTransactionQualifiers ttq = new TerminalTransactionQualifiers();
             ttq.setContactlessEMVmodeSupported(true);
             ttq.setReaderIsOfflineOnly(true);
@@ -134,6 +160,10 @@ public class EMVTerminalProfile {
         return terminalVerificationResults;
     }
     
+    public static void resetTVR(){
+        terminalVerificationResults.reset();
+    }
+    
     public static void setProperty(String tagHex, String valueHex) {
         setProperty(new TagImpl(tagHex, TagValueType.BINARY, "", ""), Util.fromHexString(valueHex));
     }
@@ -141,8 +171,152 @@ public class EMVTerminalProfile {
     public static void setProperty(Tag tag, byte[] value){
         runtimeTerminalProperties.setProperty(Util.byteArrayToHexString(tag.getTagBytes()).toLowerCase(Locale.US), Util.byteArrayToHexString(value));
     }
+    
+    public static boolean isCDASupported(EMVApplication app) {
+        return false;
+    }
+    
+    public static boolean isDDASupported(EMVApplication app) {
+        return true;
+    }
+    
+    public static boolean isSDASupported(EMVApplication app) {
+        return true;
+    }
+    
+    public static boolean isATM() {
+        return false;
+    }
+    
+    public static Date getCurrentDate() {
+        return new Date();
+    }
+    
+    public static int getSupportedApplicationVersionNumber(EMVApplication app) {
+        //TODO
+        //For now, just return the version number maintained in the card
+        return app.getApplicationVersionNumber();
+    }
+    
+    public static boolean isCVMRecognized(EMVApplication app, CVRule rule) {
+        switch(rule.getRule()) {
+            case RESERVED_FOR_USE_BY_THE_INDIVIDUAL_PAYMENT_SYSTEMS:
+                //app.getAID().getRIDBytes();
+                //TODO check if RID specific rule is supported
+                //if(supported) {
+                //    return true;
+                //}
+            case RESERVED_FOR_USE_BY_THE_ISSUER:
+                
+                if(app.getIssuerIdentificationNumber() != null){
+                    //TODO check if issuer specific rule is supported
+                    //if(supported){
+                    //  return true;
+                    //}
+                }
+            case NOT_AVAILABLE_FOR_USE:
+            case RFU:
+                return false;
+        }
+        return true;
+    }
+    
+    public static boolean isCVMSupported(CVRule rule) {
+        switch(rule.getRule()) {
+            //TODO support enciphered PIN
+            case ENCIPHERED_PIN_VERIFIED_BY_ICC:
+            case ENCIPHERED_PIN_VERIFIED_BY_ICC_AND_SIGNATURE_ON_PAPER:
+                return false;
+            case PLAINTEXT_PIN_VERIFIED_BY_ICC_AND_SIGNATURE_ON_PAPER:
+            case PLAINTEXT_PIN_VERIFIED_BY_ICC:
+                return hasPinInputCapability();
+            case SIGNATURE_ON_PAPER:
+                return false;
+            case ENCIPHERED_PIN_VERIFIED_ONLINE:
+                return isOnline();
+            case FAIL_PROCESSING:
+            case NO_CVM_REQUIRED:
+                return true;
+        }
+        return false;
+    }
+    
+    public static boolean isOnline() {
+        return isOnline;
+    }
+    
+    public static void setIsOnline(boolean value){
+        isOnline = value;
+    }
+    
+    public static boolean isCVMConditionSatisfied(CVRule rule) {
+        if(rule.getConditionAlways()) {
+            return true;
+        }
+        if(rule.getConditionCode() <= 0x05){
+            //TODO
+            return true;
+        }else if(rule.getConditionCode() < 0x0A) {
+            //TODO
+            //Check for presence Application Currency Code or Amount, Authorised in app records?
+            return true;
+        } else { //RFU and proprietary
+            return false;
+        }
+    }
+    
+    public static boolean verifyEncipheredPinOnline() {
+        if(!isOnline()) {
+            return false;
+        }
+        //TODO
+        return true;
+    }
+    
+    public static boolean hasSignatureOnPaper() {
+        return true;
+    }
+    
+    public static void setDoVerifyPinIfRequired(boolean value) {
+        doVerifyPinIfRequired = value;
+    }
+    
+    public static boolean getDoVerifyPinIfRequired() {
+        return doVerifyPinIfRequired;
+    }
+    
+    /**
+     * 
+     * @return true if a Pin CallbackHandler has be set
+     */
+    public static boolean hasPinInputCapability() {
+        return doVerifyPinIfRequired && pinCallbackHandler != null;
+    }
+    
+    public static void setPinCallbackHandler(CallbackHandler callbackHandler) {
+        pinCallbackHandler = callbackHandler;
+    }
+    
+    public static PasswordCallback getPinInput() {
+        CallbackHandler callBackHandler = pinCallbackHandler;
+        if(callBackHandler == null){
+            return null;
+        }
+        PasswordCallback passwordCallback = new PasswordCallback("Type PIN", false);
+        try{
+            callBackHandler.handle(new Callback[]{passwordCallback});
+        }catch(IOException ex){
+            Log.info(Util.getStackTrace(ex));
+        }catch(UnsupportedCallbackException ex){
+            Log.info(Util.getStackTrace(ex));
+        }
+        return passwordCallback;
+    }
+    
+    public static boolean getPerformTerminalRiskManagement() {
+        return false;
+    }
 
-    //TODO move somewhere else
     public static byte[] constructDOLResponse(DOL dol, EMVApplication app) {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         for (TagAndLength tagAndLength : dol.getTagAndLengthList()) {
@@ -154,10 +328,13 @@ public class EMVTerminalProfile {
 
     //The ICC may contain the DDOL, but there shall be a default DDOL in the terminal, 
     //specified by the payment system, for use in case the DDOL is not present in the ICC.
-    public static byte[] getDefaultDDOLResponse() {
+    public static byte[] getDefaultDDOLResponse(EMVApplication app) {
         //It is mandatory that the DDOL contains the Unpredictable Number generated by the terminal (tag '9F37', 4 bytes binary).
         byte[] unpredictableNumber = Util.generateRandomBytes(4);
-        //TODO add other DDOL data?
+        
+        //TODO add other DDOL data specified by the payment system
+        //if(app.getAID().equals(SOMEAID))
+        
         return unpredictableNumber;
     }
 
@@ -170,7 +347,7 @@ public class EMVTerminalProfile {
             }
         }
 
-        Log.debug("Not able to map any find any Terminal Country Code. Using default");
+        Log.debug("No Issuer Country Code found in app. Using default Terminal Country Code");
 
         String countryCode = defaultTerminalProperties.getProperty(Util.byteArrayToHexString(EMVTags.TERMINAL_COUNTRY_CODE.getTagBytes()));
         if(countryCode != null){
@@ -217,6 +394,15 @@ public class EMVTerminalProfile {
     }
 
     public static void main(String[] args) {
+        for(String key : defaultTerminalProperties.stringPropertyNames()){
+            System.out.println(key+"="+defaultTerminalProperties.getProperty(key));
+        }
+        
+        {
+            TagAndLength tagAndLength = new TagAndLength(EMVTags.AMOUNT_AUTHORISED_NUMERIC, 6);
+            DOL dol = new DOL(DOL.Type.PDOL, tagAndLength.getBytes());
+            System.out.println(Util.prettyPrintHexNoWrap(constructDOLResponse(dol, null)));
+        }
         {
             TagAndLength tagAndLength = new TagAndLength(EMVTags.TERMINAL_COUNTRY_CODE, 2);
             DOL dol = new DOL(DOL.Type.PDOL, tagAndLength.getBytes());

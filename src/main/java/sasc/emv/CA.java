@@ -18,16 +18,17 @@ package sasc.emv;
 import sasc.iso7816.SmartCardException;
 import sasc.iso7816.AID;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import nanoxml.XMLElement;
 import sasc.util.ByteArrayWrapper;
@@ -69,6 +70,7 @@ public class CA {
     private String name;
     private String description;
     private Map<Integer, CAPublicKey> publicKeys = publicKeys = new LinkedHashMap<Integer, CAPublicKey>();
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH);
 
     static {
         _initFromFile("/certificationauthorities.xml");
@@ -165,7 +167,7 @@ public class CA {
         try {
             XMLElement certificationAuthoritiesElement = new XMLElement();
             certificationAuthoritiesElement.parseFromReader(new InputStreamReader(Util.loadResource(CA.class, fileName), "UTF-8"));
-
+            
             if (!"CertificationAuthorities".equalsIgnoreCase(certificationAuthoritiesElement.getName())) {
                 throw new RuntimeException("Unexpected Root Element: <" + certificationAuthoritiesElement.getName() + "> . Expected <CertificationAuthorities>");
             }
@@ -176,8 +178,12 @@ public class CA {
                     throw new SmartCardException("Unexpected RID length: " + rid.length + ". Length must be 5 bytes. RID=" + Util.prettyPrintHexNoWrap(rid));
                 }
 
-                CA ca = new CA();
-                ca.setRID(rid);
+                CA ca = CA.getCA(rid);
+                if(ca == null){
+                    ca = new CA();
+                    ca.setRID(rid);
+                    certificationAuthorities.put(ByteArrayWrapper.wrapperAround(ca.getRID()), ca);
+                }
                 for (Object caChild : caElement.getChildren()) {
                     XMLElement caChildElement = (XMLElement) caChild;
                     String name = caChildElement.getName();
@@ -194,7 +200,7 @@ public class CA {
                             int hashAlgorithmIndicator = -1;
                             int publicKeyAlgorithmIndicator = -1;
                             String description = "";
-                            String expirationDate = "";
+                            String expirationDateStr = "";
                             byte[] hash = null;
                             for (Object pkObjectChild : pkElement.getChildren()) {
                                 XMLElement pkChildElement = (XMLElement) pkObjectChild;
@@ -202,7 +208,7 @@ public class CA {
                                 if ("Description".equalsIgnoreCase(pkChildElementName)) {
                                     description = pkChildElement.getContent().trim();
                                 } else if ("ExpirationDate".equalsIgnoreCase(pkChildElementName)) {
-                                    expirationDate = pkChildElement.getContent().trim();
+                                    expirationDateStr = pkChildElement.getContent().trim();
                                 } else if ("Exponent".equalsIgnoreCase(pkChildElementName)) {
                                     exp = Util.fromHexString(pkChildElement.getContent().trim());
                                 } else if ("Modulus".equalsIgnoreCase(pkChildElementName)) {
@@ -222,6 +228,12 @@ public class CA {
                             if (!Arrays.equals(hash, sha1ChecksumResult)) {
                                 throw new SmartCardException("Checksum not correct for key index " + index + " for CA RID " + Util.prettyPrintHexNoWrap(ca.getRID()) + ". Expected " + Util.byteArrayToHexString(hash) + " but was " + Util.byteArrayToHexString(sha1ChecksumResult));
                             }
+                            Date expirationDate = null;
+                            try {
+                                expirationDate = DATE_FORMAT.parse(expirationDateStr);
+                            } catch (ParseException ex) {
+                                throw new SmartCardException("Expiration date not valid. Must be in the format dd MMM yyyy, (where MMM is the english name of the month), but was: "+expirationDateStr);
+                            }
                             CAPublicKey pk = new CAPublicKey(index, exp, mod, sha1ChecksumResult, publicKeyAlgorithmIndicator, hashAlgorithmIndicator, description, expirationDate);
                             ca.setPublicKey(index, pk);
                         }
@@ -229,72 +241,11 @@ public class CA {
                         throw new RuntimeException("Unexpected XML Element: <" + name + "> : " + caChildElement);
                     }
                 }
-                certificationAuthorities.put(ByteArrayWrapper.wrapperAround(ca.getRID()), ca);
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
 
-    }
-
-    public static void addFromDirectory(String dirName) {
-        try {
-            File dirFile = new File(CA.class.getResource(dirName).toURI());
-            if (!dirFile.isDirectory()) {
-                throw new IllegalArgumentException(dirName + " does not exist or is not a directory");
-            }
-            for (File keyFile : dirFile.listFiles()) {
-                String keyFileName = keyFile.getName();
-                String ridStr = keyFileName.substring(0, keyFileName.indexOf('.'));
-                String keyIndexHex = keyFileName.substring(keyFileName.indexOf('.') + 1);
-                byte[] rid = Util.fromHexString(ridStr);
-                int keyIndex = Util.byteArrayToInt(Util.fromHexString(keyIndexHex));
-                CA ca = new CA();
-                ca.setRID(rid);
-
-                FileInputStream fis = null;
-                String encodedKey = null;
-                try {
-                    fis = new FileInputStream(keyFile);
-                    encodedKey = Util.readInputStreamToString(fis, "UTF-8");
-                } finally {
-                    if (fis != null) {
-                        fis.close();
-                    }
-                }
-
-                if (encodedKey == null || encodedKey.length() < 3) {
-                    throw new NullPointerException("Unable to read key from file: " + keyFileName);
-                }
-
-                int numModBytes = Integer.parseInt(encodedKey.substring(0, 3));
-                int modBytesStartIndex = 3;
-                int modBytesEndIndex = 3 + numModBytes * 2;
-                int numExpBytes = Integer.parseInt(encodedKey.substring(modBytesEndIndex, modBytesEndIndex + 2));
-                int expBytesStartIndex = modBytesEndIndex + 2;
-
-                String modStr = encodedKey.substring(modBytesStartIndex, modBytesEndIndex);
-                String expStr = encodedKey.substring(expBytesStartIndex);
-
-                byte[] mod = Util.fromHexString(modStr);
-                byte[] exp = Util.fromHexString(expStr);
-
-                String expirationDate = "31 December 2999"; //Test keys never expire
-                String description = "TEST key";
-                int publicKeyAlgorithmIndicator = 1; //RSA
-                int hashAlgorithmIndicator = 1; //SHA-1
-
-                byte[] sha1ChecksumResult = calculateCAPublicKeyCheckSum(ca.getRID(), Util.intToByteArray(keyIndex), mod, exp);
-                CAPublicKey pk = new CAPublicKey(keyIndex, exp, mod, sha1ChecksumResult, publicKeyAlgorithmIndicator, hashAlgorithmIndicator, description, expirationDate);
-                ca.setPublicKey(keyIndex, pk);
-
-                certificationAuthorities.put(ByteArrayWrapper.wrapperAround(ca.getRID()), ca);
-            }
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
-        } catch (URISyntaxException ex) {
-            throw new RuntimeException(ex);
-        }
     }
 
     @Override
@@ -307,6 +258,40 @@ public class CA {
         sb.append(",NumPublicKeys=");
         sb.append(publicKeys.size());
         sb.append(")");
+        return sb.toString();
+    }
+    
+    public static String toXml() {
+        StringBuilder sb = new StringBuilder();
+        
+        sb.append("<CertificationAuthorities>\n");
+
+        for(CA ca : CA.getCAs()) {
+            sb.append("    ").append("<CA RID=\"").append(Util.prettyPrintHexNoWrap(ca.getRID())).append("\">\n");
+            sb.append("        ").append("<Name>").append(ca.getName()).append("</Name>\n");
+            sb.append("        ").append("<Description>").append(ca.getDescription()).append("</Description>\n");
+            sb.append("        ").append("<PublicKeys>\n");
+            
+            for(CAPublicKey caPublicKey : ca.getCAPublicKeys()) {
+                sb.append("            ").append("<PublicKey index=\"").append(caPublicKey.getIndex()).append("\"> <!-- 0x").append(Util.int2Hex(caPublicKey.getIndex())).append(" -->\n");
+                sb.append("                ").append("<Description>").append(caPublicKey.getDescription()).append("</Description>\n");
+                sb.append("                ").append("<ExpirationDate>").append(DATE_FORMAT.format(caPublicKey.getExpirationDate())).append("</ExpirationDate>\n");
+                sb.append("                ").append("<Exponent>").append(Util.prettyPrintHexNoWrap(caPublicKey.getExponent())).append("</Exponent>\n");
+                sb.append("                ").append("<Modulus>\n");
+                sb.append("                    ").append(Util.prettyPrintHex(caPublicKey.getModulus(), 20)).append("\n");   
+                sb.append("                ").append("</Modulus>\n");
+                sb.append("                ").append("<HashAlgorithmIndicator>").append(Util.int2Hex(caPublicKey.getHashAlgorithmIndicator())).append("</HashAlgorithmIndicator>\n");
+                sb.append("                ").append("<Hash>\n");
+                byte[] sha1ChecksumResult = calculateCAPublicKeyCheckSum(ca.getRID(), Util.intToByteArray(caPublicKey.getIndex()), caPublicKey.getModulus(), caPublicKey.getExponent());
+                sb.append("                    ").append(Util.prettyPrintHex(sha1ChecksumResult, 20)).append("\n"); 
+                sb.append("                ").append("</Hash>\n");
+                sb.append("                ").append("<PublicKeyAlgorithmIndicator>").append(Util.int2Hex(caPublicKey.getPublicKeyAlgorithmIndicator())).append("</PublicKeyAlgorithmIndicator>\n");   
+                sb.append("            ").append("</PublicKey>\n");
+            }
+            sb.append("        ").append("</PublicKeys>\n");
+            sb.append("    ").append("</CA>\n");
+        }
+        sb.append("</CertificationAuthorities>\n");
         return sb.toString();
     }
 

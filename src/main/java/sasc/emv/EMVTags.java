@@ -21,7 +21,10 @@ import sasc.iso7816.Tag;
 import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import sasc.emv.system.mastercard.MCTags;
+import sasc.emv.system.visa.VISATags;
 import sasc.util.ByteArrayWrapper;
+import sasc.util.Util;
 
 /**
  * http://www.emvlab.org/emvtags/all/
@@ -30,36 +33,48 @@ import sasc.util.ByteArrayWrapper;
  * The coding of primitive context-specific class data objects in the ranges '80' to '9E' and '9F00' to '9F4F' is reserved for EMV specification.
  * The coding of primitive context-specific class data objects in the range '9F50' to '9F7F' is reserved for the payment systems.
  *
- * TODO: Create tag lists (XML?) for individual payment systems (group by RID? or AID?)
- * (see for example: VISA_VIS_ICC_Card_1.4.pdf for VISA specific tags)
- *
  * @author sasc
  */
 public class EMVTags {
 
+    private static LinkedHashMap<IssuerIdentificationNumber, LinkedHashMap<ByteArrayWrapper, Tag>> issuerToTagsMap = new LinkedHashMap<IssuerIdentificationNumber, LinkedHashMap<ByteArrayWrapper, Tag>>();
+    private static LinkedHashMap<ByteArrayWrapper, LinkedHashMap<ByteArrayWrapper, Tag>> paymentSystemToTagsMap = new LinkedHashMap<ByteArrayWrapper, LinkedHashMap<ByteArrayWrapper, Tag>>();
+
     private static LinkedHashMap<ByteArrayWrapper, Tag> tags = new LinkedHashMap<ByteArrayWrapper, Tag>();
     //One byte tags
+    //7816-4 Interindustry data object for tag allocation authority
+    public static final Tag UNIVERSAL_TAG_FOR_OID                   = new TagImpl("06", TagValueType.BINARY, "Object Identifier (OID)", "Universal tag for OID");
+    public static final Tag COUNTRY_CODE                            = new TagImpl("41", TagValueType.NUMERIC, "Country Code", "Country code (encoding specified in ISO 3166-1) and optional national data");
     public static final Tag ISSUER_IDENTIFICATION_NUMBER            = new TagImpl("42", TagValueType.NUMERIC, "Issuer Identification Number (IIN)", "The number that identifies the major industry and the card issuer and that forms the first part of the Primary Account Number (PAN)");
+
+    //7816-4 Interindustry data objects for application identification and selection
     public static final Tag AID_CARD                                = new TagImpl("4f", TagValueType.BINARY, "Application Identifier (AID) - card", "Identifies the application as described in ISO/IEC 7816-5");
     public static final Tag APPLICATION_LABEL                       = new TagImpl("50", TagValueType.TEXT, "Application Label", "Mnemonic associated with the AID according to ISO/IEC 7816-5");
-    public static final Tag PATH                                    = new TagImpl("51", TagValueType.BINARY, "ISO-7816 Path", "");
+    public static final Tag PATH                                    = new TagImpl("51", TagValueType.BINARY, "File reference data element", "ISO-7816 Path");
+    public static final Tag COMMAND_APDU                            = new TagImpl("52", TagValueType.BINARY, "Command APDU", "");
+    public static final Tag DISCRETIONARY_DATA_OR_TEMPLATE          = new TagImpl("53", TagValueType.BINARY, "Discretionary data (or template)", "");
+    public static final Tag APPLICATION_TEMPLATE                    = new TagImpl("61", TagValueType.BINARY, "Application Template", "Contains one or more data objects relevant to an application directory entry according to ISO/IEC 7816-5");
+    public static final Tag FCI_TEMPLATE                            = new TagImpl("6f", TagValueType.BINARY, "File Control Information (FCI) Template", "Set of file control parameters and file management data (according to ISO/IEC 7816-4)");
+    public static final Tag DD_TEMPLATE                             = new TagImpl("73", TagValueType.BINARY, "Directory Discretionary Template", "Issuer discretionary part of the directory according to ISO/IEC 7816-5");
+    public static final Tag DEDICATED_FILE_NAME                     = new TagImpl("84", TagValueType.BINARY, "Dedicated File (DF) Name", "Identifies the name of the DF as described in ISO/IEC 7816-4");
+    public static final Tag SFI                                     = new TagImpl("88", TagValueType.BINARY, "Short File Identifier (SFI)", "Identifies the SFI to be used in the commands related to a given AEF or DDF. The SFI data object is a binary field with the three high order bits set to zero");
+    
+    public static final Tag FCI_PROPRIETARY_TEMPLATE                = new TagImpl("a5", TagValueType.BINARY, "File Control Information (FCI) Proprietary Template", "Identifies the data object proprietary to this specification in the FCI template according to ISO/IEC 7816-4");
+    public static final Tag ISSUER_URL                              = new TagImpl("5f50", TagValueType.TEXT, "Issuer URL", "The URL provides the location of the Issuer’s Library Server on the Internet");
+    
+    //EMV
     public static final Tag TRACK_2_EQV_DATA                        = new TagImpl("57", TagValueType.BINARY, "Track 2 Equivalent Data", "Contains the data elements of track 2 according to ISO/IEC 7813, excluding start sentinel, end sentinel, and Longitudinal Redundancy Check (LRC)");
     public static final Tag PAN                                     = new TagImpl("5a", TagValueType.NUMERIC, "Application Primary Account Number (PAN)", "Valid cardholder account number");
-    public static final Tag APPLICATION_TEMPLATE                    = new TagImpl("61", TagValueType.BINARY, "Application Template", "Contains one or more data objects relevant to an application directory entry according to ISO/IEC 7816-5");
-    public static final Tag FCI_TEMPLATE                            = new TagImpl("6f", TagValueType.BINARY, "File Control Information (FCI) Template", "Identifies the FCI template according to ISO/IEC 7816-4");
     public static final Tag RECORD_TEMPLATE                         = new TagImpl("70", TagValueType.BINARY, "Record Template (EMV Proprietary)", "Template proprietary to the EMV specification");
     public static final Tag ISSUER_SCRIPT_TEMPLATE_1                = new TagImpl("71", TagValueType.BINARY, "Issuer Script Template 1", "Contains proprietary issuer data for transmission to the ICC before the second GENERATE AC command");
     public static final Tag ISSUER_SCRIPT_TEMPLATE_2                = new TagImpl("72", TagValueType.BINARY, "Issuer Script Template 2", "Contains proprietary issuer data for transmission to the ICC after the second GENERATE AC command");
-    public static final Tag DD_TEMPLATE                             = new TagImpl("73", TagValueType.BINARY, "Directory Discretionary Template", "Issuer discretionary part of the directory according to ISO/IEC 7816-5");
     public static final Tag RESPONSE_MESSAGE_TEMPLATE_2             = new TagImpl("77", TagValueType.BINARY, "Response Message Template Format 2", "Contains the data objects (with tags and lengths) returned by the ICC in response to a command");
     public static final Tag RESPONSE_MESSAGE_TEMPLATE_1             = new TagImpl("80", TagValueType.BINARY, "Response Message Template Format 1", "Contains the data objects (without tags and lengths) returned by the ICC in response to a command");
     public static final Tag AMOUNT_AUTHORISED_BINARY                = new TagImpl("81", TagValueType.BINARY, "Amount, Authorised (Binary)", "Authorised amount of the transaction (excluding adjustments)");
     public static final Tag APPLICATION_INTERCHANGE_PROFILE         = new TagImpl("82", TagValueType.BINARY, "Application Interchange Profile", "Indicates the capabilities of the card to support specific functions in the application");
     public static final Tag COMMAND_TEMPLATE                        = new TagImpl("83", TagValueType.BINARY, "Command Template", "Identifies the data field of a command message");
-    public static final Tag DEDICATED_FILE_NAME                     = new TagImpl("84", TagValueType.BINARY, "Dedicated File (DF) Name", "Identifies the name of the DF as described in ISO/IEC 7816-4");
     public static final Tag ISSUER_SCRIPT_COMMAND                   = new TagImpl("86", TagValueType.BINARY, "Issuer Script Command", "Contains a command for transmission to the ICC");
     public static final Tag APPLICATION_PRIORITY_INDICATOR          = new TagImpl("87", TagValueType.BINARY, "Application Priority Indicator", "Indicates the priority of a given application or group of applications in a directory");
-    public static final Tag SFI                                     = new TagImpl("88", TagValueType.BINARY, "Short File Identifier (SFI)", "Identifies the SFI to be used in the commands related to a given AEF or DDF. The SFI data object is a binary field with the three high order bits set to zero");
     public static final Tag AUTHORISATION_CODE                      = new TagImpl("89", TagValueType.BINARY, "Authorisation Code", "Value generated by the authorisation authority for an approved transaction");
     public static final Tag AUTHORISATION_RESPONSE_CODE             = new TagImpl("8a", TagValueType.TEXT, "Authorisation Response Code", "Code that defines the disposition of a message");
     public static final Tag CDOL1                                   = new TagImpl("8c", TagValueType.DOL, "Card Risk Management Data Object List 1 (CDOL1)", "List of data objects (tag and length) to be passed to the ICC in the first GENERATE AC command");
@@ -79,7 +94,6 @@ public class EMVTags {
     public static final Tag TRANSACTION_STATUS_INFORMATION          = new TagImpl("9b", TagValueType.BINARY, "Transaction Status Information", "Indicates the functions performed in a transaction");
     public static final Tag TRANSACTION_TYPE                        = new TagImpl("9c", TagValueType.NUMERIC, "Transaction Type", "Indicates the type of financial transaction, represented by the first two digits of ISO 8583:1987 Processing Code");
     public static final Tag DDF_NAME                                = new TagImpl("9d", TagValueType.BINARY, "Directory Definition File (DDF) Name", "Identifies the name of a DF associated with a directory");
-    public static final Tag FCI_PROPRIETARY_TEMPLATE                = new TagImpl("a5", TagValueType.BINARY, "File Control Information (FCI) Proprietary Template", "Identifies the data object proprietary to this specification in the FCI template according to ISO/IEC 7816-4");
     //Two byte tags
     public static final Tag CARDHOLDER_NAME                         = new TagImpl("5f20", TagValueType.TEXT, "Cardholder Name", "Indicates cardholder name according to ISO 7813");
     public static final Tag APP_EXPIRATION_DATE                     = new TagImpl("5f24", TagValueType.NUMERIC, "Application Expiration Date", "Date after which application expires");
@@ -90,7 +104,6 @@ public class EMVTags {
     public static final Tag SERVICE_CODE                            = new TagImpl("5f30", TagValueType.NUMERIC, "Service Code", "Service code as defined in ISO/IEC 7813 for track 1 and track 2");
     public static final Tag PAN_SEQUENCE_NUMBER                     = new TagImpl("5f34", TagValueType.NUMERIC, "Application Primary Account Number (PAN) Sequence Number", "Identifies and differentiates cards with the same PAN");
     public static final Tag TRANSACTION_CURRENCY_EXP                = new TagImpl("5f36", TagValueType.NUMERIC, "Transaction Currency Exponent", "Indicates the implied position of the decimal point from the right of the transaction amount represented according to ISO 4217");
-    public static final Tag ISSUER_URL                              = new TagImpl("5f50", TagValueType.TEXT, "Issuer URL", "The URL provides the location of the Issuer’s Library Server on the Internet");
     public static final Tag IBAN                                    = new TagImpl("5f53", TagValueType.BINARY, "International Bank Account Number (IBAN)", "Uniquely identifies the account of a customer at a financial institution as defined in ISO 13616");
     public static final Tag BANK_IDENTIFIER_CODE                    = new TagImpl("5f54", TagValueType.MIXED, "Bank Identifier Code (BIC)", "Uniquely identifies a bank as defined in ISO 9362");
     public static final Tag ISSUER_COUNTRY_CODE_ALPHA2              = new TagImpl("5f55", TagValueType.TEXT, "Issuer Country Code (alpha2 format)", "Indicates the country of the issuer as defined in ISO 3166 (using a 2 character alphabetic code)");
@@ -160,74 +173,55 @@ public class EMVTags {
     public static final Tag LOG_ENTRY                               = new TagImpl("9f4d", TagValueType.BINARY, "Log Entry", "Provides the SFI of the Transaction Log file and its number of records");
     public static final Tag MERCHANT_NAME_AND_LOCATION              = new TagImpl("9f4e", TagValueType.TEXT, "Merchant Name and Location", "Indicates the name and location of the merchant");
     public static final Tag LOG_FORMAT                              = new TagImpl("9f4f", TagValueType.DOL, "Log Format", "List (in tag and length format) of data objects representing the logged data elements that are passed to the terminal when a transaction log record is read");
-    //'9F50' to '9F7F' are reserved for the payment systems (proprietary)
-    //'9f66' specified in EMV Contactless
-    public static final Tag TERMINAL_TRANSACTION_QUALIFIERS         = new TagImpl("9f66", TagValueType.BINARY, "Terminal Transaction Qualifiers", "Provided by the reader in the GPO command and used by the card to determine processing choices based on reader functionality");
-
+    
     public static final Tag FCI_ISSUER_DISCRETIONARY_DATA           = new TagImpl("bf0c", TagValueType.BINARY, "File Control Information (FCI) Issuer Discretionary Data", "Issuer discretionary part of the FCI (e.g. O/S Manufacturer proprietary data)");
-    public static final Tag VISA_LOG_ENTRY                          = new TagImpl("df60", TagValueType.BINARY, "VISA Log Entry ??", "");
 
-    //TODO these tags are MASTERCARD specific
-    public static final Tag MASTERCARD_UPPER_OFFLINE_AMOUNT         = new TagImpl("9f52", TagValueType.BINARY, "Upper Cumulative Domestic Offline Transaction Amount", "Issuer specified data element indicating the required maximum cumulative offline amount allowed for the application before the transaction goes online.");
-
-    //TODO Global Platform
-    //Template "73" Security Domain Management Data
-    public static final Tag UNIVERSAL_TAG_FOR_OID                   = new TagImpl("06",   TagValueType.BINARY, "Object Identifier (OID)", "");
-    public static final Tag APPLICATION_TAG_0                       = new TagImpl("60",   TagValueType.BINARY, "Card Management Type And Version OID", "{globalPlatform 2 v} - GP version in last 3 bytes");
-    public static final Tag APPLICATION_TAG_3                       = new TagImpl("63",   TagValueType.BINARY, "Card Identification Scheme OID", "{globalPlatform 3} - Indicates a GP card that is uniquely identified by the Issuer Identification Number (IIN) and Card Image Number (CIN)");
-    public static final Tag APPLICATION_TAG_4                       = new TagImpl("64",   TagValueType.BINARY, "Selected Security Domain Secure Channel Protocol OID", "{globalPlatform 4 scp i}");
-    public static final Tag APPLICATION_TAG_5                       = new TagImpl("65",   TagValueType.BINARY, "Card Configuration Details", "");
-    public static final Tag APPLICATION_TAG_6                       = new TagImpl("66",   TagValueType.BINARY, "Card / Chip Details", "");
-    public static final Tag MAXIMUM_COMMAND_LENGTH                  = new TagImpl("9f65", TagValueType.BINARY, "Maximum length of data field in command message", "Global Platform");
-    public static final Tag APP_LIFE_CYCLE_DATA                     = new TagImpl("9f6e", TagValueType.BINARY, "Application production life cycle data", "Global Platform");
-
+    //'9F50' to '9F7F' are reserved for the payment systems (proprietary)
     
-    //Chipnip
-    //Tag[c1] Name=[UNHANDLED TAG], TagType=PRIMITIVE, ValueType=BINARY, Class=PRIVATE BER-TLV[c1, 02 (raw 02), 1101]
-
-    //TODO
+    //The following tags are specified in EMV Contactless (Book A)
     
-    
-    //Card from portugal
-//    a000000004 Unhandled tags:
-//
-//    df48 02 0620
-//    df40 01 00
-//    df27 08 0103000000000000
-//    df28 10 ffffffffffffffffffffffffffffffff
-//    df47 01 01
-//    df49 0d 48000001011900000000000000
-//    df44 28 00000000000000000000202020202020202020202020202020202020202020202020202020202020
-//    df45 22 00000000202020202020202020202020202020202020202020202020202020202020
-//    df46 03 000000
-//
-//
-//    501649ff20 Unhandled tags:
-//
-//    df48 02 0620
-//    df40 01 00
-//    df27 08 0100000000000000
-//    df28 10 ffffffffffffffffffffffffffffffff
-//    df47 01 01
-//    df49 0d 00000001010000000000000000
+    //The Track 1 Data may be present in the file read using the READ 
+    //RECORD command during a mag-stripe mode transaction. It is made up of 
+    //the following sub-fields:
+    //+------------------------+--------------+--------------------+
+    //| Data Field             | Length       |      Format        |
+    //+------------------------+--------------+--------------------+
+    //| Format Code            |      1       |              '42'  |
+    //| Primary Account Number | var up to 19 |             digits |
+    //| Field Separator        |      1       |              '5E'  |
+    //| Name                   |   2-26       | (see ISO/IEC 7813) |
+    //| Field Separator        |      1       |              '5E'  |
+    //| Expiry Date            |      4       |              YYMM  |
+    //| Service Code           |      3       |            digits  |
+    //| Discretionary Data     | var.         |               ans  |
+    //+------------------------+--------------+--------------------+
+    //BER-TLV[56, 29 (raw 29), 42 xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx 5e 20 2f 5e xx xx xx xx 32 30 31 30 31 30 30 30 30 30 30 30 30 30 30 30]
+    //BER-TLV[56, 34 (raw 34), 42 XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX 5e 20 2f 5e YY YY MM MM 32 30 31 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+    public static final Tag TRACK1_DATA                             = new TagImpl("56", TagValueType.BINARY, "Track 1 Data", "Track 1 Data contains the data objects of the track 1 according to [ISO/IEC 7813] Structure B, excluding start sentinel, end sentinel and LRC.");
 
-    /* ISO7816 interindustry data tags */
-//ISO7816_II_CATEGORY_TLV         0x80
-//ISO7816_II_CATEGORY_NOT_TLV     0x00
-    public static final Tag ISO7816_TAG_II_CARD_SERVICE             = new TagImpl("43", TagValueType.BINARY, "ISO 7816 Card Service", "");
-    public static final Tag ISO7816_TAG_II_INITIAL_ACCESS_DATA      = new TagImpl("44", TagValueType.BINARY, "ISO 7816 Initial Access Data", "");
-    public static final Tag ISO7816_TAG_II_CARD_ISSUER_DATA         = new TagImpl("45", TagValueType.BINARY, "ISO 7816 Card Issuer Data", "");
-    public static final Tag ISO7816_TAG_II_PRE_ISSUING              = new TagImpl("46", TagValueType.BINARY, "ISO 7816 Pre Issuing", "");
-    public static final Tag ISO7816_TAG_II_CARD_CAPABILITIES        = new TagImpl("47", TagValueType.BINARY, "ISO 7816 Card Capabilities", "");
-//public static final Tag ISO7816_TAG_II_AID                      = new TagImpl("4f", TagValueType.BINARY, "Card Capabilities", "");
-//ISO7816_TAG_II_ALLOCATION_SCHEME        0x78
-//ISO7816_TAG_II_STATUS_LCS               0x81
-//ISO7816_TAG_II_STATUS_SW                0x82
-//ISO7816_TAG_II_STATUS_LCS_SW            0x83
-//
-///* Other interindustry data tags */
-//
-//IASECC_TAG_II_IO_BUFFER_SIZES           0xE0
+    public static final Tag TERMINAL_TRANSACTION_QUALIFIERS         = new TagImpl("9f66", TagValueType.BINARY, "Terminal Transaction Qualifiers", "Provided by the reader in the GPO command and used by the card to determine processing choices based on reader functionality");
+    //The Track 2 Data is present in the file read using the READ RECORD command 
+    //during a mag-stripe mode transaction. It is made up of the following 
+    //sub-fields (same as tag 57):
+    //
+    //+------------------------+-----------------------+-----------+
+    //| Data Field             | Length                | Format    |
+    //+------------------------+-----------------------+-----------+
+    //| Primary Account Number | var. up to 19 nibbles | n         |
+    //| Field Separator        |              1 nibble | b ('D')   |
+    //| Expiry Date            |                     2 | n (YYMM)  |
+    //| Service Code           |             3 nibbles | n         |
+    //| Discretionary Data     | var.                  | n         |
+    //| Padding if needed      |              1 nibble | b ('F')   |
+    //+------------------------+-----------------------+-----------+
+
+    //9f6b 13  BB BB BB BB BB BB BB BB dY YM M2 01 00 00 00 00 00 00 0f
+    public static final Tag TRACK2_DATA                             = new TagImpl("9f6b", TagValueType.BINARY, "Track 2 Data", "Track 2 Data contains the data objects of the track 2 according to [ISO/IEC 7813] Structure B, excluding start sentinel, end sentinel and LRC.");
+    public static final Tag VLP_ISSUER_AUTHORISATION_CODE           = new TagImpl("9f6e", TagValueType.BINARY, "Visa Low-Value Payment (VLP) Issuer Authorisation Code", "");
+    
+    //These are specified in EMV Contactless (Book B)
+    public static final Tag EXTENDED_SELECTION                      = new TagImpl("9f29", TagValueType.BINARY, "Indicates the card's preference for the kernel on which the contactless application can be processed", "");
+    public static final Tag KERNEL_IDENTIFIER                       = new TagImpl("9f2a", TagValueType.BINARY, "The value to be appended to the ADF Name in the data field of the SELECT command, if the Extended Selection Support flag is present and set to 1", "");    
 
     /**
      * If the tag is not found, this method returns the "[UNHANDLED TAG]" containing 'tagBytes'
@@ -238,9 +232,21 @@ public class EMVTags {
     public static Tag getNotNull(byte[] tagBytes) {
         Tag tag = find(tagBytes);
         if (tag == null) {
-            tag = new TagImpl(tagBytes, TagValueType.BINARY, "[UNHANDLED TAG]", "");
+            tag = createUnknownTag(tagBytes);
         }
         return tag;
+    }
+    
+    public static Tag getNotNull(EMVApplication app, Tag tag) {
+        Tag tagFound = get(app, tag);
+        if (tagFound == null) {
+            tagFound = createUnknownTag(tag.getTagBytes());
+        }
+        return tagFound;
+    }
+    
+    public static Tag createUnknownTag(byte[] tagBytes) {
+        return new TagImpl(tagBytes, TagValueType.BINARY, "[UNKNOWN TAG]", "");
     }
 
     /**
@@ -260,7 +266,9 @@ public class EMVTags {
     }
 
     static {
-        Field[] fields = EMVTags.class.getFields();
+        Field[] fields; 
+        
+        fields = EMVTags.class.getFields();
         for (Field f : fields) {
             if (f.getType() == Tag.class) {
                 try {
@@ -271,6 +279,76 @@ public class EMVTags {
                 }
             }
         }
+        fields = VISATags.class.getFields();
+        for (Field f : fields) {
+            if (f.getType() == Tag.class) {
+                try {
+                    Tag t = (Tag) f.get(null);
+                    addPaymentSystemTag(new byte[]{(byte)0xA0, 0x00, 0x00, 0x00, 0x03}, t);
+                } catch (IllegalAccessException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
+        fields = MCTags.class.getFields();
+        for (Field f : fields) {
+            if (f.getType() == Tag.class) {
+                try {
+                    Tag t = (Tag) f.get(null);
+                    addPaymentSystemTag(new byte[]{(byte)0xA0, 0x00, 0x00, 0x00, 0x04}, t);
+                } catch (IllegalAccessException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        }
+        //Chipnip
+        addPaymentSystemTag(Util.fromHexString("A000000315"), new TagImpl("c1",   TagValueType.BINARY, "?", "Example: BER-TLV[c1, 02 (raw 02), 1101]"));
+    }
+        
+    private static void addIssuerTag(IssuerIdentificationNumber iin, Tag tag) {
+        //Use 'wrapper around', since the underlaying byte-array will not be changed in this case
+        ByteArrayWrapper tagBytesWrapped = ByteArrayWrapper.wrapperAround(tag.getTagBytes());
+        LinkedHashMap<ByteArrayWrapper, Tag> issuerTags = issuerToTagsMap.get(iin);
+        if (issuerTags == null) {
+            issuerTags = new LinkedHashMap<ByteArrayWrapper, Tag>();
+            issuerToTagsMap.put(iin, issuerTags);
+        }
+        if (issuerTags.containsKey(tagBytesWrapped)) {
+            throw new IllegalArgumentException("Tag already added " + tag);
+        }
+        issuerTags.put(tagBytesWrapped, tag);
+    }
+    
+    private static void addPaymentSystemTag(byte[] ridBytes, Tag tag) {
+        //Use 'wrapper around', since the underlaying byte-array will not be changed in this case
+        ByteArrayWrapper tagBytesWrapped = ByteArrayWrapper.wrapperAround(tag.getTagBytes());
+        ByteArrayWrapper ridBytesWrapped = ByteArrayWrapper.wrapperAround(ridBytes);
+        LinkedHashMap<ByteArrayWrapper, Tag> paymentSystemTags = paymentSystemToTagsMap.get(ridBytesWrapped);
+        if (paymentSystemTags == null) {
+            paymentSystemTags = new LinkedHashMap<ByteArrayWrapper, Tag>();
+            paymentSystemToTagsMap.put(ridBytesWrapped, paymentSystemTags);
+        }
+        if (paymentSystemTags.containsKey(tagBytesWrapped)) {
+            throw new IllegalArgumentException("Tag already added " + tag);
+        }
+        paymentSystemTags.put(tagBytesWrapped, tag);
+    }
+    
+    public static Tag get(EMVApplication app, Tag tag){
+        ByteArrayWrapper tagBytesWrapped = ByteArrayWrapper.wrapperAround(tag.getTagBytes());
+        IssuerIdentificationNumber iin = app.getIssuerIdentificationNumber();
+        if(iin != null){
+            if(issuerToTagsMap.containsKey(iin) && issuerToTagsMap.get(iin).containsKey(tagBytesWrapped)){
+                return issuerToTagsMap.get(iin).get(tagBytesWrapped);
+            }
+        }
+        if(app.getAID() != null) {
+            ByteArrayWrapper ridBytesWrapped = ByteArrayWrapper.wrapperAround(app.getAID().getRIDBytes());
+            if(paymentSystemToTagsMap.containsKey(ridBytesWrapped) && paymentSystemToTagsMap.get(ridBytesWrapped).containsKey(tagBytesWrapped)){
+                    return paymentSystemToTagsMap.get(ridBytesWrapped).get(tagBytesWrapped);
+            }
+        }
+        return find(tag.getTagBytes());
     }
 
     public static void main(String[] args) {
@@ -284,6 +362,6 @@ public class EMVTags {
     }
 
     private EMVTags() {
-        //Do not instantiate
+        throw new UnsupportedOperationException("Not allowed to instantiate");
     }
 }

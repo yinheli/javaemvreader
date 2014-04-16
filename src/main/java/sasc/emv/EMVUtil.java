@@ -16,7 +16,7 @@
 package sasc.emv;
 
 import sasc.iso7816.ShortFileIdentifier;
-import sasc.common.SmartCard;
+import sasc.smartcard.common.SmartCard;
 import sasc.iso7816.TagValueType;
 import sasc.iso7816.TagAndLength;
 import sasc.iso7816.Tag;
@@ -28,8 +28,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import sasc.emv.system.visa.VISATags;
 import sasc.iso7816.ATR;
 import sasc.iso7816.TLVException;
+import sasc.iso7816.TLVUtil;
 import sasc.terminal.CardResponse;
 import sasc.terminal.TerminalException;
 import sasc.terminal.CardConnection;
@@ -51,22 +53,29 @@ public class EMVUtil {
      * @throws TerminalException
      */
     //TODO remove this and replace with CLS/INS bit indication (response formatted in a TLV structure)
-    public static CardResponse sendCmdNoParse(CardConnection terminal, String command) throws TerminalException {
-        return sendCmdInternal(terminal, command, false);
+    public static CardResponse sendCmdNoParse(CardConnection terminal, byte[] cmd) throws TerminalException {
+        return sendCmdInternal(terminal, cmd, false);
     }
 
-    public static CardResponse sendCmd(CardConnection terminal, String command) throws TerminalException {
-        return sendCmdInternal(terminal, command, true);
+    public static CardResponse sendCmd(CardConnection terminal, byte[] cmd) throws TerminalException {
+        return sendCmdInternal(terminal, cmd, true);
+    }
+    public static CardResponse sendCmdNoParse(CardConnection terminal, String cmd) throws TerminalException {
+        return sendCmdInternal(terminal, Util.fromHexString(cmd), false);
+    }
+
+    public static CardResponse sendCmd(CardConnection terminal, String cmd) throws TerminalException {
+        return sendCmdInternal(terminal, Util.fromHexString(cmd), true);
     }
 
     //TODO move this to generic ISO7816 routine?
-    private static CardResponse sendCmdInternal(CardConnection terminal, String command, boolean doParseTLVData) throws TerminalException {
-        byte[] cmdBytes = Util.fromHexString(command);
+    private static CardResponse sendCmdInternal(CardConnection terminal, byte[] cmd, boolean doParseTLVData) throws TerminalException {
+        byte[] cmdBytes = checkAndAddLeIfMissing(cmd);
         Log.command(Util.prettyPrintHex(cmdBytes));
         long startTime = System.nanoTime();
         CardResponse response = terminal.transmit(cmdBytes);
 
-//      //handle procedure bytes here, and not in the lower level TerminalProvider Implementations.
+        //handle procedure bytes here, and not in the lower level TerminalProvider Implementations.
         //That way we can process procedure bytes from any Provider (if they are not handled at that level)
 
         byte sw1 = (byte) response.getSW1();
@@ -117,6 +126,40 @@ public class EMVUtil {
         printResponse(response.getData(), response.getSW1(), response.getSW2(), response.getSW(), doParseTLVData);
     }
 
+    //TODO support extended length
+    public static byte[] checkAndAddLeIfMissing(byte[] cmd) {
+        if(cmd == null) {
+            throw new IllegalArgumentException("Cmd cannot be null");
+        }
+        if(cmd.length < 4) {
+            throw new IllegalArgumentException("Cmd length must be >= 4, but was "+cmd.length);
+        }
+        if(cmd.length == 4) {
+            //Add Le
+            byte[] cmdWithLe = new byte[5];
+            System.arraycopy(cmd, 0, cmdWithLe, 0, cmd.length);
+            cmdWithLe[4] = 0x00;
+            return cmdWithLe;
+        }
+        if(cmd.length > 5){
+            int lc = Util.byteToInt(cmd[4]);
+            if(lc < cmd.length-6 //Lc is less than payload(with Le) length 
+                    || lc > cmd.length-5 //Lc is larger than payload(no Le) length
+                    ) {
+                throw new IllegalArgumentException("Lc was "+lc+", but payload length was "+(cmd.length-5) + " (Le presence unknown)");
+            }
+            if(lc == cmd.length-5) {
+                //Add Le
+                byte[] cmdWithLe = new byte[cmd.length+1];
+                System.arraycopy(cmd, 0, cmdWithLe, 0, cmd.length);
+                cmdWithLe[cmdWithLe.length-1] = 0x00;
+                return cmdWithLe;
+            }
+        }
+        
+        //Le already present
+        return cmd;
+    }
 
     public static void printResponse(byte[] dataAndSw, boolean doParseTLVData){
         byte[] tmp = new byte[dataAndSw.length-2];
@@ -139,25 +182,35 @@ public class EMVUtil {
         Log.info("response ascii  : " + Util.getSafePrintChars(data));
         if (doParseTLVData) {
             try{
-                Log.info("response parsed :\n" + EMVUtil.prettyPrintAPDUResponse(data));
+                Log.info("response parsed :\n" + TLVUtil.prettyPrintAPDUResponse(data));
             }catch(TLVException ex){
                 Log.debug(ex.getMessage()); //Util.getStackTrace(ex)
             }
         }
     }
 
-    //parseFCI_PSE ?? TODO split PSE/PPSE
+    //TODO split PSE/PPSE?
+    
+    //PPSE (Book B):
+    //If the Kernel Identifier (Tag '9F2A') is absent in the Directory Entry,
+    //then Entry Point shall use a default value for the
+    //Requested Kernel ID, based on the matching AID, as indicated
+    //
+    //American Express AID kernel 4
+    //MasterCard AID kernel 2
+    //Visa AID kernel 3
+    //Other 0
     public static DDF parseFCIDDF(byte[] data, SmartCard card) {
 
         DDF ddf = new DDF();
 
-        BERTLV tlv = EMVUtil.getNextTLV(new ByteArrayInputStream(data));
+        BERTLV tlv = TLVUtil.getNextTLV(new ByteArrayInputStream(data));
 
         if (tlv.getTag().equals(EMVTags.FCI_TEMPLATE)) {
             ByteArrayInputStream templateStream = tlv.getValueStream();
 
             while (templateStream.available() >= 2) {
-                tlv = EMVUtil.getNextTLV(templateStream);
+                tlv = TLVUtil.getNextTLV(templateStream);
                 if (tlv.getTag().equals(EMVTags.DEDICATED_FILE_NAME)) {
                     ddf.setName(tlv.getValueBytes());
                 } else if (tlv.getTag().equals(EMVTags.FCI_PROPRIETARY_TEMPLATE)) {
@@ -165,7 +218,7 @@ public class EMVUtil {
                     int totalLen = bis2.available();
                     int templateLen = tlv.getLength();
                     while (bis2.available() > (totalLen - templateLen)) {
-                        tlv = EMVUtil.getNextTLV(bis2);
+                        tlv = TLVUtil.getNextTLV(bis2);
 
                         if (tlv.getTag().equals(EMVTags.SFI)) {
                             ShortFileIdentifier sfi = new ShortFileIdentifier(Util.byteArrayToInt(tlv.getValueBytes()));
@@ -185,7 +238,7 @@ public class EMVUtil {
                             int total3Len = discrStream.available();
                             int template3Len = tlv.getLength();
                             while (discrStream.available() > (total3Len - template3Len)) {
-                                tlv = EMVUtil.getNextTLV(discrStream);
+                                tlv = TLVUtil.getNextTLV(discrStream);
 
                                 if (tlv.getTag().equals(EMVTags.APPLICATION_TEMPLATE)) {
                                     ByteArrayInputStream appTemplateStream = new ByteArrayInputStream(tlv.getValueBytes());
@@ -193,7 +246,7 @@ public class EMVUtil {
                                     int template4Len = tlv.getLength();
                                     EMVApplication app = new EMVApplication();
                                     while (appTemplateStream.available() > (appTemplateTotalLen - template4Len)) {
-                                        tlv = EMVUtil.getNextTLV(appTemplateStream);
+                                        tlv = TLVUtil.getNextTLV(appTemplateStream);
 
                                         if (tlv.getTag().equals(EMVTags.AID_CARD)) {
                                             app.setAID(new AID(tlv.getValueBytes()));
@@ -208,7 +261,7 @@ public class EMVUtil {
                                             card.addUnhandledRecord(tlv);
                                         }
                                     }
-                                    //Check if app template is valid
+                                    //Verify that the app template is valid
                                     if(app.getAID() != null){
                                         card.addEMVApplication(app);
                                     }else{
@@ -237,16 +290,15 @@ public class EMVUtil {
         return ddf;
     }
 
-    public static List<EMVApplication> parsePSERecord(byte[] data, SmartCard card) {
+    public static void parsePSERecord(byte[] data, SmartCard card) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
 
-        List<EMVApplication> apps = new ArrayList<EMVApplication>();
         while (bis.available() >= 2) {
-            BERTLV tlv = EMVUtil.getNextTLV(bis);
+            BERTLV tlv = TLVUtil.getNextTLV(bis);
             if (tlv.getTag().equals(EMVTags.RECORD_TEMPLATE)) {
                 ByteArrayInputStream valueBytesBis = new ByteArrayInputStream(tlv.getValueBytes());
                 while (valueBytesBis.available() >= 2) {
-                    tlv = EMVUtil.getNextTLV(valueBytesBis);
+                    tlv = TLVUtil.getNextTLV(valueBytesBis);
                     if (tlv.getTag().equals(EMVTags.APPLICATION_TEMPLATE)) { //Application Template
                         ByteArrayInputStream bis2 = new ByteArrayInputStream(tlv.getValueBytes());
                         int totalLen = bis2.available();
@@ -254,7 +306,7 @@ public class EMVUtil {
                         EMVApplication app = new EMVApplication();
                         while (bis2.available() > (totalLen - templateLen)) {
 
-                            tlv = EMVUtil.getNextTLV(bis2);
+                            tlv = TLVUtil.getNextTLV(bis2);
 
                             if (tlv.getTag().equals(EMVTags.AID_CARD)) {
                                 app.setAID(new AID(tlv.getValueBytes()));
@@ -274,12 +326,17 @@ public class EMVUtil {
                                 LanguagePreference languagePreference = new LanguagePreference(tlv.getValueBytes());
                                 app.setLanguagePreference(languagePreference);
                             } else {
-                                app.addUnhandledRecord(tlv);
+                                checkForProprietaryTagOrAddToUnhandled(app, tlv);
                             }
                         }
                         Log.debug("Adding application: " + Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()));
-                        apps.add(app);
-                        card.addEMVApplication(app);
+//                        apps.add(app);
+                        //Verify that the app template is valid
+                        if(app.getAID() != null){
+                            card.addEMVApplication(app);
+                        }else{
+                            Log.debug("Found invalid application template: "+app.toString());
+                        }
                     } else {
                         card.addUnhandledRecord(tlv);
                     }
@@ -289,26 +346,24 @@ public class EMVUtil {
                 card.addUnhandledRecord(tlv);
             }
         }
-        return apps;
+//        return apps;
     }
 
-    public static ApplicationDefinitionFile parseFCIADF(byte[] data, EMVApplication app) {
-        ApplicationDefinitionFile adf = new ApplicationDefinitionFile(); //TODO: actually _use_ ADF (add to app?)
+    public static void parseFCIADF(byte[] data, EMVApplication app) {
 
         if(data == null || data.length < 2){
-            return adf;
+            return;
         }
 
-        BERTLV tlv = EMVUtil.getNextTLV(new ByteArrayInputStream(data));
+        BERTLV tlv = TLVUtil.getNextTLV(new ByteArrayInputStream(data));
 
         if (tlv.getTag().equals(EMVTags.FCI_TEMPLATE)) {
             ByteArrayInputStream templateStream = tlv.getValueStream();
             while (templateStream.available() >= 2) {
 
 
-                tlv = EMVUtil.getNextTLV(templateStream);
+                tlv = TLVUtil.getNextTLV(templateStream);
                 if (tlv.getTag().equals(EMVTags.DEDICATED_FILE_NAME)) {
-                    adf.setName(tlv.getValueBytes()); //AID
                     app.setAID(new AID(tlv.getValueBytes()));
                     Log.debug("ADDED AID to app. AID after set: "+Util.prettyPrintHexNoWrap(app.getAID().getAIDBytes()) + " - AID in FCI: " + Util.prettyPrintHexNoWrap(tlv.getValueBytes()));
                 } else if (tlv.getTag().equals(EMVTags.FCI_PROPRIETARY_TEMPLATE)) { //Proprietary Information Template
@@ -316,7 +371,7 @@ public class EMVUtil {
                     int totalLen = bis2.available();
                     int templateLen = tlv.getLength();
                     while (bis2.available() > (totalLen - templateLen)) {
-                        tlv = EMVUtil.getNextTLV(bis2);
+                        tlv = TLVUtil.getNextTLV(bis2);
 
                         if (tlv.getTag().equals(EMVTags.APPLICATION_LABEL)) {
                             app.setLabel(Util.getSafePrintChars(tlv.getValueBytes()));
@@ -340,24 +395,24 @@ public class EMVUtil {
                             int totalLenFCIDiscretionary = bis3.available();
                             int tlvLen = tlv.getLength();
                             while (bis3.available() > (totalLenFCIDiscretionary - tlvLen)) {
-                                tlv = EMVUtil.getNextTLV(bis3);
+                                tlv = TLVUtil.getNextTLV(bis3);
                                 if (tlv.getTag().equals(EMVTags.LOG_ENTRY)) {
                                     app.setLogEntry(new LogEntry(tlv.getValueBytes()[0], tlv.getValueBytes()[1]));
-							    } else if (tlv.getTag().equals(EMVTags.VISA_LOG_ENTRY)) { //TODO move this to VISAApp
+							    } else if (tlv.getTag().equals(VISATags.VISA_LOG_ENTRY)) { //TODO add this to VISAApp
 							    	//app.setVisaLogEntry(new LogEntry(tlv.getValueBytes()[0], tlv.getValueBytes()[1]));
                                 } else if (tlv.getTag().equals(EMVTags.ISSUER_URL)) {
                                     app.setIssuerUrl(Util.getSafePrintChars(tlv.getValueBytes()));
                                 } else if (tlv.getTag().equals(EMVTags.ISSUER_IDENTIFICATION_NUMBER)) {
-                                    int iin = Util.binaryHexCodedDecimalToInt(Util.byteArrayToHexString(tlv.getValueBytes()));
+                                    IssuerIdentificationNumber iin = new IssuerIdentificationNumber(tlv.getValueBytes());
                                     app.setIssuerIdentificationNumber(iin);
                                 } else if (tlv.getTag().equals(EMVTags.ISSUER_COUNTRY_CODE_ALPHA3)) {
                                     app.setIssuerCountryCodeAlpha3(Util.getSafePrintChars(tlv.getValueBytes()));
                                 } else {
-                                    app.addUnhandledRecord(tlv);
+                                    checkForProprietaryTagOrAddToUnhandled(app, tlv);
                                 }
                             }
                         } else {
-                            app.addUnhandledRecord(tlv);
+                            checkForProprietaryTagOrAddToUnhandled(app, tlv);
                         }
 
                     }
@@ -365,10 +420,18 @@ public class EMVUtil {
             }
 
         } else {
-            app.addUnhandledRecord(tlv);
-            throw new SmartCardException("Error parsing ADF. Data: " + Util.byteArrayToHexString(data));
+            checkForProprietaryTagOrAddToUnhandled(app, tlv);
+            throw new SmartCardException("Error parsing ADF. Expected FCI Template. Data: " + Util.byteArrayToHexString(data));
         }
-        return adf;
+    }
+    
+    private static void checkForProprietaryTagOrAddToUnhandled(EMVApplication app, BERTLV tlv) {
+        Tag tagFound = EMVTags.get(app, tlv.getTag());
+        if(tagFound != null) {
+            app.addUnprocessedRecord(tlv);
+        } else {
+            app.addUnknownRecord(tlv);
+        }
     }
 
     public static void parseProcessingOpts(byte[] data, EMVApplication app) {
@@ -377,7 +440,7 @@ public class EMVUtil {
         if (bis.available() < 2) {
             throw new SmartCardException("Error parsing Processing Options. Invalid TLV Length. Data: " + Util.byteArrayToHexString(data));
         }
-        BERTLV tlv = EMVUtil.getNextTLV(bis);
+        BERTLV tlv = TLVUtil.getNextTLV(bis);
 
         ByteArrayInputStream valueBytesBis = tlv.getValueStream();
 
@@ -400,9 +463,30 @@ public class EMVUtil {
             ApplicationFileLocator afl = new ApplicationFileLocator(aflBytes);
             app.setApplicationFileLocator(afl);
         } else if (tlv.getTag().equals(EMVTags.RESPONSE_MESSAGE_TEMPLATE_2)) {
-            //AIP & AFL WITH delimiters (that is, including, including tag and length) and possibly other BER TLV tags (that might be proprietary)
+            //AIP (& AFL) WITH delimiters (that is, including, including tag and length) and possibly other BER TLV tags (that might be proprietary)
             while (valueBytesBis.available() >= 2) {
-                tlv = EMVUtil.getNextTLV(valueBytesBis);
+                tlv = TLVUtil.getNextTLV(valueBytesBis);
+                
+//   Example:
+//                77 4e -- Response Message Template Format 2
+//                    82 02 -- Application Interchange Profile
+//                          00 00 (BINARY)
+//                    9f 36 02 -- Application Transaction Counter (ATC)
+//                             00 01 (BINARY)
+//                    57 13 -- Track 2 Equivalent Data
+//                          40 23 60 09 00 12 50 08 d1 80 52 21 15 15 29 93
+//                          00 00 0f (BINARY)
+//                    9f 10 07 -- Issuer Application Data
+//                             06 0a 0a 03 a0 00 00 (BINARY)
+//                    9f 26 08 -- Application Cryptogram
+//                             4e 29 20 46 bf 43 38 51 (BINARY)
+//                    5f 34 01 -- Application Primary Account Number (PAN) Sequence Number
+//                             01 (NUMERIC)
+//                    9f 6c 02 -- [UNHANDLED TAG]
+//                             30 00 (BINARY)
+//                    5f 20 0f -- Cardholder Name
+//                             56 49 53 41 20 43 41 52 44 48 4f 4c 44 45 52 (=VISA CARDHOLDER)
+                
                 if (tlv.getTag().equals(EMVTags.APPLICATION_INTERCHANGE_PROFILE)) {
                     byte[] aipBytes = tlv.getValueBytes();
                     ApplicationInterchangeProfile aip = new ApplicationInterchangeProfile(aipBytes[0], aipBytes[1]);
@@ -412,27 +496,21 @@ public class EMVUtil {
                     ApplicationFileLocator afl = new ApplicationFileLocator(aflBytes);
                     app.setApplicationFileLocator(afl);
                 } else {
-                    app.addUnhandledRecord(tlv);
+                    checkForProprietaryTagOrAddToUnhandled(app, tlv);
                 }
             }
         } else {
-            app.addUnhandledRecord(tlv);
+            checkForProprietaryTagOrAddToUnhandled(app, tlv);
         }
-
-
-
-
     }
 
-    //TODO convert this into "parseAppData", and make it generic for reading all application data (records + GPO + additional data)?
-    //
     public static void parseAppRecord(byte[] data, EMVApplication app) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
 
         if (bis.available() < 2) {
             throw new SmartCardException("Error parsing Application Record. Data: " + Util.byteArrayToHexString(data));
         }
-        BERTLV tlv = EMVUtil.getNextTLV(bis);
+        BERTLV tlv = TLVUtil.getNextTLV(bis);
 
         if (!tlv.getTag().equals(EMVTags.RECORD_TEMPLATE)) {
             throw new SmartCardException("Error parsing Application Record: No Response Template found. Data=" + Util.byteArrayToHexString(tlv.getValueBytes()));
@@ -441,7 +519,7 @@ public class EMVUtil {
         bis = new ByteArrayInputStream(tlv.getValueBytes());
 
         while (bis.available() >= 2) {
-            tlv = EMVUtil.getNextTLV(bis);
+            tlv = TLVUtil.getNextTLV(bis);
             if (tlv.getTag().equals(EMVTags.CARDHOLDER_NAME)) {
                 app.setCardholderName(Util.getSafePrintChars(tlv.getValueBytes()));
             } else if (tlv.getTag().equals(EMVTags.TRACK1_DISCRETIONARY_DATA)) {
@@ -451,9 +529,6 @@ public class EMVUtil {
             } else if (tlv.getTag().equals(EMVTags.TRACK_2_EQV_DATA)) {
                 Track2EquivalentData t2Data = new Track2EquivalentData(tlv.getValueBytes());
                 app.setTrack2EquivalentData(t2Data);
-//            } else if (tlv.getTag().equals(EMVTags.MC_TRACK2_DATA)) { //TODO move to MC specific tags
-//                Track2EquivalentData t2Data = new Track2EquivalentData(tlv.getValueBytes());
-//                app.setTrack2EquivalentData(t2Data);
             } else if (tlv.getTag().equals(EMVTags.APP_EXPIRATION_DATE)) {
                 app.setExpirationDate(tlv.getValueBytes());
             } else if (tlv.getTag().equals(EMVTags.APP_EFFECTIVE_DATE)) {
@@ -568,6 +643,27 @@ public class EMVUtil {
                     app.setICCPublicKeyCertificate(iccCert);
                 }
                 iccCert.getICCPublicKey().setRemainder(tlv.getValueBytes());
+            } else if (tlv.getTag().equals(EMVTags.ICC_PIN_ENCIPHERMENT_PUBLIC_KEY_CERT)) {
+                ICCPinEnciphermentPublicKeyCertificate iccPinEnciphermentCert = app.getICCPinEnciphermentPublicKeyCertificate();
+                if (iccPinEnciphermentCert == null) {
+                    iccPinEnciphermentCert = new ICCPinEnciphermentPublicKeyCertificate(app, app.getIssuerPublicKeyCertificate());
+                    app.setICCPinEnciphermentPublicKeyCertificate(iccPinEnciphermentCert);
+                }
+                iccPinEnciphermentCert.setSignedBytes(tlv.getValueBytes());
+            } else if (tlv.getTag().equals(EMVTags.ICC_PIN_ENCIPHERMENT_PUBLIC_KEY_EXP)) {
+                ICCPinEnciphermentPublicKeyCertificate iccPinEnciphermentCert = app.getICCPinEnciphermentPublicKeyCertificate();
+                if (iccPinEnciphermentCert == null) {
+                    iccPinEnciphermentCert = new ICCPinEnciphermentPublicKeyCertificate(app, app.getIssuerPublicKeyCertificate());
+                    app.setICCPinEnciphermentPublicKeyCertificate(iccPinEnciphermentCert);
+                }
+                iccPinEnciphermentCert.getICCPublicKey().setExponent(tlv.getValueBytes());
+            } else if (tlv.getTag().equals(EMVTags.ICC_PIN_ENCIPHERMENT_PUBLIC_KEY_REM)) {
+                ICCPinEnciphermentPublicKeyCertificate iccPinEnciphermentCert = app.getICCPinEnciphermentPublicKeyCertificate();
+                if (iccPinEnciphermentCert == null) {
+                    iccPinEnciphermentCert = new ICCPinEnciphermentPublicKeyCertificate(app, app.getIssuerPublicKeyCertificate());
+                    app.setICCPinEnciphermentPublicKeyCertificate(iccPinEnciphermentCert);
+                }
+                iccPinEnciphermentCert.getICCPublicKey().setRemainder(tlv.getValueBytes());
             } else if (tlv.getTag().equals(EMVTags.DDOL)) {
                 DOL ddol = new DOL(DOL.Type.DDOL, tlv.getValueBytes());
                 app.setDDOL(ddol);
@@ -575,20 +671,22 @@ public class EMVUtil {
                 app.setIBAN(new IBAN(tlv.getValueBytes()));
             } else if (tlv.getTag().equals(EMVTags.BANK_IDENTIFIER_CODE)) {
                 app.setBIC(new BankIdentifierCode(tlv.getValueBytes()));
+            } else if (tlv.getTag().equals(EMVTags.APP_DISCRETIONARY_DATA)) {
+                app.setDiscretionaryData(tlv.getValueBytes());
             } else {
-                app.addUnhandledRecord(tlv);
+                checkForProprietaryTagOrAddToUnhandled(app, tlv);
             }
 
         }
     }
 
-    public static void parseInternalAuthResponse(byte[] data, byte[] authenticationRelatedData, EMVApplication app) {
+    public static void processInternalAuthResponse(byte[] data, byte[] authenticationRelatedData, EMVApplication app) {
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
 
         if (bis.available() < 2) {
             throw new SmartCardException("Error parsing Internal Auth Response. Invalid TLV Length. Data: " + Util.byteArrayToHexString(data));
         }
-        BERTLV tlv = EMVUtil.getNextTLV(bis);
+        BERTLV tlv = TLVUtil.getNextTLV(bis);
 
         ByteArrayInputStream valueBytesBis = tlv.getValueStream();
 
@@ -597,351 +695,43 @@ public class EMVUtil {
         }
 
         if (tlv.getTag().equals(EMVTags.RESPONSE_MESSAGE_TEMPLATE_1)) {
-            app.getICCPublicKeyCertificate().validate();
-            if (!app.getICCPublicKeyCertificate().isValid()) {
-                //TODO
+            if (!app.getIssuerPublicKeyCertificate().validate() || !app.getICCPublicKeyCertificate().validate()) {
+                EMVTerminal.getTerminalVerificationResults().setDDAFailed(true);
+                return;
             }
             try {
                 SignedDynamicApplicationData sdad = SignedDynamicApplicationData.parseSignedData(tlv.getValueBytes(), app.getICCPublicKeyCertificate().getICCPublicKey(), authenticationRelatedData);
                 app.setSignedDynamicApplicationData(sdad);
-                app.getTransactionStatusInformation().setOfflineDataAuthenticationWasPerformed(true); //TODO
             } catch (SignedDataException ex) {
                 Log.debug(ex.getMessage());
-                EMVTerminalProfile.getTerminalVerificationResults().setDDAFailed(true);
+                EMVTerminal.getTerminalVerificationResults().setDDAFailed(true);
             }
-
-//            //AIP & AFL concatenated without delimiters (that is, excluding tag and length)
-//            ApplicationInterchangeProfile aip = new ApplicationInterchangeProfile((byte) valueBytesBis.read(), (byte) valueBytesBis.read());
-//            app.setApplicationInterchangeProfile(aip);
-//
-//            if (valueBytesBis.available() % 4 != 0) {
-//                throw new SmartCardException("Error parsing Internal Auth Response: Invalid AFL length: " + valueBytesBis.available());
-//            }
-//
-//            byte[] aflBytes = new byte[valueBytesBis.available()];
-//            valueBytesBis.read(aflBytes, 0, aflBytes.length);
-//
-//            ApplicationFileLocator afl = new ApplicationFileLocator(aflBytes);
-//            app.setApplicationFileLocator(afl);
         } else if (tlv.getTag().equals(EMVTags.RESPONSE_MESSAGE_TEMPLATE_2)) {
             //AIP & AFL WITH delimiters (that is, including, including tag and length) and possibly other BER TLV tags (that might be proprietary)
             while (valueBytesBis.available() >= 2) {
-                tlv = EMVUtil.getNextTLV(valueBytesBis);
-                //TODO the code below is just copied from GPO
-//                if (tlv.getTag().equals(EMVTags.APPLICATION_INTERCHANGE_PROFILE)) {
-//                    byte[] aipBytes = tlv.getValueBytes();
-//                    ApplicationInterchangeProfile aip = new ApplicationInterchangeProfile(aipBytes[0], aipBytes[1]);
-//                    app.setApplicationInterchangeProfile(aip);
-//                } else if (tlv.getTag().equals(EMVTags.APPLICATION_FILE_LOCATOR)) {
-//                    byte[] aflBytes = tlv.getValueBytes();
-//                    ApplicationFileLocator afl = new ApplicationFileLocator(aflBytes);
-//                    app.setApplicationFileLocator(afl);
-//                } else {
-//                    app.addUnhandledRecord(tlv);
-//                }
-            }
-        } else {
-            app.addUnhandledRecord(tlv);
-        }
-
-    }
-
-    public static String prettyPrintAPDUResponse(byte[] data) {
-        return prettyPrintAPDUResponse(data, 0);
-    }
-
-    public static String prettyPrintAPDUResponse(byte[] data, int startPos, int length) {
-        byte[] tmp = new byte[length-startPos];
-        System.arraycopy(data, startPos, tmp, 0, length);
-        return prettyPrintAPDUResponse(tmp, 0);
-    }
-
-    public static String prettyPrintAPDUResponse(byte[] data, int indentLength) {
-        StringBuilder buf = new StringBuilder();
-
-        ByteArrayInputStream stream = new ByteArrayInputStream(data);
-
-        while (stream.available() > 0) {
-            buf.append("\n");
-
-            buf.append(Util.getSpaces(indentLength));
-
-            BERTLV tlv = EMVUtil.getNextTLV(stream);
-
-            Log.debug(tlv.toString());
-
-            byte[] tagBytes = tlv.getTagBytes();
-            byte[] lengthBytes = tlv.getRawEncodedLengthBytes();
-            byte[] valueBytes = tlv.getValueBytes();
-
-            Tag tag = tlv.getTag();
-
-            buf.append(Util.prettyPrintHex(tagBytes));
-            buf.append(" ");
-            buf.append(Util.prettyPrintHex(lengthBytes));
-            buf.append(" -- ");
-            buf.append(tag.getName());
-
-            int extraIndent = (lengthBytes.length * 3) + (tagBytes.length * 3);
-
-            if (tag.isConstructed()) {
-                //indentLength += extraIndent; //TODO check this
-                //Recursion
-                buf.append(prettyPrintAPDUResponse(valueBytes, indentLength + extraIndent));
-            } else {
-                buf.append("\n");
-                if (tag.getTagValueType() == TagValueType.DOL) {
-                    buf.append(getFormattedTagAndLength(valueBytes, indentLength + extraIndent));
+                tlv = TLVUtil.getNextTLV(valueBytesBis);
+                if (tlv.getTag().equals(EMVTags.SIGNED_DYNAMIC_APPLICATION_DATA)) {
+                    try {
+                        SignedDynamicApplicationData sdad = SignedDynamicApplicationData.parseSignedData(tlv.getValueBytes(), app.getICCPublicKeyCertificate().getICCPublicKey(), authenticationRelatedData);
+                        app.setSignedDynamicApplicationData(sdad);
+                        app.getTransactionStatusInformation().setOfflineDataAuthenticationWasPerformed(true); //TODO
+                    } catch (SignedDataException ex) {
+                        Log.debug(ex.getMessage());
+                        EMVTerminal.getTerminalVerificationResults().setDDAFailed(true);
+                    }
                 } else {
-                    buf.append(Util.getSpaces(indentLength + extraIndent));
-                    buf.append(Util.prettyPrintHex(Util.byteArrayToHexString(valueBytes), indentLength + extraIndent));
-                    buf.append(" (");
-                    buf.append(getTagValueAsString(tag, valueBytes));
-                    buf.append(")");
+                    checkForProprietaryTagOrAddToUnhandled(app, tlv);
                 }
             }
-        }
-        return buf.toString();
-    }
-
-    //This is just a list of Tag And Lengths (eg DOLs)
-    private static String getFormattedTagAndLength(byte[] data, int indentLength) {
-        StringBuilder buf = new StringBuilder();
-        String indent = Util.getSpaces(indentLength);
-        ByteArrayInputStream stream = new ByteArrayInputStream(data);
-
-        boolean firstLine = true;
-        while (stream.available() > 0) {
-            if (firstLine) {
-                firstLine = false;
-            } else {
-                buf.append("\n");
-            }
-            buf.append(indent);
-
-            Tag tag = EMVTags.getNotNull(EMVUtil.readTagIdBytes(stream));
-            int length = EMVUtil.readTagLength(stream);
-
-            buf.append(Util.prettyPrintHex(tag.getTagBytes()));
-            buf.append(" ");
-            buf.append(Util.byteArrayToHexString(Util.intToByteArray(length)));
-            buf.append(" -- ");
-            buf.append(tag.getName());
-        }
-        return buf.toString();
-    }
-
-    public static byte[] readTagIdBytes(ByteArrayInputStream stream) {
-        ByteArrayOutputStream tagBAOS = new ByteArrayOutputStream();
-        byte tagFirstOctet = (byte) stream.read();
-        tagBAOS.write(tagFirstOctet);
-
-        //Find TAG bytes
-        byte MASK = (byte) 0x1F;
-        if ((tagFirstOctet & MASK) == MASK) { // EMV book 3, Page 178 or Annex B1 (EMV4.3)
-            //Tag field is longer than 1 byte
-            do {
-                int nextOctet = stream.read();
-                if(nextOctet < 0){
-                    break;
-                }
-                byte tlvIdNextOctet = (byte) nextOctet;
-
-                tagBAOS.write(tlvIdNextOctet);
-
-                if (!Util.isBitSet(tlvIdNextOctet, 8) || (Util.isBitSet(tlvIdNextOctet, 8) && (tlvIdNextOctet & 0x7f) == 0) ) {
-                    break;
-                }
-            } while (true);
-        }
-        return tagBAOS.toByteArray();
-    }
-
-    public static int readTagLength(ByteArrayInputStream stream) {
-        //Find LENGTH bytes
-        int length;
-        int tmpLength = stream.read();
-
-        if(tmpLength < 0) {
-            throw new TLVException("Negative length: "+tmpLength);
-        }
-
-        if (tmpLength <= 127) { // 0111 1111
-            // short length form
-            length = tmpLength;
-        } else if (tmpLength == 128) { // 1000 0000
-            // length identifies indefinite form, will be set later
-            // indefinite form is not specified in ISO7816-4, but we include it here for completeness
-            length = tmpLength;
         } else {
-            // long length form
-            int numberOfLengthOctets = tmpLength & 127; // turn off 8th bit
-            tmpLength = 0;
-            for (int i = 0; i < numberOfLengthOctets; i++) {
-                int nextLengthOctet = stream.read();
-                if(nextLengthOctet < 0){
-                    throw new TLVException("EOS when reading length bytes");
-                }
-                tmpLength <<= 8;
-                tmpLength |= nextLengthOctet;
-            }
-            length = tmpLength;
-        }
-        return length;
-    }
-
-    //http://www.cardwerk.com/smartcards/smartcard_standard_ISO7816-4_annex-d.aspx#AnnexD_1
-    public static BERTLV getNextTLV(ByteArrayInputStream stream) {
-        if (stream.available() < 2) {
-            throw new TLVException("Error parsing data. Available bytes < 2 . Length=" + stream.available());
+            checkForProprietaryTagOrAddToUnhandled(app, tlv);
         }
 
-
-        //ISO/IEC 7816 uses neither '00' nor 'FF' as tag value.
-        //Before, between, or after TLV-coded data objects,
-        //'00' or 'FF' bytes without any meaning may occur
-        //(for example, due to erased or modified TLV-coded data objects).
-
-        stream.mark(0);
-        int peekInt = stream.read();
-        byte peekByte = (byte) peekInt;
-        //peekInt == 0xffffffff indicates EOS
-        while (peekInt != -1 && (peekByte == (byte) 0xFF || peekByte == (byte) 0x00)) {
-            stream.mark(0); //Current position
-            peekInt = stream.read();
-            peekByte = (byte) peekInt;
-        }
-        stream.reset(); //Reset back to the last known position without 0x00 or 0xFF
-
-        if (stream.available() < 2) {
-            throw new TLVException("Error parsing data. Available bytes < 2 . Length=" + stream.available());
-        }
-
-        byte[] tagIdBytes = EMVUtil.readTagIdBytes(stream);
-
-        //We need to get the raw length bytes.
-        //Use quick and dirty workaround
-        stream.mark(0);
-        int posBefore = stream.available();
-        //Now parse the lengthbyte(s)
-        //This method will read all length bytes. We can then find out how many bytes was read.
-        int length = EMVUtil.readTagLength(stream); //Decoded
-        //Now find the raw (encoded) length bytes
-        int posAfter = stream.available();
-        stream.reset();
-        byte[] lengthBytes = new byte[posBefore - posAfter];
-
-        if(lengthBytes.length < 1 || lengthBytes.length > 4){
-            throw new TLVException("Number of length bytes must be from 1 to 4. Found "+lengthBytes.length);
-        }
-
-        stream.read(lengthBytes, 0, lengthBytes.length);
-
-        int rawLength = Util.byteArrayToInt(lengthBytes);
-
-        byte[] valueBytes;
-
-        Tag tag = EMVTags.getNotNull(tagIdBytes);
-
-        // Find VALUE bytes
-        if (rawLength == 128) { // 1000 0000
-            // indefinite form
-            stream.mark(0);
-            int prevOctet = 1;
-            int curOctet;
-            int len = 0;
-            while (true) {
-                len++;
-                curOctet = stream.read();
-                if (curOctet < 0) {
-                    throw new TLVException("Error parsing data. TLV "
-                            + "length byte indicated indefinite length, but EOS "
-                            + "was reached before 0x0000 was found" + stream.available());
-                }
-                if (prevOctet == 0 && curOctet == 0) {
-                    break;
-                }
-                prevOctet = curOctet;
-            }
-            len -= 2;
-            valueBytes = new byte[len];
-            stream.reset();
-            stream.read(valueBytes, 0, len);
-            length = len;
-        } else {
-            if(stream.available() < length){
-                throw new TLVException("Length byte(s) indicated "+length+" value bytes, but only "+stream.available()+ " " +(stream.available()>1?"are":"is")+" available");
-            }
-            // definite form
-            valueBytes = new byte[length];
-            stream.read(valueBytes, 0, length);
-        }
-
-        //Remove any trailing 0x00 and 0xFF
-        stream.mark(0);
-        peekInt = stream.read();
-        peekByte = (byte) peekInt;
-        while (peekInt != -1 && (peekByte == (byte) 0xFF || peekByte == (byte) 0x00)) {
-            stream.mark(0);
-            peekInt = stream.read();
-            peekByte = (byte) peekInt;
-        }
-        stream.reset(); //Reset back to the last known position without 0x00 or 0xFF
-
-
-        BERTLV tlv = new BERTLV(tag, length, lengthBytes, valueBytes);
-        return tlv;
-    }
-
-    private static String getTagValueAsString(Tag tag, byte[] value) {
-        StringBuilder buf = new StringBuilder();
-
-        switch (tag.getTagValueType()) {
-            case TEXT:
-                buf.append("=");
-                buf.append(new String(value));
-                break;
-            case NUMERIC:
-                buf.append("NUMERIC");
-                break;
-            case BINARY:
-                buf.append("BINARY");
-                break;
-
-            case MIXED:
-                buf.append("=");
-                buf.append(Util.getSafePrintChars(value));
-                break;
-
-            case DOL:
-                buf.append("");
-                break;
-        }
-
-        return buf.toString();
-    }
-
-    public static List<TagAndLength> parseTagAndLength(byte[] data) {
-        ByteArrayInputStream stream = new ByteArrayInputStream(data);
-        List<TagAndLength> tagAndLengthList = new ArrayList<TagAndLength>();
-
-        while (stream.available() > 0) {
-            if (stream.available() < 2) {
-                throw new SmartCardException("Data length < 2 : " + stream.available());
-            }
-            byte[] tagIdBytes = EMVUtil.readTagIdBytes(stream);
-            int tagValueLength = EMVUtil.readTagLength(stream);
-
-            Tag tag = EMVTags.getNotNull(tagIdBytes);
-
-            tagAndLengthList.add(new TagAndLength(tag, tagValueLength));
-        }
-        return tagAndLengthList;
     }
 
     public static void main(String[] args) {
 
-        System.out.println(readTagLength(new ByteArrayInputStream(new byte[]{(byte)0x81, (byte)0x97})));
+        System.out.println(TLVUtil.readTagLength(new ByteArrayInputStream(new byte[]{(byte)0x81, (byte)0x97})));
 
 //        EMVApplication app = new EMVApplication();
 //        parseFCIADF(Util.fromHexString("6f198407a0000000038002a50e5009564953412041757468870101"), app);
@@ -957,7 +747,7 @@ public class EMVUtil {
 
 //        System.out.println(EMVUtil.prettyPrintAPDUResponse(Util.fromHexString("6F388407 A0000000 031010A5 2D500B56 69736144 616E6B6F 72748701 015F2D08 6461656E 6E6F7376 9F110101 9F120B56 69736144 616E6B6F 7274")));
 
-    
+        
     }
 
     private static void printCmdHdr(String hex){

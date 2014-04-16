@@ -41,9 +41,18 @@ public class TagImpl implements Tag {
     }
 
     private void build(byte[] idBytes, TagValueType tagValueType, String name, String description) {
+        if(idBytes == null){
+            throw new IllegalArgumentException("Param id cannot be null");
+        }
+        if(idBytes.length == 0) {
+            throw new IllegalArgumentException("Param id cannot be empty");
+        }
+        if(tagValueType == null){
+            throw new IllegalArgumentException("Param tagValueType cannot be null");
+        }
         this.idBytes = idBytes;
-        this.name = name;
-        this.description = description;
+        this.name = name!=null?name:"";
+        this.description = description!=null?description:"";
         this.tagValueType = tagValueType;
 
         if(Util.isBitSet(this.idBytes[0], 6)){

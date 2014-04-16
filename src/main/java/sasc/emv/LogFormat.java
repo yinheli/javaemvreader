@@ -19,6 +19,7 @@ import sasc.iso7816.TagAndLength;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import sasc.iso7816.TLVUtil;
 import sasc.util.Log;
 import sasc.util.Util;
 
@@ -32,7 +33,7 @@ public class LogFormat {
     private int recordLength = 0;
 
     public LogFormat(byte[] formatBytes){
-        this.formatList = EMVUtil.parseTagAndLength(formatBytes);
+        this.formatList = TLVUtil.parseTagAndLength(formatBytes);
         for(TagAndLength tal : formatList){
             recordLength+=tal.getLength();
         }

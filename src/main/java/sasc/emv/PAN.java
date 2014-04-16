@@ -37,7 +37,7 @@ public class PAN {
     //This is the first six digits of the number on many types of card including 
     //credit cards and debit cards. As other issuers besides banks participate in card schemes, 
     //the term IIN (Issuer Identification Number) is replacing BIN.
-    private int iin; 
+    private IssuerIdentificationNumber iin;
     private long accountNumber;
     private String panStr;
     private boolean valid;
@@ -52,7 +52,7 @@ public class PAN {
         }
         this.panStr = inputString.toUpperCase();
         mii = Short.parseShort(panStr.substring(0, 1));
-        iin = Integer.parseInt(panStr.substring(0, 6));
+        iin = new IssuerIdentificationNumber(Util.fromHexString(panStr.substring(0, 6)));
         //The PAN is transferred as 'cn' (compressed numeric):
         //Compressed numeric data elements consist of two numeric digits
         //(having values in the range Hex '0'–'9') per byte.
@@ -76,7 +76,7 @@ public class PAN {
         return mii;
     }
 
-    public int getIssuerIdentifierNumber() {
+    public IssuerIdentificationNumber getIssuerIdentifierNumber() {
         return iin;
     }
 
@@ -157,12 +157,13 @@ public class PAN {
                 pw.println(indentStr + "Country Code (ISO 3166-1): " + panStr.substring(1, 4) + " (=" + ISO3166_1.getCountryForCode(panStr.substring(1, 4)) + ")");
                 break;
         }
-        IIN_DB.IIN iinLookup = IIN_DB.searchIIN(iin);
+        int iinInt = iin.getValue();
+        IIN_DB.IIN iinLookup = IIN_DB.searchIIN(iinInt);
         String iinDescription = "";
         if(iinLookup != null){
             iinDescription = " ("+iinLookup.getDescription()+")";
         }
-        pw.println(indentStr + "Issuer Identifier Number: " + iin + iinDescription);
+        pw.println(indentStr + "Issuer Identifier Number: " + iinInt + iinDescription);
         pw.println(indentStr + "Account Number: " + accountNumber);
         pw.println(indentStr + "Check Digit: " + getCheckDigit() + " ("+(isValid()?"Valid":"Invalid")+")");
     }

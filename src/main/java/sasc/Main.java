@@ -15,7 +15,7 @@
  */
 package sasc;
 
-import sasc.common.CardExplorer;
+import sasc.smartcard.common.CardExplorer;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -40,7 +40,6 @@ public class Main {
     public static void main(String[] args) {
 
         //Default values
-        //boolean noGUI = true;//TODO: implement GUI and set
         boolean noGUI = Boolean.getBoolean("java.awt.headless");
         boolean emulate = false;
         boolean listTerminals = false;
@@ -119,15 +118,13 @@ public class Main {
                 ex.printStackTrace(System.err);
                 System.exit(-1);
             }
-        } else {
-            //TODO
-        }
+        } 
 
         if (noGUI) {
             //No Swing/GUI
             new CardExplorer().start();
         } else {
-            //Create swing app using appframework
+            // Create swing app using appframework
             // http://java.dzone.com/news/jsr-296-end-jframe
             // https://appframework.dev.java.net/
             org.jdesktop.application.Application.launch(GUI.class, args);

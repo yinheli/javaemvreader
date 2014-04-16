@@ -15,12 +15,18 @@
  */
 package sasc.emv;
 
-import sasc.common.SessionProcessingEnv;
+import java.io.IOException;
+import sasc.smartcard.common.SessionProcessingEnv;
 import sasc.util.Log;
 import sasc.iso7816.AID;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.StringTokenizer;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -31,8 +37,8 @@ import sasc.terminal.CardConnection;
 import sasc.util.Util;
 
 import static org.junit.Assert.*;
-import sasc.common.CardSession;
-import sasc.common.SmartCard;
+import sasc.smartcard.common.CardSession;
+import sasc.smartcard.common.SmartCard;
 
 /**
  * This Test is only used to track changes in output from revision to revision.
@@ -47,8 +53,8 @@ public class SASCIntegrationTest {
 
     @BeforeClass
     public static void setUpClass() throws Exception {
-        EMVTerminalProfile.setProperty(EMVTags.TERMINAL_COUNTRY_CODE, new byte[]{0x08, 0x26});
-        EMVTerminalProfile.setProperty(EMVTags.TRANSACTION_CURRENCY_CODE, new byte[]{0x08, 0x26});
+        EMVTerminal.setProperty(EMVTags.TERMINAL_COUNTRY_CODE, new byte[]{0x08, 0x26});
+        EMVTerminal.setProperty(EMVTags.TRANSACTION_CURRENCY_CODE, new byte[]{0x08, 0x26});
     }
 
     @AfterClass
@@ -72,25 +78,46 @@ public class SASCIntegrationTest {
         StringWriter dumpWriter = new StringWriter();
         Log.setPrintWriter(new PrintWriter(dumpWriter));
 
-        sasc.common.Context.init();
-        CA.initFromFile("/CertificationAuthorities_Test.xml");
-        CardConnection term = new CardEmulator("/SDACardTransaction.xml");
+        sasc.smartcard.common.Context.init();
+        CA.initFromFile("/certificationAuthorities_mock.xml");
+        
+        EMVTerminal.setPinCallbackHandler(new CallbackHandler(){
+
+            @Override
+            public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
+                for(Callback callback : callbacks){
+                    if(callback instanceof PasswordCallback) {
+                        PasswordCallback pinCallback = (PasswordCallback)callback;
+                        //Set static PIN, or display input dialog here
+                        char[] pin = new char[]{'1','2','3','4'};
+                        pinCallback.setPassword(pin);
+                        Arrays.fill(pin, ' '); //Zeroize PIN data
+                        return;
+                    }
+                    throw new UnsupportedCallbackException(callback);
+                }
+            }
+        });
+        
+        EMVTerminal.setIsOnline(false);
+        EMVTerminal.setDoVerifyPinIfRequired(true);
+        
+        CardConnection term = new CardEmulator("/sdacardtransaction.xml");
         CardSession cardSession = CardSession.createSession(term, new SessionProcessingEnv());
         smartCard = cardSession.initCard();
         EMVSession session = EMVSession.startSession(smartCard, term);
 
         AID targetAID = new AID("a1 23 45 67 89 10 10"); //Our TEST AID
 
-        
         session.initContext();
-        for(EMVApplication app : smartCard.getApplications()){
+        for(EMVApplication app : smartCard.getEmvApplications()){
             session.selectApplication(app);
             session.initiateApplicationProcessing();
-            session.readAdditionalData();
-            if (targetAID.equals(app.getAID())) {
-                session.verifyPIN(new char[]{'1','2','3','4'}, true);
+            session.prepareTransactionProcessing();
+            session.performTransaction();
+            if(app.getATC() == -1 || app.getLastOnlineATC() == -1) {
+                session.testReadATCData();
             }
-//            session.getChallenge();
         }
 
         smartCard.dump(new PrintWriter(dumpWriter), 0);

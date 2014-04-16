@@ -16,7 +16,6 @@
 package sasc.iso7816;
 
 import java.util.Arrays;
-import sasc.iso7816.Tag;
 
 /**
  *
@@ -48,7 +47,7 @@ public class TagAndLength {
 
     @Override
     public String toString(){
-        return tag.toString() + " " + length;
+        return tag.toString() + " length: " + length;
     }
 
 }

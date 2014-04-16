@@ -1,4 +1,7 @@
 # RID; Applicant; Country
+# Austria
+D040000001; Paylife; Austria
+# Germany
 # http://www.kartenbezogene-identifier.de/de/rapi/rid-liste.html
 D276000001; Gesetzl. KrankenV.; Germany
 D276000002; ZeitControl; Germany
@@ -157,5 +160,5 @@ D276000154; Vereinigte IKK; Germany
 D276000155; IDpendant; Germany
 D276000156; OSPT; Germany
 D276000157; sysmocom-systems for mobile communications; Germany
-
+# Norway
 D578000002; Bankaxept; Norway

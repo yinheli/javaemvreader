@@ -315,10 +315,14 @@ public class TerminalVerificationResults {
     public boolean scriptProcessingFailedAfterFinal_GENERATE_AC() {
         return bitSet.get(getBitSetIndex(5, 5));
     }
+    
+    public void reset() {
+        bitSet.clear();
+    }
 
     //4 rightmost bits of the fifth byte are RFU
     public byte[] toByteArray() {
-        return Util.bitSet2ByteArray(bitSet);
+        return Util.resizeArray(Util.bitSet2ByteArray(bitSet), 5);
     }
 
     private int getBitSetIndex(int byteNum, int bitPos) {
@@ -360,6 +364,8 @@ public class TerminalVerificationResults {
         tvr.setPinEntryRequired_PINPadPresent_ButPINWasNotEntered(false);
         tvr.setNewCard(true);
         System.out.println(tvr.toString());
+        
+        System.out.println(Util.prettyPrintHexNoWrap(new TerminalVerificationResults().toByteArray()));
         
         System.out.println(new TerminalVerificationResults(Util.fromHexString("8000048000"))); //Hobby store
         System.out.println(new TerminalVerificationResults(Util.fromHexString("0000008000"))); //Autogrill (IT)

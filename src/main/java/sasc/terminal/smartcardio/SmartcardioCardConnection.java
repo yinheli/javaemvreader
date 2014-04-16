@@ -246,6 +246,11 @@ public class SmartcardioCardConnection implements CardConnection, Terminal {
         public short getSW() {
             return sw;
         }
+        
+        @Override
+        public String toString() {
+            return Util.prettyPrintHex(data) + "\n" + Util.short2Hex(sw);
+        }
     }
     
 

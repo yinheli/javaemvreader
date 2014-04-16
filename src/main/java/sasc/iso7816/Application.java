@@ -16,7 +16,7 @@
 package sasc.iso7816;
 
 import java.io.PrintWriter;
-import sasc.common.SmartCard;
+import sasc.smartcard.common.SmartCard;
 
 /**
  *

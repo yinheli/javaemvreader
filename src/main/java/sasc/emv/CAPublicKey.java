@@ -38,7 +38,6 @@ public class CAPublicKey {
     private Date expirationDate;
     private int hashAlgorithmIndicator;
     private int publicKeyAlgorithmIndicator;
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH);
     
     //A check value calculated on the concatenation of all parts of the 
     //Certification Authority Public Key:
@@ -49,7 +48,7 @@ public class CAPublicKey {
     //using SHA-1
     private byte[] sha1CheckSum = null;
 
-    public CAPublicKey(int index, byte[] exponent, byte[] modulus, byte[] sha1CheckSum, int publicKeyAlgorithmIndicator, int hashAlgorithmIndicator, String description, String expirationDate){
+    public CAPublicKey(int index, byte[] exponent, byte[] modulus, byte[] sha1CheckSum, int publicKeyAlgorithmIndicator, int hashAlgorithmIndicator, String description, Date expirationDate){
         this.index = index;
         this.exponent = exponent;
         this.modulus = modulus;
@@ -57,11 +56,7 @@ public class CAPublicKey {
         this.publicKeyAlgorithmIndicator = publicKeyAlgorithmIndicator;
         this.hashAlgorithmIndicator = hashAlgorithmIndicator;
         this.description = description;
-        try {
-            this.expirationDate = DATE_FORMAT.parse(expirationDate);
-        } catch (ParseException ex) {
-            throw new SmartCardException("Expiration date not valid. Must be in the format dd MMM yyyy, (where MMM is the english name of the month), but was: "+expirationDate);
-        }
+        this.expirationDate = expirationDate;
     }
 
     public int getIndex(){

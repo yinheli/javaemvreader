@@ -19,7 +19,9 @@ import sasc.iso7816.SmartCardException;
 import java.io.ByteArrayInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import sasc.util.Log;
 import sasc.util.Util;
 
@@ -32,6 +34,8 @@ import sasc.util.Util;
  */
 public class CVMList {
     private LinkedList<CVRule> cvRules = new LinkedList<CVRule>();
+    private byte[] amountField;
+    private byte[] secondAmountField;
 
     public CVMList(byte[] data){
 
@@ -39,8 +43,8 @@ public class CVMList {
             throw new IllegalArgumentException("Length is less than 8. Length=" + data.length);
         }
         ByteArrayInputStream bis = new ByteArrayInputStream(data);
-        byte[] amountField = new byte[4];
-        byte[] secondAmountField = new byte[4];
+        amountField = new byte[4];
+        secondAmountField = new byte[4];
         bis.read(amountField, 0, amountField.length);
         bis.read(secondAmountField, 0, secondAmountField.length);
         if(bis.available() % 2 != 0 ){
@@ -58,6 +62,10 @@ public class CVMList {
         StringWriter sw = new StringWriter();
         dump(new PrintWriter(sw), 0);
         return sw.toString();
+    }
+    
+    public List<CVRule> getRules() {
+        return Collections.unmodifiableList(cvRules);
     }
 
     public void dump(PrintWriter pw, int indent) {

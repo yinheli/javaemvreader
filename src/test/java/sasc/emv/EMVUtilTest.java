@@ -23,6 +23,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import sasc.iso7816.TLVUtil;
 import sasc.terminal.CardConnection;
 import sasc.terminal.CardResponse;
 import sasc.util.Util;
@@ -192,7 +193,7 @@ public class EMVUtilTest {
                 + "                  43 68 69 70 6b 6e 69 70 (=Chipknip)\n"
                 + "            87 01 -- Application Priority Indicator\n"
                 + "                  00 (BINARY)";
-        String result = EMVUtil.prettyPrintAPDUResponse(data);
+        String result = TLVUtil.prettyPrintAPDUResponse(data);
         assertEquals(expResult, result);
     }
 //    /**

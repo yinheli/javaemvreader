@@ -1,5 +1,28 @@
 changelog
 
+v0.6.0
+Improvements:
+More refactoring work
+prepareTransactionProcessing (Offline Data Authentication, Processing restrictions, Terminal Risk Management, etc) [experimental]
+Added ability to specify a custom PIN callback handler
+Parse ICCPinEnciphermentPublicKeyCertificate
+Added MC and VISA proprietary tags
+Added support for registering AtrHandlers and AidHandlers
+Read data from Global Platform Security Domains
+Read JCOP Identify Applet
+Read (synchronous) storage cards (via PC/SC compliant readers)
+Re-add CA test public keys
+Use byte arrays instead of Strings when sending commands
+Store application discretionary data
+Differentiate between unprocessed records (known tag) and unknown records (unknown tag)
+Experimental support for identifying context specific TLV tags based on IIN/RID
+Automatically add Le if missing
+Added support for Internal Auth response containing RESPONSE_MESSAGE_TEMPLATE_2 (based on a patch by bgillis)
+Get PC/SC error code description, if available
+Bugfixes:
+Fixed bug in TerminalVerificationResults returing wrong array length, causing GPO to fail
+Fixed bug in the handling of verifyPIN response (based on a patch by bgillis)
+
 v0.5.2
 Temporarily disabled loading of CA test keys
 

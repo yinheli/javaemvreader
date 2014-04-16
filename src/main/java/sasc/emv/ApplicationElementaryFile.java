@@ -31,7 +31,7 @@ import sasc.util.Util;
  *
  * @author sasc
  */
-public class ApplicationElementaryFile implements File{
+public class ApplicationElementaryFile implements File {
 
     private ShortFileIdentifier sfi;
     private int startRecordNumber;

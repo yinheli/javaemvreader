@@ -62,6 +62,10 @@ public class Util {
         return prettyPrintHex(in, indent, true);
     }
 
+    public static String prettyPrintHex(byte[] data, int indent) {
+        return Util.prettyPrintHex(Util.byteArrayToHexString(data), indent, true);
+    }
+    
     public static String prettyPrintHex(byte[] data) {
         return Util.prettyPrintHex(Util.byteArrayToHexString(data), 0, true);
     }
@@ -372,12 +376,7 @@ public class Util {
     }
 
     public static String removeSpaces(String s) {
-        StringTokenizer st = new StringTokenizer(s, " ", false);
-        StringBuilder buf = new StringBuilder();
-        while (st.hasMoreElements()) {
-            buf.append(st.nextElement());
-        }
-        return buf.toString();
+        return s.replaceAll(" ", "");
     }
 
     public static String readInputStreamToString(InputStream is, String encoding) throws IOException {
@@ -429,20 +428,39 @@ public class Util {
     }
 
     /**
-     * This method converts the literal hex representation of a byte to an int.
-     * eg 0x70 = 70 (int)
+     * This method converts the literal hex representation of a decimal 
+     * encoded in 1-5 bytes to an int.
+     * The value should not be larger than Integer.MAX_VALUE
+     *  
+     * eg 0x70 = 70 (decimal)
+     * eg 0x21 47 48 36 47 = 2147483647 (decimal)
      * @param hex
      */
     public static int binaryHexCodedDecimalToInt(String hex) {
+        if (hex == null) {
+            throw new IllegalArgumentException("Param hex cannot be null");
+        }
         hex = Util.removeSpaces(hex);
-        if (hex.length() > 8) {
-            throw new IllegalArgumentException("There must be a maximum of 4 hex octets. hex=" + hex);
+        if (hex.length() > 10) {
+            throw new IllegalArgumentException("There must be a maximum of 5 hex octets. hex=" + hex);
         }
         try {
             return Integer.parseInt(hex);
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException("Argument hex must be all digits. hex="+hex, ex);
         }
+    }
+    
+    /**
+     * This method converts a 1-5 byte BCD to an int.
+     * eg 0x7099 = 7099 (int)
+     * @param bcdArray
+     */
+    public static int binaryHexCodedDecimalToInt(byte[] bcdArray) {
+        if (bcdArray == null) {
+            throw new IllegalArgumentException("Param bcdArray cannot be null");
+        }
+        return binaryHexCodedDecimalToInt(Util.byteArrayToHexString(bcdArray));
     }
 
     /**
@@ -741,7 +759,7 @@ public class Util {
         return "";
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) {        
 //        System.out.println(Util.isBitSet((byte) 0x5f, 2)); // 0101 1111
 //        System.out.println(Util.isBitSet((byte) 0x9f, 2)); // 1001 1111
 //

@@ -31,9 +31,6 @@ public class TerminalEnumerator {
             TerminalProvider terminalProvider = TerminalAPIManager.getProvider(TerminalAPIManager.SelectionPolicy.ANY_PROVIDER);
             for (Terminal terminal : terminalProvider.listTerminals()) {
                 System.out.println(terminal.getTerminalInfo());
-                if("Yubico Yubikey NEO OTP+CCID 2".equals(terminal.getName())){
-                    System.out.println(Util.prettyPrintHexNoWrap(terminal.connect().getATR()));
-                }
             }
             System.exit(0);
 
